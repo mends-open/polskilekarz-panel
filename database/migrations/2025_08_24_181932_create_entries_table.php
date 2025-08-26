@@ -20,7 +20,7 @@ return new class extends Migration
             $table->foreignIdFor(User::class)->constrained();
             $table->foreignIdFor(Entity::class)->constrained();
             $table->string('type');
-            $table->jsonb('data');
+            $table->jsonb('data')->nullable();
             $table->timestampsTz();
             $table->softDeletesTz();
         });

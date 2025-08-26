@@ -14,9 +14,10 @@ return new class extends Migration
         Schema::create('medications', function (Blueprint $table) {
             $table->id();
             $table->string('name')->unique();
-            $table->jsonb('labels');
-            $table->jsonb('brands');
-            $table->timestamps();
+            $table->jsonb('labels')->nullable();
+            $table->jsonb('brands')->nullable();;
+            $table->timestampsTz();
+            $table->softDeletesTz();
         });
     }
 

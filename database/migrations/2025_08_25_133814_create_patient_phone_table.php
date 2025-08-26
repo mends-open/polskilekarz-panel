@@ -21,8 +21,8 @@ return new class extends Migration
             $table->timestamp('call_consent_since')->nullable();
             $table->timestamp('sms_consent_since')->nullable();
             $table->timestamp('whatsapp_consent_since')->nullable();
-            $table->timestamps();
-            $table->softDeletes();
+            $table->timestampsTz();
+            $table->softDeletesTz();
 
             $table->unique(['patient_id', 'phone_id']);
         });

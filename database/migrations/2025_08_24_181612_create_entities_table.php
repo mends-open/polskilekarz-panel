@@ -13,8 +13,9 @@ return new class extends Migration
     {
         Schema::create('entities', function (Blueprint $table) {
             $table->id();
-            $table->jsonb('headers');
-            $table->jsonb('stamps');
+            $table->string('name');
+            $table->jsonb('headers')->nullable();
+            $table->jsonb('stamps')->nullable();
             $table->timestampsTz();
             $table->softDeletesTz();
         });

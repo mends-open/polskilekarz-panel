@@ -17,10 +17,10 @@ return new class extends Migration
             $table->id();
             $table->foreignIdFor(Patient::class)->constrained();
             $table->foreignIdFor(Email::class)->constrained();
-            $table->timestamp('primary_since')->default(false);
+            $table->timestamp('primary_since');
             $table->timestamp('message_consent_since')->nullable();
-            $table->timestamps();
-            $table->softDeletes();
+            $table->timestampsTz();
+            $table->softDeletesTz();
 
             $table->unique(['patient_id', 'email_id']);
         });
