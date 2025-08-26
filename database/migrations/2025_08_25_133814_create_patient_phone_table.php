@@ -3,8 +3,9 @@
 use App\Models\Patient;
 use App\Models\Phone;
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Tpetry\PostgresqlEnhanced\Query\Builder;
+use Tpetry\PostgresqlEnhanced\Schema\Blueprint;
+use Tpetry\PostgresqlEnhanced\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -25,6 +26,11 @@ return new class extends Migration
             $table->softDeletesTz();
 
             $table->unique(['patient_id', 'phone_id']);
+
+            $table->uniqueIndex(['patient_id'])
+                ->where(fn (Builder $condition) =>
+                    $condition->whereNotNull('primary_since')
+                );
         });
     }
 
