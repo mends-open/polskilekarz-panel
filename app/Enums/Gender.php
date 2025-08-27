@@ -2,11 +2,11 @@
 
 namespace App\Enums;
 
-enum Gender: string
+enum Gender
 {
     // http://hl7.org/fhir/administrative-gender
-    case Male = 'male';
-    case Female = 'female';
-    case Other = 'other';
-    case Unknown = 'unknown';
+    case Male;
+    case Female;
+    case Other;
+    case Unknown;
 }

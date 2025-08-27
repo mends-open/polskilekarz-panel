@@ -2,34 +2,33 @@
 
 namespace App\Enums;
 
-enum EntryType: string
+enum EntryType
 {
-    case Generic = 'generic';
+    case Generic;
 
     // Operational (internal)
-    case Task = 'task';
-    case Note = 'note';
-    case Warning = 'warning';
-    case Danger = 'danger';
+    case Task;
+    case Note;
+    case Warning;
+    case Danger;
 
     // Clinical narratives
-    case Interview = 'interview';
-    case Examination = 'examination';
+    case Interview;
+    case Examination;
 
     // Clinical data
-    case Condition = 'condition';          // includes pregnancy, breastfeeding, addiction (coded)
-    case Allergy = 'allergy';
-    case Observation = 'observation';        // vitals, scores, measurements
-    case MedicationPlan = 'medication_plan';     // plan/history, not the Rx itself
+    case Condition;          // includes pregnancy, breastfeeding, addiction (coded)
+    case Allergy;
+    case Observation;        // vitals, scores, measurements
+    case MedicationPlan;     // plan/history, not the Rx itself
 
     // Patient-facing outputs
-    case Recommendation = 'recommendation';
-    case MedicalCertificate = 'medical_certificate';
-    case SickLeave = 'sick_leave';
-    case CrossBorderPrescription = 'cross_border_prescription';
+    case Recommendation;
+    case MedicalCertificate;
+    case SickLeave;
+    case CrossBorderPrescription;
 
     // External docs
-    case Attachment = 'attachment';         // imported/uploaded document
-    case Referral = 'referral';
-
+    case Attachment;         // imported/uploaded document
+    case Referral;
 }
