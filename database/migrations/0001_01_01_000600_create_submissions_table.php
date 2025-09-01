@@ -1,9 +1,9 @@
 <?php
 
-use App\Models\Document;
+use App\Models\Patient;
 use Illuminate\Database\Migrations\Migration;
-use Tpetry\PostgresqlEnhanced\Schema\Blueprint;
-use Tpetry\PostgresqlEnhanced\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -12,10 +12,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('documentables', function (Blueprint $table) {
+        Schema::create('submissions', function (Blueprint $table) {
             $table->id();
-            $table->foreignIdFor(Document::class);
-            $table->morphs('documentable');
+            $table->foreignIdFor(Patient::class)->constrained();
             $table->timestampsTz();
             $table->softDeletesTz();
         });
@@ -26,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('documentables');
+        Schema::dropIfExists('submissions');
     }
 };
