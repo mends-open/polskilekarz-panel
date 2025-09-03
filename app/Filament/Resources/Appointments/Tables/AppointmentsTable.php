@@ -26,7 +26,7 @@ class AppointmentsTable
                     ->sortable(),
                 TextColumn::make('type')
                     ->label(__('appointments.fields.type'))
-                    ->enum(AppointmentType::class)
+                    ->formatStateUsing(fn (?string $state) => $state ? AppointmentType::labels()[$state] ?? $state : null)
                     ->searchable(),
                 TextColumn::make('duration')
                     ->label(__('appointments.fields.duration'))

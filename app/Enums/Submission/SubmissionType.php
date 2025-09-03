@@ -17,4 +17,15 @@ enum SubmissionType implements HasLabel
             'enums.submission_type.' . Str::snake($this->name)
         );
     }
+
+    public static function labels(): array
+    {
+        $labels = [];
+
+        foreach (self::cases() as $case) {
+            $labels[$case->name] = $case->getLabel();
+        }
+
+        return $labels;
+    }
 }

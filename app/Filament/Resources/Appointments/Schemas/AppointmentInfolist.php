@@ -20,7 +20,7 @@ class AppointmentInfolist
                     ->numeric(),
                 TextEntry::make('type')
                     ->label(__('appointments.fields.type'))
-                    ->enum(AppointmentType::class),
+                    ->formatStateUsing(fn (?string $state) => $state ? AppointmentType::labels()[$state] ?? $state : null),
                 TextEntry::make('duration')
                     ->label(__('appointments.fields.duration'))
                     ->numeric(),

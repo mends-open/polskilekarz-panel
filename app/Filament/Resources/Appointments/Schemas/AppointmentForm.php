@@ -24,7 +24,7 @@ class AppointmentForm
                     ->numeric(),
                 Select::make('type')
                     ->label(__('appointments.fields.type'))
-                    ->enum(AppointmentType::class)
+                    ->options(AppointmentType::class)
                     ->required(),
                 TextInput::make('duration')
                     ->label(__('appointments.fields.duration'))

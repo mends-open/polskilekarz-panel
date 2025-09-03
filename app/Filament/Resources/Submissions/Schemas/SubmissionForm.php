@@ -23,7 +23,7 @@ class SubmissionForm
                     ->numeric(),
                 Select::make('type')
                     ->label(__('submissions.fields.type'))
-                    ->enum(SubmissionType::class)
+                    ->options(SubmissionType::class)
                     ->required(),
                 TextInput::make('data')
                     ->label(__('submissions.fields.data')),

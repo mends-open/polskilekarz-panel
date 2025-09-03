@@ -20,7 +20,7 @@ class SubmissionInfolist
                     ->numeric(),
                 TextEntry::make('type')
                     ->label(__('submissions.fields.type'))
-                    ->enum(SubmissionType::class),
+                    ->formatStateUsing(fn (?string $state) => $state ? SubmissionType::labels()[$state] ?? $state : null),
                 TextEntry::make('created_at')
                     ->label(__('submissions.fields.created_at'))
                     ->dateTime(),

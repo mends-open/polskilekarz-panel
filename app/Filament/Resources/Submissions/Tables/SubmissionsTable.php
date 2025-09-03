@@ -26,7 +26,7 @@ class SubmissionsTable
                     ->sortable(),
                 TextColumn::make('type')
                     ->label(__('submissions.fields.type'))
-                    ->enum(SubmissionType::class)
+                    ->formatStateUsing(fn (?string $state) => $state ? SubmissionType::labels()[$state] ?? $state : null)
                     ->searchable(),
                 TextColumn::make('created_at')
                     ->label(__('submissions.fields.created_at'))

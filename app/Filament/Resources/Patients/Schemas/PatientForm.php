@@ -26,7 +26,7 @@ class PatientForm
                     ->required(),
                 ToggleButtons::make('gender')
                     ->label(__('patients.fields.gender'))
-                    ->enum(PatientGender::class)
+                    ->options(PatientGender::class)
                     ->inline()
                     ->required(),
                 Repeater::make('addresses')

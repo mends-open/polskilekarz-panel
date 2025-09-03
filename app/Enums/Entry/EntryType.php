@@ -34,4 +34,15 @@ enum EntryType implements HasLabel
             'enums.entry_type.' . Str::snake($this->name)
         );
     }
+
+    public static function labels(): array
+    {
+        $labels = [];
+
+        foreach (self::cases() as $case) {
+            $labels[$case->name] = $case->getLabel();
+        }
+
+        return $labels;
+    }
 }

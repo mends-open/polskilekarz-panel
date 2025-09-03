@@ -28,4 +28,15 @@ enum PatientIdentifier implements HasLabel
             'enums.patient_identifier.' . Str::snake($this->name)
         );
     }
+
+    public static function labels(): array
+    {
+        $labels = [];
+
+        foreach (self::cases() as $case) {
+            $labels[$case->name] = $case->getLabel();
+        }
+
+        return $labels;
+    }
 }

@@ -22,7 +22,7 @@ class PatientInfolist
                     ->date(),
                 TextEntry::make('gender')
                     ->label(__('patients.fields.gender'))
-                    ->enum(PatientGender::class),
+                    ->formatStateUsing(fn (?string $state) => $state ? PatientGender::labels()[$state] ?? $state : null),
                 RepeatableEntry::make('addresses')
                     ->label(__('patients.fields.addresses'))
                     ->schema([

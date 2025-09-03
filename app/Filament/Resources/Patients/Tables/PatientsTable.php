@@ -28,7 +28,7 @@ class PatientsTable
                     ->sortable(),
                 TextColumn::make('gender')
                     ->label(__('patients.fields.gender'))
-                    ->enum(PatientGender::class)
+                    ->formatStateUsing(fn (?string $state) => $state ? PatientGender::labels()[$state] ?? $state : null)
                     ->searchable(),
                 TextColumn::make('created_at')
                     ->label(__('patients.fields.created_at'))
