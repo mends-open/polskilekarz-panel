@@ -2,7 +2,10 @@
 
 namespace App\Enums\Entry;
 
-enum EntryType
+use Filament\Support\Contracts\HasLabel;
+use Illuminate\Support\Str;
+
+enum EntryType implements HasLabel
 {
     // Operational (internal)
     case Task;
@@ -24,4 +27,11 @@ enum EntryType
     case CrossBorderPrescription;
     case Referral;
     case Attachment;
+
+    public function getLabel(): ?string
+    {
+        return __(
+            'enums.entry_type.' . Str::snake($this->name)
+        );
+    }
 }

@@ -2,8 +2,10 @@
 
 namespace App\Enums\Patient;
 
+use Filament\Support\Contracts\HasLabel;
+use Illuminate\Support\Str;
 
-enum PatientIdentifier
+enum PatientIdentifier implements HasLabel
 {
     // Document Identifiers
     case IdentityDocument; // Country agnostic
@@ -19,4 +21,11 @@ enum PatientIdentifier
     case NIR; // Numéro d'Inscription au Répertoire, FR
     case NUSS; // Número de la Seguridad Social, ES
     case CodiceFiscale; // Codice Fiscale, IT
+
+    public function getLabel(): ?string
+    {
+        return __(
+            'enums.patient_identifier.' . Str::snake($this->name)
+        );
+    }
 }

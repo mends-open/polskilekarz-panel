@@ -13,30 +13,36 @@ class EntityInfolist
     {
         return $schema
             ->components([
-                TextEntry::make('name'),
+                TextEntry::make('name')
+                    ->label(__('entities.fields.name')),
                 RepeatableEntry::make('headers')
-                    ->label('Headers')
+                    ->label(__('entities.fields.headers'))
                     ->schema([
                         TextEntry::make('content')
+                            ->label(__('entities.fields.header'))
                             ->html(),
                     ]),
                 RepeatableEntry::make('footers')
-                    ->label('Footers')
+                    ->label(__('entities.fields.footers'))
                     ->schema([
                         TextEntry::make('content')
+                            ->label(__('entities.fields.footer'))
                             ->html(),
                     ]),
                 SpatieMediaLibraryImageEntry::make('stamps')
-                    ->label('Stamps')
+                    ->label(__('entities.fields.stamps'))
                     ->collection('stamps'),
                 SpatieMediaLibraryImageEntry::make('logos')
-                    ->label('Logos')
+                    ->label(__('entities.fields.logos'))
                     ->collection('logos'),
                 TextEntry::make('created_at')
+                    ->label(__('entities.fields.created_at'))
                     ->dateTime(),
                 TextEntry::make('updated_at')
+                    ->label(__('entities.fields.updated_at'))
                     ->dateTime(),
                 TextEntry::make('deleted_at')
+                    ->label(__('entities.fields.deleted_at'))
                     ->dateTime(),
             ]);
     }
