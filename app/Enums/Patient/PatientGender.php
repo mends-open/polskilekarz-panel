@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Enums;
+namespace App\Enums\Patient;
 
-enum Gender
+enum PatientGender
 {
     // http://hl7.org/fhir/administrative-gender
     case Male;

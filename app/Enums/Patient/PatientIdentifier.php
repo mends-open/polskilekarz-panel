@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Enums;
+namespace App\Enums\Patient;
 
 
-enum IdentifierType
+enum PatientIdentifier
 {
     // Document Identifiers
     case IdentityDocument; // Country agnostic
