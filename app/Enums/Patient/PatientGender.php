@@ -3,21 +3,18 @@
 namespace App\Enums\Patient;
 
 use Filament\Support\Contracts\HasLabel;
-use Illuminate\Support\Str;
 
-enum PatientGender implements HasLabel
+enum PatientGender: string implements HasLabel
 {
     // http://hl7.org/fhir/administrative-gender
-    case Male;
-    case Female;
-    case Other;
-    case Unknown;
+    case Male = 'male';
+    case Female = 'female';
+    case Other = 'other';
+    case Unknown = 'unknown';
 
     public function getLabel(): ?string
     {
-        return __(
-            'enums.patient_gender.' . Str::snake($this->name)
-        );
+        return __('enums.patient_gender.' . $this->value);
     }
 
     public static function labels(): array
@@ -25,7 +22,7 @@ enum PatientGender implements HasLabel
         $labels = [];
 
         foreach (self::cases() as $case) {
-            $labels[$case->name] = $case->getLabel();
+            $labels[$case->value] = $case->getLabel();
         }
 
         return $labels;

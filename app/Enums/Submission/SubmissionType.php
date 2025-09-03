@@ -3,19 +3,16 @@
 namespace App\Enums\Submission;
 
 use Filament\Support\Contracts\HasLabel;
-use Illuminate\Support\Str;
 
-enum SubmissionType implements HasLabel
+enum SubmissionType: string implements HasLabel
 {
-    case Registration;
-    case PreVisit;
-    case PostVisit;
+    case Registration = 'registration';
+    case PreVisit = 'pre_visit';
+    case PostVisit = 'post_visit';
 
     public function getLabel(): ?string
     {
-        return __(
-            'enums.submission_type.' . Str::snake($this->name)
-        );
+        return __('enums.submission_type.' . $this->value);
     }
 
     public static function labels(): array
@@ -23,7 +20,7 @@ enum SubmissionType implements HasLabel
         $labels = [];
 
         foreach (self::cases() as $case) {
-            $labels[$case->name] = $case->getLabel();
+            $labels[$case->value] = $case->getLabel();
         }
 
         return $labels;

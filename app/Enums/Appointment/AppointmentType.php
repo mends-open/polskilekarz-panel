@@ -3,21 +3,18 @@
 namespace App\Enums\Appointment;
 
 use Filament\Support\Contracts\HasLabel;
-use Illuminate\Support\Str;
 
-enum AppointmentType implements HasLabel
+enum AppointmentType: string implements HasLabel
 {
-    case General;
-    case Psychiatric;
-    case Psychological;
-    case Prescription;
-    case Documentation;
+    case General = 'general';
+    case Psychiatric = 'psychiatric';
+    case Psychological = 'psychological';
+    case Prescription = 'prescription';
+    case Documentation = 'documentation';
 
     public function getLabel(): ?string
     {
-        return __(
-            'enums.appointment_type.' . Str::snake($this->name)
-        );
+        return __('enums.appointment_type.' . $this->value);
     }
 
     public static function labels(): array
@@ -25,7 +22,7 @@ enum AppointmentType implements HasLabel
         $labels = [];
 
         foreach (self::cases() as $case) {
-            $labels[$case->name] = $case->getLabel();
+            $labels[$case->value] = $case->getLabel();
         }
 
         return $labels;
