@@ -3,7 +3,9 @@
 namespace App\Filament\Resources\Patients\Schemas;
 
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\ToggleButtons;
 use Filament\Schemas\Schema;
 
 class PatientForm
@@ -18,9 +20,23 @@ class PatientForm
                     ->required(),
                 DatePicker::make('birth_date')
                     ->required(),
-                TextInput::make('gender')
+                ToggleButtons::make('gender')
+                    ->options([
+                        'male' => 'Male',
+                        'female' => 'Female',
+                        'other' => 'Other',
+                    ])
+                    ->inline()
                     ->required(),
-                TextInput::make('addresses'),
+                Repeater::make('addresses')
+                    ->label('Addresses')
+                    ->schema([
+                        TextInput::make('line1')
+                            ->label('Line 1'),
+                        TextInput::make('city'),
+                        TextInput::make('postal_code'),
+                        TextInput::make('country'),
+                    ]),
                 TextInput::make('identifiers'),
             ]);
     }
