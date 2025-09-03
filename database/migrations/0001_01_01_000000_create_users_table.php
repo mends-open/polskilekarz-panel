@@ -17,9 +17,8 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestampTz('email_verified_at')->nullable();
             $table->string('password');
-            $table->jsonb('signatures');
-            $table->jsonb('footers');
-            $table->jsonb('stamps');
+            $table->jsonb('signatures')->nullable();
+            $table->jsonb('stamps')->nullable();;
             $table->rememberToken();
             $table->timestampsTz();
             $table->softDeletesTz();
