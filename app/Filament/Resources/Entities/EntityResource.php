@@ -24,6 +24,21 @@ class EntityResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'Entity';
 
+    public static function getModelLabel(): string
+    {
+        return __('entities.label');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('entities.plural');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('entities.plural');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return EntityForm::configure($schema);

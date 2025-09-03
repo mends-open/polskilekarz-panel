@@ -1,6 +1,8 @@
 <?php
 
 return [
+    'label' => 'Patient',
+    'plural' => 'Patients',
     'fields' => [
         'first_name' => 'First name',
         'last_name' => 'Last name',

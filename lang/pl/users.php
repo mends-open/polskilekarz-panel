@@ -1,6 +1,8 @@
 <?php
 
 return [
+    'label' => 'Użytkownik',
+    'plural' => 'Użytkownicy',
     'fields' => [
         'name' => 'Nazwa',
         'email' => 'Adres e-mail',

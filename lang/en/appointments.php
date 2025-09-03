@@ -1,6 +1,8 @@
 <?php
 
 return [
+    'label' => 'Appointment',
+    'plural' => 'Appointments',
     'fields' => [
         'patient_id' => 'Patient',
         'user_id' => 'User',

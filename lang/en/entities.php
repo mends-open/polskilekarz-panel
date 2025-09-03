@@ -1,6 +1,8 @@
 <?php
 
 return [
+    'label' => 'Entity',
+    'plural' => 'Entities',
     'fields' => [
         'name' => 'Name',
         'headers' => 'Headers',

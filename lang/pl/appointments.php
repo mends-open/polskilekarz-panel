@@ -1,6 +1,8 @@
 <?php
 
 return [
+    'label' => 'Wizyta',
+    'plural' => 'Wizyty',
     'fields' => [
         'patient_id' => 'Pacjent',
         'user_id' => 'Użytkownik',

@@ -1,6 +1,8 @@
 <?php
 
 return [
+    'label' => 'Document',
+    'plural' => 'Documents',
     'fields' => [
         'patient_id' => 'Patient',
         'user_id' => 'User',

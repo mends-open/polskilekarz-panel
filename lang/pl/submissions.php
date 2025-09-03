@@ -1,6 +1,8 @@
 <?php
 
 return [
+    'label' => 'Zgłoszenie',
+    'plural' => 'Zgłoszenia',
     'fields' => [
         'patient_id' => 'Pacjent',
         'user_id' => 'Użytkownik',

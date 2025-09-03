@@ -1,6 +1,8 @@
 <?php
 
 return [
+    'label' => 'Podmiot',
+    'plural' => 'Podmioty',
     'fields' => [
         'name' => 'Nazwa',
         'headers' => 'Nagłówki',
