@@ -28,12 +28,10 @@ class EntityInfolist
                     ]),
                 SpatieMediaLibraryImageEntry::make('stamps')
                     ->label('Stamps')
-                    ->collection('stamps')
-                    ->multiple(),
+                    ->collection('stamps'),
                 SpatieMediaLibraryImageEntry::make('logos')
                     ->label('Logos')
-                    ->collection('logos')
-                    ->multiple(),
+                    ->collection('logos'),
                 TextEntry::make('created_at')
                     ->dateTime(),
                 TextEntry::make('updated_at')

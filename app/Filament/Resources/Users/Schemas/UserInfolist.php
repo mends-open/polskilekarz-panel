@@ -24,8 +24,7 @@ class UserInfolist
                     ]),
                 SpatieMediaLibraryImageEntry::make('stamps')
                     ->label('Stamps')
-                    ->collection('stamps')
-                    ->multiple(),
+                    ->collection('stamps'),
                 TextEntry::make('email_verified_at')
                     ->dateTime(),
                 TextEntry::make('created_at')
