@@ -3,14 +3,18 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\Concerns\ValidatesAttributes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, SoftDeletes, ValidatesAttributes;
 
     /**
      * The attributes that are mass assignable.
@@ -21,6 +25,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'signatures',
+        'stamps',
     ];
 
     /**
@@ -43,6 +49,49 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'signatures' => 'array',
+            'stamps' => 'array',
+        ];
+    }
+
+    public function entities(): BelongsToMany
+    {
+        return $this->belongsToMany(Entity::class)->using(EntityUser::class);
+    }
+
+    public function appointments(): HasMany
+    {
+        return $this->hasMany(Appointment::class);
+    }
+
+    public function entries(): HasMany
+    {
+        return $this->hasMany(Entry::class);
+    }
+
+    public function documents(): HasMany
+    {
+        return $this->hasMany(Document::class);
+    }
+
+    public function submissions(): HasMany
+    {
+        return $this->hasMany(Submission::class);
+    }
+
+    public function entryMedications(): HasMany
+    {
+        return $this->hasMany(EntryMedication::class);
+    }
+
+    public function rules(): array
+    {
+        return [
+            'name' => ['required', 'string'],
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string'],
+            'signatures' => ['nullable', 'array'],
+            'stamps' => ['nullable', 'array'],
         ];
     }
 }
