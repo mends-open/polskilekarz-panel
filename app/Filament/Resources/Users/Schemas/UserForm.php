@@ -3,6 +3,9 @@
 namespace App\Filament\Resources\Users\Schemas;
 
 use Filament\Forms\Components\DateTimePicker;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\RichEditor;
+use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 
@@ -22,8 +25,16 @@ class UserForm
                 TextInput::make('password')
                     ->password()
                     ->required(),
-                TextInput::make('signatures'),
-                TextInput::make('stamps'),
+                Repeater::make('signatures')
+                    ->label('Signatures')
+                    ->schema([
+                        RichEditor::make('content')
+                            ->label('Signature'),
+                    ]),
+                SpatieMediaLibraryFileUpload::make('stamps')
+                    ->label('Stamps')
+                    ->collection('stamps')
+                    ->multiple(),
             ]);
     }
 }

@@ -10,11 +10,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
-class User extends Authenticatable
+class User extends Authenticatable implements HasMedia
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, SoftDeletes, ValidatesAttributes;
+    use HasFactory, Notifiable, SoftDeletes, ValidatesAttributes, InteractsWithMedia;
 
     /**
      * The attributes that are mass assignable.
@@ -93,5 +95,10 @@ class User extends Authenticatable
             'signatures' => ['nullable', 'array'],
             'stamps' => ['nullable', 'array'],
         ];
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('stamps');
     }
 }

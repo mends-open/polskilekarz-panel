@@ -7,10 +7,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
-class Entity extends Model
+class Entity extends Model implements HasMedia
 {
-    use HasFactory, SoftDeletes, ValidatesAttributes;
+    use HasFactory, SoftDeletes, ValidatesAttributes, InteractsWithMedia;
 
     protected $fillable = [
         'name',
@@ -41,5 +43,11 @@ class Entity extends Model
             'stamps' => ['nullable', 'array'],
             'logos' => ['nullable', 'array'],
         ];
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('stamps');
+        $this->addMediaCollection('logos');
     }
 }

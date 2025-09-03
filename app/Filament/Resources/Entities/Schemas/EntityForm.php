@@ -2,6 +2,9 @@
 
 namespace App\Filament\Resources\Entities\Schemas;
 
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\RichEditor;
+use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 
@@ -13,10 +16,26 @@ class EntityForm
             ->components([
                 TextInput::make('name')
                     ->required(),
-                TextInput::make('headers'),
-                TextInput::make('footers'),
-                TextInput::make('stamps'),
-                TextInput::make('logos'),
+                Repeater::make('headers')
+                    ->label('Headers')
+                    ->schema([
+                        RichEditor::make('content')
+                            ->label('Header'),
+                    ]),
+                Repeater::make('footers')
+                    ->label('Footers')
+                    ->schema([
+                        RichEditor::make('content')
+                            ->label('Footer'),
+                    ]),
+                SpatieMediaLibraryFileUpload::make('stamps')
+                    ->label('Stamps')
+                    ->collection('stamps')
+                    ->multiple(),
+                SpatieMediaLibraryFileUpload::make('logos')
+                    ->label('Logos')
+                    ->collection('logos')
+                    ->multiple(),
             ]);
     }
 }
