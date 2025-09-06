@@ -31,7 +31,8 @@ class Document extends Model
     public function entries(): BelongsToMany
     {
         return $this->belongsToMany(Entry::class)
-            ->wherePivotNull('deleted_at');
+            ->using(DocumentEntry::class)
+            ->withTimestamps();
     }
 
     public function rules(): array

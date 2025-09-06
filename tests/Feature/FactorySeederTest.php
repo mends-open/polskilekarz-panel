@@ -44,7 +44,6 @@ beforeEach(function () {
         $table->foreignId('entity_id');
         $table->foreignId('user_id');
         $table->timestamps();
-        $table->softDeletes();
     });
 
     Schema::create('patients', function (Blueprint $table) {
@@ -73,7 +72,6 @@ beforeEach(function () {
         $table->dateTimeTz('primary_since')->nullable();
         $table->dateTimeTz('message_consent_since')->nullable();
         $table->timestampsTz();
-        $table->softDeletesTz();
     });
 
     Schema::create('phones', function (Blueprint $table) {
@@ -92,7 +90,6 @@ beforeEach(function () {
         $table->dateTimeTz('sms_consent_since')->nullable();
         $table->dateTimeTz('whatsapp_consent_since')->nullable();
         $table->timestampsTz();
-        $table->softDeletesTz();
     });
 
     Schema::create('appointments', function (Blueprint $table) {
@@ -133,7 +130,6 @@ beforeEach(function () {
         $table->foreignId('medication_id');
         $table->foreignId('user_id');
         $table->timestampsTz();
-        $table->softDeletesTz();
     });
 
     Schema::create('documents', function (Blueprint $table) {
@@ -149,7 +145,6 @@ beforeEach(function () {
         $table->foreignId('document_id');
         $table->foreignId('entry_id');
         $table->timestampsTz();
-        $table->softDeletesTz();
     });
 });
 
@@ -227,7 +222,7 @@ it('seeds patient with contacts and appointment', function () {
     expect(AppointmentType::tryFrom(Appointment::first()->type))->toBe(AppointmentType::General);
 });
 
-it('soft deletes email patient pivot', function () {
+it('deletes email patient pivot', function () {
     $pivot = EmailPatient::factory()->create();
     $patient = $pivot->patient;
 
@@ -235,14 +230,13 @@ it('soft deletes email patient pivot', function () {
 
     $pivot->delete();
 
-    expect(EmailPatient::count())->toBe(0)
-        ->and(EmailPatient::withTrashed()->count())->toBe(1);
+    expect(EmailPatient::count())->toBe(0);
 
     $patient->refresh();
     expect($patient->emails()->count())->toBe(0);
 });
 
-it('soft deletes patient phone pivot', function () {
+it('deletes patient phone pivot', function () {
     $pivot = PatientPhone::factory()->create();
     $patient = $pivot->patient;
 
@@ -250,14 +244,13 @@ it('soft deletes patient phone pivot', function () {
 
     $pivot->delete();
 
-    expect(PatientPhone::count())->toBe(0)
-        ->and(PatientPhone::withTrashed()->count())->toBe(1);
+    expect(PatientPhone::count())->toBe(0);
 
     $patient->refresh();
     expect($patient->phones()->count())->toBe(0);
 });
 
-it('soft deletes document entry pivot', function () {
+it('deletes document entry pivot', function () {
     $pivot = DocumentEntry::factory()->create();
     $document = $pivot->document;
 
@@ -265,8 +258,7 @@ it('soft deletes document entry pivot', function () {
 
     $pivot->delete();
 
-    expect(DocumentEntry::count())->toBe(0)
-        ->and(DocumentEntry::withTrashed()->count())->toBe(1);
+    expect(DocumentEntry::count())->toBe(0);
 
     $document->refresh();
     expect($document->entries()->count())->toBe(0);

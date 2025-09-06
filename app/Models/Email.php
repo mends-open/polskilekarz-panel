@@ -19,7 +19,9 @@ class Email extends Model
     public function patients(): BelongsToMany
     {
         return $this->belongsToMany(Patient::class)
-            ->wherePivotNull('deleted_at');
+            ->using(EmailPatient::class)
+            ->withPivot(['primary_since', 'message_consent_since'])
+            ->withTimestamps();
     }
 
     public function rules(): array

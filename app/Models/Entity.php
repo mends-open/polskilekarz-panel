@@ -32,7 +32,8 @@ class Entity extends Model implements HasMedia
     public function users(): BelongsToMany
     {
         return $this->belongsToMany(User::class)
-            ->wherePivotNull('deleted_at');
+            ->using(EntityUser::class)
+            ->withTimestamps();
     }
 
     public function rules(): array

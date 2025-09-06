@@ -4,15 +4,18 @@ namespace App\Models;
 
 use App\Models\Concerns\ValidatesAttributes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 
-class EntryMedication extends Model
+class EntryMedication extends Pivot
 {
-    use HasFactory, SoftDeletes, ValidatesAttributes;
+    use HasFactory, ValidatesAttributes;
 
     protected $table = 'entry_medication';
+
+    public $incrementing = true;
+
+    public $timestamps = true;
 
     protected $fillable = [
         'entry_id',

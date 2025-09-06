@@ -57,7 +57,8 @@ class User extends Authenticatable implements HasMedia
     public function entities(): BelongsToMany
     {
         return $this->belongsToMany(Entity::class)
-            ->wherePivotNull('deleted_at');
+            ->using(EntityUser::class)
+            ->withTimestamps();
     }
 
     public function appointments(): HasMany
