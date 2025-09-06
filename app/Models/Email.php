@@ -18,7 +18,8 @@ class Email extends Model
 
     public function patients(): BelongsToMany
     {
-        return $this->belongsToMany(Patient::class)->using(EmailPatient::class);
+        return $this->belongsToMany(Patient::class)
+            ->wherePivotNull('deleted_at');
     }
 
     public function rules(): array

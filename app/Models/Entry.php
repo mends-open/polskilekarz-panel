@@ -47,7 +47,8 @@ class Entry extends Model
 
     public function documents(): BelongsToMany
     {
-        return $this->belongsToMany(Document::class)->using(DocumentEntry::class);
+        return $this->belongsToMany(Document::class)
+            ->wherePivotNull('deleted_at');
     }
 
     public function rules(): array
