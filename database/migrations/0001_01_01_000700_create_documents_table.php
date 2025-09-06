@@ -17,7 +17,6 @@ return new class extends Migration
             $table->id();
             $table->foreignIdFor(Patient::class)->constrained();
             $table->foreignIdFor(User::class)->constrained();
-            $table->string('attachment')->nullable();
             $table->timestampsTz();
             $table->softDeletesTz();
         });
