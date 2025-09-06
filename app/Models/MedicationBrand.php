@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\ValidatesAttributes;
+use App\Enums\Country;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,6 +20,10 @@ class MedicationBrand extends Model
         'administration',
         'form',
         'strength',
+    ];
+
+    protected $casts = [
+        'country' => Country::class,
     ];
 
     public function medication(): BelongsTo

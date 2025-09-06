@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Enums\Country;
 use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -32,29 +33,51 @@ class ImportEmaMedicationsJob implements ShouldQueue
         $sheet = $spreadsheet->getActiveSheet();
 
         $unique = [];
+        $brands = [];
         foreach ($sheet->toArray() as $index => $row) {
             if ($index < 20) {
                 continue; // Skip headers and preamble
             }
+            $brand = Str::of($row[0] ?? '')->squish()->value();
             $column = $row[1] ?? null;
-            if (! $column) {
+            $administration = Str::of($row[2] ?? '')->squish()->value();
+            $countryName = Str::of($row[3] ?? '')->squish()->value();
+
+            $country = Country::fromName($countryName);
+            if (! $column || ! $country) {
                 continue;
             }
-            $substances = preg_split('/[|,]/', $column);
+
+            $substances = explode('|', $column);
             foreach ($substances as $substance) {
                 $inn = $this->normalize($substance);
                 if ($inn === '') {
                     continue;
                 }
                 $unique[$inn] = true;
+
+                $key = $inn.'|'.$brand.'|'.$country->value.'|'.$administration;
+                $brands[$key] = [
+                    'inn' => $inn,
+                    'brand' => $brand,
+                    'country' => $country->value,
+                    'administration' => $administration,
+                    'form' => null,
+                    'strength' => null,
+                ];
             }
         }
 
         $inns = array_keys($unique);
-        $chunks = array_chunk($inns, 500);
+        $innChunks = array_chunk($inns, 500);
+        $brandChunks = array_chunk(array_values($brands), 500);
+
         $batch = Bus::batch([])->name('Import EMA medications')->dispatch();
-        foreach ($chunks as $chunk) {
+        foreach ($innChunks as $chunk) {
             $batch->add(new UpsertMedicationsJob($chunk));
+        }
+        foreach ($brandChunks as $chunk) {
+            $batch->add(new UpsertMedicationBrandsJob($chunk));
         }
     }
 
