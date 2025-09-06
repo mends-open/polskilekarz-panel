@@ -16,16 +16,16 @@ class UpsertMedicationsJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, Batchable;
 
     /** @var array<int, string> */
-    public function __construct(private array $names)
+    public function __construct(private array $inns)
     {
     }
 
     public function handle(): void
     {
-        foreach ($this->names as $name) {
-            $normalized = Str::of($name)->ascii()->lower()->squish()->value();
+        foreach ($this->inns as $inn) {
+            $normalized = Str::of($inn)->ascii()->lower()->squish()->value();
             if ($normalized !== '') {
-                Medication::firstOrCreate(['name' => $normalized]);
+                Medication::firstOrCreate(['inn' => $normalized]);
             }
         }
     }

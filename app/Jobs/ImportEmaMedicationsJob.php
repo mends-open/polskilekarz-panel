@@ -42,16 +42,16 @@ class ImportEmaMedicationsJob implements ShouldQueue
             }
             $substances = preg_split('/[|,]/', $column);
             foreach ($substances as $substance) {
-                $name = $this->normalize($substance);
-                if ($name === '') {
+                $inn = $this->normalize($substance);
+                if ($inn === '') {
                     continue;
                 }
-                $unique[$name] = true;
+                $unique[$inn] = true;
             }
         }
 
-        $names = array_keys($unique);
-        $chunks = array_chunk($names, 500);
+        $inns = array_keys($unique);
+        $chunks = array_chunk($inns, 500);
         $batch = Bus::batch([])->name('Import EMA medications')->dispatch();
         foreach ($chunks as $chunk) {
             $batch->add(new UpsertMedicationsJob($chunk));

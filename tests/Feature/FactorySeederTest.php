@@ -119,7 +119,7 @@ beforeEach(function () {
 
     Schema::create('medications', function (Blueprint $table) {
         $table->id();
-        $table->string('name');
+        $table->string('inn');
         $table->timestamps();
         $table->softDeletes();
     });
