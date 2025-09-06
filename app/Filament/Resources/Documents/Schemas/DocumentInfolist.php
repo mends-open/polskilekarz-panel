@@ -17,8 +17,6 @@ class DocumentInfolist
                 TextEntry::make('user_id')
                     ->label(__('documents.fields.user_id'))
                     ->numeric(),
-                TextEntry::make('attachment')
-                    ->label(__('documents.fields.attachment')),
                 TextEntry::make('created_at')
                     ->label(__('documents.fields.created_at'))
                     ->dateTime(),
