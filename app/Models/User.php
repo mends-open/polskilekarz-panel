@@ -49,8 +49,6 @@ class User extends Authenticatable implements HasMedia
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
             'signatures' => 'array',
             'stamps' => 'array',
         ];
@@ -89,9 +87,6 @@ class User extends Authenticatable implements HasMedia
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string'],
-            'email' => ['required', 'email'],
-            'password' => ['required', 'string'],
             'signatures' => ['nullable', 'array'],
             'stamps' => ['nullable', 'array'],
         ];
