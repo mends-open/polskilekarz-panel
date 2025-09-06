@@ -30,7 +30,7 @@ class Document extends Model
 
     public function entries(): BelongsToMany
     {
-        return $this->belongsToMany(Entry::class, 'document_entry')
+        return $this->belongsToMany(Entry::class)
             ->wherePivotNull('deleted_at');
     }
 

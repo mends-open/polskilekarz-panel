@@ -18,7 +18,7 @@ class Phone extends Model
 
     public function patients(): BelongsToMany
     {
-        return $this->belongsToMany(Patient::class, 'patient_phone')
+        return $this->belongsToMany(Patient::class)
             ->wherePivotNull('deleted_at');
     }
 

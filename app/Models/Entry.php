@@ -42,13 +42,13 @@ class Entry extends Model
 
     public function medications(): BelongsToMany
     {
-        return $this->belongsToMany(Medication::class, 'entry_medication')
+        return $this->belongsToMany(Medication::class)
             ->wherePivotNull('deleted_at');
     }
 
     public function documents(): BelongsToMany
     {
-        return $this->belongsToMany(Document::class, 'document_entry')
+        return $this->belongsToMany(Document::class)
             ->wherePivotNull('deleted_at');
     }
 
