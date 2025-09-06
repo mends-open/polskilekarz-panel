@@ -29,9 +29,29 @@ beforeEach(function () {
         $table->softDeletes();
     });
 
+    Schema::create('entities', function (Blueprint $table) {
+        $table->id();
+        $table->string('name');
+        $table->json('headers')->nullable();
+        $table->json('footers')->nullable();
+        $table->json('stamps')->nullable();
+        $table->json('logos')->nullable();
+        $table->timestamps();
+        $table->softDeletes();
+    });
+
+    Schema::create('entity_user', function (Blueprint $table) {
+        $table->id();
+        $table->foreignId('entity_id');
+        $table->foreignId('user_id');
+        $table->timestamps();
+        $table->softDeletes();
+    });
+
     Schema::create('documents', function (Blueprint $table) {
         $table->id();
         $table->foreignId('patient_id');
+        $table->foreignId('entity_id');
         $table->foreignId('user_id');
         $table->timestamps();
         $table->softDeletes();
@@ -40,6 +60,8 @@ beforeEach(function () {
 
 afterEach(function () {
     Schema::drop('documents');
+    Schema::drop('entity_user');
+    Schema::drop('entities');
     Schema::drop('patients');
     Schema::drop('users');
 });
