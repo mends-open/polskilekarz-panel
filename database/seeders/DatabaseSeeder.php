@@ -22,26 +22,26 @@ class DatabaseSeeder extends Seeder
         $user = User::factory()->create();
         $entity->users()->attach($user);
 
-        $patient = Patient::factory()->create();
+        Patient::factory()->count(5)->create()->each(function (Patient $patient) use ($user) {
+            $email = Email::factory()->create();
+            $patient->emails()->attach($email, [
+                'primary_since' => now(),
+                'message_consent_since' => now(),
+            ]);
 
-        $email = Email::factory()->create();
-        $patient->emails()->attach($email, [
-            'primary_since' => now(),
-            'message_consent_since' => now(),
-        ]);
+            $phone = Phone::factory()->create();
+            $patient->phones()->attach($phone, [
+                'primary_since' => now(),
+                'call_consent_since' => now(),
+                'sms_consent_since' => now(),
+                'whatsapp_consent_since' => now(),
+            ]);
 
-        $phone = Phone::factory()->create();
-        $patient->phones()->attach($phone, [
-            'primary_since' => now(),
-            'call_consent_since' => now(),
-            'sms_consent_since' => now(),
-            'whatsapp_consent_since' => now(),
-        ]);
-
-        Appointment::factory()
-            ->for($patient)
-            ->for($user)
-            ->state(['type' => AppointmentType::General->value])
-            ->create();
+            Appointment::factory()
+                ->for($patient)
+                ->for($user)
+                ->state(['type' => AppointmentType::General->value])
+                ->create();
+        });
     }
 }

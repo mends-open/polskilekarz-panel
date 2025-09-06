@@ -11,8 +11,6 @@ class EntryMedication extends Pivot
 {
     use HasFactory, ValidatesAttributes;
 
-    protected $table = 'entry_medication';
-
     public $incrementing = true;
 
     public $timestamps = true;

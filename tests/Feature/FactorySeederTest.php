@@ -209,16 +209,19 @@ it('creates entry medication pivot via factory', function () {
     expect(EntryMedication::count())->toBe(1);
 });
 
-it('seeds patient with contacts and appointment', function () {
+it('seeds patients with contacts and appointments', function () {
     (new DatabaseSeeder)->run();
 
     expect(User::count())->toBe(1);
     expect(Entity::count())->toBe(1);
+    expect(Patient::count())->toBe(5);
+    expect(Email::count())->toBe(5);
+    expect(Phone::count())->toBe(5);
+    expect(Appointment::count())->toBe(5);
     $patient = Patient::first();
     expect($patient)->not->toBeNull();
     expect($patient->emails()->count())->toBe(1);
     expect($patient->phones()->count())->toBe(1);
-    expect(Appointment::count())->toBe(1);
     expect(AppointmentType::tryFrom(Appointment::first()->type))->toBe(AppointmentType::General);
 });
 
@@ -262,4 +265,32 @@ it('deletes document entry pivot', function () {
 
     $document->refresh();
     expect($document->entries()->count())->toBe(0);
+});
+
+it('deletes entity user pivot', function () {
+    $pivot = EntityUser::factory()->create();
+    $entity = $pivot->entity;
+
+    expect($entity->users()->count())->toBe(1);
+
+    $pivot->delete();
+
+    expect(EntityUser::count())->toBe(0);
+
+    $entity->refresh();
+    expect($entity->users()->count())->toBe(0);
+});
+
+it('deletes entry medication pivot', function () {
+    $pivot = EntryMedication::factory()->create();
+    $entry = $pivot->entry;
+
+    expect($entry->medications()->count())->toBe(1);
+
+    $pivot->delete();
+
+    expect(EntryMedication::count())->toBe(0);
+
+    $entry->refresh();
+    expect($entry->medications()->count())->toBe(0);
 });

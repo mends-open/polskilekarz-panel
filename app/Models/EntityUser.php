@@ -11,8 +11,6 @@ class EntityUser extends Pivot
 {
     use HasFactory, ValidatesAttributes;
 
-    protected $table = 'entity_user';
-
     public $incrementing = true;
 
     public $timestamps = true;

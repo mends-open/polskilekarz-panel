@@ -11,8 +11,6 @@ class EmailPatient extends Pivot
 {
     use HasFactory, ValidatesAttributes;
 
-    protected $table = 'email_patient';
-
     public $incrementing = true;
 
     public $timestamps = true;

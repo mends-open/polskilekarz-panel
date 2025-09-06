@@ -11,8 +11,6 @@ class DocumentEntry extends Pivot
 {
     use HasFactory, ValidatesAttributes;
 
-    protected $table = 'document_entry';
-
     public $incrementing = true;
 
     public $timestamps = true;
