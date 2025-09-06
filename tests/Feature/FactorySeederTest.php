@@ -1,8 +1,14 @@
 <?php
 
-use App\Models\Document;
-use App\Models\DocumentEntry;
-use App\Models\Entry;
+use App\Enums\Appointment\AppointmentType;
+use App\Models\Appointment;
+use App\Models\Email;
+use App\Models\EmailPatient;
+use App\Models\Entity;
+use App\Models\Patient;
+use App\Models\PatientPhone;
+use App\Models\Phone;
+use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -15,18 +21,6 @@ beforeEach(function () {
         $table->timestamp('email_verified_at')->nullable();
         $table->string('password');
         $table->rememberToken();
-        $table->timestamps();
-        $table->softDeletes();
-    });
-
-    Schema::create('patients', function (Blueprint $table) {
-        $table->id();
-        $table->string('first_name');
-        $table->string('last_name');
-        $table->date('birth_date');
-        $table->string('gender');
-        $table->json('addresses')->nullable();
-        $table->json('identifiers')->nullable();
         $table->timestamps();
         $table->softDeletes();
     });
@@ -50,68 +44,123 @@ beforeEach(function () {
         $table->softDeletes();
     });
 
-    Schema::create('entries', function (Blueprint $table) {
+    Schema::create('patients', function (Blueprint $table) {
+        $table->id();
+        $table->string('first_name');
+        $table->string('last_name');
+        $table->date('birth_date');
+        $table->string('gender');
+        $table->json('addresses')->nullable();
+        $table->json('identifiers')->nullable();
+        $table->timestamps();
+        $table->softDeletes();
+    });
+
+    Schema::create('emails', function (Blueprint $table) {
+        $table->id();
+        $table->string('email');
+        $table->timestamps();
+        $table->softDeletes();
+    });
+
+    Schema::create('email_patient', function (Blueprint $table) {
+        $table->id();
+        $table->foreignId('patient_id');
+        $table->foreignId('email_id');
+        $table->dateTimeTz('primary_since')->nullable();
+        $table->dateTimeTz('message_consent_since')->nullable();
+        $table->timestampsTz();
+        $table->softDeletesTz();
+    });
+
+    Schema::create('phones', function (Blueprint $table) {
+        $table->id();
+        $table->string('phone');
+        $table->timestamps();
+        $table->softDeletes();
+    });
+
+    Schema::create('patient_phone', function (Blueprint $table) {
+        $table->id();
+        $table->foreignId('patient_id');
+        $table->foreignId('phone_id');
+        $table->dateTimeTz('primary_since')->nullable();
+        $table->dateTimeTz('call_consent_since')->nullable();
+        $table->dateTimeTz('sms_consent_since')->nullable();
+        $table->dateTimeTz('whatsapp_consent_since')->nullable();
+        $table->timestampsTz();
+        $table->softDeletesTz();
+    });
+
+    Schema::create('appointments', function (Blueprint $table) {
         $table->id();
         $table->foreignId('patient_id');
         $table->foreignId('user_id');
-        $table->foreignId('entity_id');
         $table->string('type');
-        $table->json('data')->nullable();
-        $table->timestamps();
-        $table->softDeletes();
-    });
-
-    Schema::create('documents', function (Blueprint $table) {
-        $table->id();
-        $table->foreignId('patient_id');
-        $table->foreignId('user_id');
-        $table->timestamps();
-        $table->softDeletes();
-    });
-
-    Schema::create('document_entry', function (Blueprint $table) {
-        $table->id();
-        $table->foreignId('document_id');
-        $table->foreignId('entry_id');
-        $table->timestamps();
-        $table->softDeletes();
+        $table->smallInteger('duration');
+        $table->dateTimeTz('scheduled_at');
+        $table->dateTimeTz('confirmed_at')->nullable();
+        $table->dateTimeTz('started_at')->nullable();
+        $table->dateTimeTz('cancelled_at')->nullable();
+        $table->timestampsTz();
+        $table->softDeletesTz();
     });
 });
 
 afterEach(function () {
-    Schema::drop('document_entry');
-    Schema::drop('documents');
-    Schema::drop('entries');
+    Schema::drop('appointments');
+    Schema::drop('patient_phone');
+    Schema::drop('phones');
+    Schema::drop('email_patient');
+    Schema::drop('emails');
+    Schema::drop('patients');
     Schema::drop('entity_user');
     Schema::drop('entities');
-    Schema::drop('patients');
     Schema::drop('users');
 });
 
-it('creates document via factory', function () {
-    $document = Document::factory()->create();
+it('creates email via factory', function () {
+    Email::factory()->create();
 
-    expect($document->patient)->not->toBeNull();
-    expect($document->user)->not->toBeNull();
+    expect(Email::count())->toBe(1);
 });
 
-it('creates entry via factory', function () {
-    $entry = Entry::factory()->create();
+it('creates phone via factory', function () {
+    Phone::factory()->create();
 
-    expect($entry->patient)->not->toBeNull();
-    expect($entry->user)->not->toBeNull();
-    expect($entry->entity)->not->toBeNull();
+    expect(Phone::count())->toBe(1);
 });
 
-it('creates document entry pivot via factory', function () {
-    DocumentEntry::factory()->create();
+it('creates appointment via factory', function () {
+    $appointment = Appointment::factory()->create();
 
-    expect(DocumentEntry::count())->toBe(1);
+    expect($appointment->patient)->not->toBeNull();
+    expect($appointment->user)->not->toBeNull();
+    expect(AppointmentType::tryFrom($appointment->type))->not->toBeNull();
 });
 
-it('seeds document with entries', function () {
+it('creates email patient pivot via factory', function () {
+    EmailPatient::factory()->create();
+
+    expect(EmailPatient::count())->toBe(1);
+});
+
+it('creates patient phone pivot via factory', function () {
+    PatientPhone::factory()->create();
+
+    expect(PatientPhone::count())->toBe(1);
+});
+
+it('seeds patient with contacts and appointment', function () {
     (new DatabaseSeeder())->run();
 
-    expect(Document::count())->toBe(1);
-    expect(Document::first()->entries()->count())->toBe(3);
+    expect(User::count())->toBe(1);
+    expect(Entity::count())->toBe(1);
+    $patient = Patient::first();
+    expect($patient)->not->toBeNull();
+    expect($patient->emails()->count())->toBe(1);
+    expect($patient->phones()->count())->toBe(1);
+    expect(Appointment::count())->toBe(1);
+    expect(AppointmentType::tryFrom(Appointment::first()->type))->toBe(AppointmentType::General);
 });
+

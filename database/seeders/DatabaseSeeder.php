@@ -2,10 +2,12 @@
 
 namespace Database\Seeders;
 
-use App\Models\Document;
+use App\Enums\Appointment\AppointmentType;
+use App\Models\Appointment;
+use App\Models\Email;
 use App\Models\Entity;
-use App\Models\Entry;
 use App\Models\Patient;
+use App\Models\Phone;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -19,20 +21,27 @@ class DatabaseSeeder extends Seeder
         $entity = Entity::factory()->create();
         $user = User::factory()->create();
         $entity->users()->attach($user);
+
         $patient = Patient::factory()->create();
 
-        $entries = Entry::factory()
-            ->count(3)
+        $email = Email::factory()->create();
+        $patient->emails()->attach($email, [
+            'primary_since' => now(),
+            'message_consent_since' => now(),
+        ]);
+
+        $phone = Phone::factory()->create();
+        $patient->phones()->attach($phone, [
+            'primary_since' => now(),
+            'call_consent_since' => now(),
+            'sms_consent_since' => now(),
+            'whatsapp_consent_since' => now(),
+        ]);
+
+        Appointment::factory()
             ->for($patient)
             ->for($user)
-            ->for($entity)
+            ->state(['type' => AppointmentType::General->value])
             ->create();
-
-        $document = Document::factory()
-            ->for($patient)
-            ->for($user)
-            ->create();
-
-        $document->entries()->attach($entries);
     }
 }

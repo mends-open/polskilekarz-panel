@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use App\Models\Concerns\ValidatesAttributes;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class PatientPhone extends Pivot
 {
-    use SoftDeletes, ValidatesAttributes;
+    use HasFactory, SoftDeletes, ValidatesAttributes;
 
     protected $table = 'patient_phone';
 
