@@ -12,7 +12,7 @@ return new class extends Migration
         Schema::create('medication_brands', function (Blueprint $table) {
             $table->id();
             $table->foreignIdFor(Medication::class);
-            $table->caseInsensitiveText('country');
+            $table->string('country');
             $table->string('brand');
             $table->string('administration');
             $table->string('form')->nullable();
