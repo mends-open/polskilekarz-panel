@@ -13,25 +13,31 @@ class UserInfolist
     {
         return $schema
             ->components([
-                TextEntry::make('name'),
+                TextEntry::make('name')
+                    ->label(__('users.fields.name')),
                 TextEntry::make('email')
-                    ->label('Email address'),
+                    ->label(__('users.fields.email')),
                 RepeatableEntry::make('signatures')
-                    ->label('Signatures')
+                    ->label(__('users.fields.signatures'))
                     ->schema([
                         TextEntry::make('content')
+                            ->label(__('users.fields.signature'))
                             ->html(),
                     ]),
                 SpatieMediaLibraryImageEntry::make('stamps')
-                    ->label('Stamps')
+                    ->label(__('users.fields.stamps'))
                     ->collection('stamps'),
                 TextEntry::make('email_verified_at')
+                    ->label(__('users.fields.email_verified_at'))
                     ->dateTime(),
                 TextEntry::make('created_at')
+                    ->label(__('users.fields.created_at'))
                     ->dateTime(),
                 TextEntry::make('updated_at')
+                    ->label(__('users.fields.updated_at'))
                     ->dateTime(),
                 TextEntry::make('deleted_at')
+                    ->label(__('users.fields.deleted_at'))
                     ->dateTime(),
             ]);
     }

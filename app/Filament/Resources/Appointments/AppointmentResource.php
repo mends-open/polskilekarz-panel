@@ -24,6 +24,21 @@ class AppointmentResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'Appointment';
 
+    public static function getModelLabel(): string
+    {
+        return __('appointments.label');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('appointments.plural');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('appointments.plural');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return AppointmentForm::configure($schema);

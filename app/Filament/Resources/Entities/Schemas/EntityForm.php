@@ -15,25 +15,26 @@ class EntityForm
         return $schema
             ->components([
                 TextInput::make('name')
+                    ->label(__('entities.fields.name'))
                     ->required(),
                 Repeater::make('headers')
-                    ->label('Headers')
+                    ->label(__('entities.fields.headers'))
                     ->schema([
                         RichEditor::make('content')
-                            ->label('Header'),
+                            ->label(__('entities.fields.header')),
                     ]),
                 Repeater::make('footers')
-                    ->label('Footers')
+                    ->label(__('entities.fields.footers'))
                     ->schema([
                         RichEditor::make('content')
-                            ->label('Footer'),
+                            ->label(__('entities.fields.footer')),
                     ]),
                 SpatieMediaLibraryFileUpload::make('stamps')
-                    ->label('Stamps')
+                    ->label(__('entities.fields.stamps'))
                     ->collection('stamps')
                     ->multiple(),
                 SpatieMediaLibraryFileUpload::make('logos')
-                    ->label('Logos')
+                    ->label(__('entities.fields.logos'))
                     ->collection('logos')
                     ->multiple(),
             ]);

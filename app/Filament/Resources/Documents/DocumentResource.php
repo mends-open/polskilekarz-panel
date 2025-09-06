@@ -24,6 +24,21 @@ class DocumentResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'Medication';
 
+    public static function getModelLabel(): string
+    {
+        return __('documents.label');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('documents.plural');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('documents.plural');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return DocumentForm::configure($schema);

@@ -12,12 +12,15 @@ class DocumentForm
         return $schema
             ->components([
                 TextInput::make('patient_id')
+                    ->label(__('documents.fields.patient_id'))
                     ->required()
                     ->numeric(),
                 TextInput::make('user_id')
+                    ->label(__('documents.fields.user_id'))
                     ->required()
                     ->numeric(),
-                TextInput::make('attachment'),
+                TextInput::make('attachment')
+                    ->label(__('documents.fields.attachment')),
             ]);
     }
 }

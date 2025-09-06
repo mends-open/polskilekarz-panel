@@ -24,6 +24,21 @@ class SubmissionResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'Submission';
 
+    public static function getModelLabel(): string
+    {
+        return __('submissions.label');
+    }
+
+    public static function getPluralModelLabel(): string
+    {
+        return __('submissions.plural');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('submissions.plural');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return SubmissionForm::configure($schema);

@@ -16,16 +16,20 @@ class EntitiesTable
         return $table
             ->columns([
                 TextColumn::make('name')
+                    ->label(__('entities.fields.name'))
                     ->searchable(),
                 TextColumn::make('created_at')
+                    ->label(__('entities.fields.created_at'))
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('updated_at')
+                    ->label(__('entities.fields.updated_at'))
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('deleted_at')
+                    ->label(__('entities.fields.deleted_at'))
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
