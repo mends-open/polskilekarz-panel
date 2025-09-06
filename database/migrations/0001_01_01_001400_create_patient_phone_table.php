@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\Email;
 use App\Models\Patient;
+use App\Models\Phone;
 use Illuminate\Database\Migrations\Migration;
 use Tpetry\PostgresqlEnhanced\Query\Builder;
 use Tpetry\PostgresqlEnhanced\Schema\Blueprint;
@@ -14,16 +14,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('email_patients', function (Blueprint $table) {
+        Schema::create('patient_phone', function (Blueprint $table) {
             $table->id();
             $table->foreignIdFor(Patient::class)->constrained();
-            $table->foreignIdFor(Email::class)->constrained();
+            $table->foreignIdFor(Phone::class)->constrained();
             $table->timestampTz('primary_since')->nullable();
-            $table->timestampTz('message_consent_since')->nullable();
+            $table->timestampTz('call_consent_since')->nullable();
+            $table->timestampTz('sms_consent_since')->nullable();
+            $table->timestampTz('whatsapp_consent_since')->nullable();
             $table->timestampsTz();
             $table->softDeletesTz();
 
-            $table->unique(['patient_id', 'email_id']);
+            $table->unique(['patient_id', 'phone_id']);
 
             $table->uniqueIndex(['patient_id'])
                 ->where(fn (Builder $condition) => $condition->whereNotNull('primary_since')
@@ -36,6 +38,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('email_patients');
+        Schema::dropIfExists('patient_phone');
     }
 };

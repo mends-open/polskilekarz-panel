@@ -12,6 +12,8 @@ class PatientPhone extends Model
 {
     use HasFactory, SoftDeletes, ValidatesAttributes;
 
+    protected $table = 'patient_phone';
+
     protected $fillable = [
         'patient_id',
         'phone_id',

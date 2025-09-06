@@ -56,7 +56,7 @@ class User extends Authenticatable implements HasMedia
 
     public function entities(): BelongsToMany
     {
-        return $this->belongsToMany(Entity::class, 'entity_users')
+        return $this->belongsToMany(Entity::class, 'entity_user')
             ->wherePivotNull('deleted_at');
     }
 

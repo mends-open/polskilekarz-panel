@@ -18,7 +18,7 @@ class Medication extends Model
 
     public function entries(): BelongsToMany
     {
-        return $this->belongsToMany(Entry::class, 'entry_medications')
+        return $this->belongsToMany(Entry::class, 'entry_medication')
             ->wherePivotNull('deleted_at');
     }
 

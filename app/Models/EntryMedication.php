@@ -12,6 +12,8 @@ class EntryMedication extends Model
 {
     use HasFactory, SoftDeletes, ValidatesAttributes;
 
+    protected $table = 'entry_medication';
+
     protected $fillable = [
         'entry_id',
         'medication_id',

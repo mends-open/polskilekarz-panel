@@ -39,7 +39,7 @@ beforeEach(function () {
         $table->softDeletes();
     });
 
-    Schema::create('entity_users', function (Blueprint $table) {
+    Schema::create('entity_user', function (Blueprint $table) {
         $table->id();
         $table->foreignId('entity_id');
         $table->foreignId('user_id');
@@ -66,7 +66,7 @@ beforeEach(function () {
         $table->softDeletes();
     });
 
-    Schema::create('email_patients', function (Blueprint $table) {
+    Schema::create('email_patient', function (Blueprint $table) {
         $table->id();
         $table->foreignId('patient_id');
         $table->foreignId('email_id');
@@ -83,7 +83,7 @@ beforeEach(function () {
         $table->softDeletes();
     });
 
-    Schema::create('patient_phones', function (Blueprint $table) {
+    Schema::create('patient_phone', function (Blueprint $table) {
         $table->id();
         $table->foreignId('patient_id');
         $table->foreignId('phone_id');
@@ -127,7 +127,7 @@ beforeEach(function () {
         $table->softDeletes();
     });
 
-    Schema::create('entry_medications', function (Blueprint $table) {
+    Schema::create('entry_medication', function (Blueprint $table) {
         $table->id();
         $table->foreignId('entry_id');
         $table->foreignId('medication_id');
@@ -144,7 +144,7 @@ beforeEach(function () {
         $table->softDeletesTz();
     });
 
-    Schema::create('document_entries', function (Blueprint $table) {
+    Schema::create('document_entry', function (Blueprint $table) {
         $table->id();
         $table->foreignId('document_id');
         $table->foreignId('entry_id');
@@ -154,18 +154,18 @@ beforeEach(function () {
 });
 
 afterEach(function () {
-    Schema::drop('document_entries');
+    Schema::drop('document_entry');
     Schema::drop('documents');
-    Schema::drop('entry_medications');
+    Schema::drop('entry_medication');
     Schema::drop('medications');
     Schema::drop('entries');
     Schema::drop('appointments');
-    Schema::drop('patient_phones');
+    Schema::drop('patient_phone');
     Schema::drop('phones');
-    Schema::drop('email_patients');
+    Schema::drop('email_patient');
     Schema::drop('emails');
     Schema::drop('patients');
-    Schema::drop('entity_users');
+    Schema::drop('entity_user');
     Schema::drop('entities');
     Schema::drop('users');
 });

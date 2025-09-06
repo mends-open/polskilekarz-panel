@@ -12,6 +12,8 @@ class EntityUser extends Model
 {
     use HasFactory, SoftDeletes, ValidatesAttributes;
 
+    protected $table = 'entity_user';
+
     protected $fillable = [
         'entity_id',
         'user_id',
