@@ -10,6 +10,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Throwable;
 
@@ -41,7 +42,7 @@ class ImportEmaMedicationsJob implements ShouldQueue
             }
             $substances = preg_split('/[|,]/', $column);
             foreach ($substances as $substance) {
-                $name = strtolower(trim($substance));
+                $name = $this->normalize($substance);
                 if ($name === '') {
                     continue;
                 }
@@ -60,5 +61,14 @@ class ImportEmaMedicationsJob implements ShouldQueue
     public function failed(Throwable $e): void
     {
         // Optionally handle failures
+    }
+
+    private function normalize(string $value): string
+    {
+        return Str::of($value)
+            ->ascii()
+            ->lower()
+            ->squish()
+            ->value();
     }
 }
