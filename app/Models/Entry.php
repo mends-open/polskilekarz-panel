@@ -42,12 +42,17 @@ class Entry extends Model
 
     public function medications(): BelongsToMany
     {
-        return $this->belongsToMany(Medication::class)->using(EntryMedication::class);
+        return $this->belongsToMany(Medication::class)
+            ->using(EntryMedication::class)
+            ->withPivot('user_id')
+            ->withTimestamps();
     }
 
     public function documents(): BelongsToMany
     {
-        return $this->belongsToMany(Document::class)->using(DocumentEntry::class);
+        return $this->belongsToMany(Document::class)
+            ->using(DocumentEntry::class)
+            ->withTimestamps();
     }
 
     public function rules(): array

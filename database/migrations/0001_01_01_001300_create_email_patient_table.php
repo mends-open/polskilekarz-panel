@@ -21,13 +21,11 @@ return new class extends Migration
             $table->timestampTz('primary_since')->nullable();
             $table->timestampTz('message_consent_since')->nullable();
             $table->timestampsTz();
-            $table->softDeletesTz();
 
             $table->unique(['patient_id', 'email_id']);
 
             $table->uniqueIndex(['patient_id'])
-                ->where(fn (Builder $condition) =>
-                $condition->whereNotNull('primary_since')
+                ->where(fn (Builder $condition) => $condition->whereNotNull('primary_since')
                 );
         });
     }

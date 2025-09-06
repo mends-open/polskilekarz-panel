@@ -3,15 +3,17 @@
 namespace App\Models;
 
 use App\Models\Concerns\ValidatesAttributes;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\Pivot;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class EmailPatient extends Pivot
 {
-    use SoftDeletes, ValidatesAttributes;
+    use HasFactory, ValidatesAttributes;
 
-    protected $table = 'email_patient';
+    public $incrementing = true;
+
+    public $timestamps = true;
 
     protected $fillable = [
         'patient_id',

@@ -7,16 +7,16 @@ use App\Models\Concerns\ValidatesAttributes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
 class User extends Authenticatable implements HasMedia
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, SoftDeletes, ValidatesAttributes, InteractsWithMedia;
+    use HasFactory, InteractsWithMedia, Notifiable, SoftDeletes, ValidatesAttributes;
 
     /**
      * The attributes that are mass assignable.
@@ -56,7 +56,9 @@ class User extends Authenticatable implements HasMedia
 
     public function entities(): BelongsToMany
     {
-        return $this->belongsToMany(Entity::class)->using(EntityUser::class);
+        return $this->belongsToMany(Entity::class)
+            ->using(EntityUser::class)
+            ->withTimestamps();
     }
 
     public function appointments(): HasMany

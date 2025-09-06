@@ -23,9 +23,6 @@ class DocumentsTable
                     ->label(__('documents.fields.user_id'))
                     ->numeric()
                     ->sortable(),
-                TextColumn::make('attachment')
-                    ->label(__('documents.fields.attachment'))
-                    ->searchable(),
                 TextColumn::make('created_at')
                     ->label(__('documents.fields.created_at'))
                     ->dateTime()

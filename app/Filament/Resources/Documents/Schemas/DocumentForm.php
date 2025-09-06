@@ -19,8 +19,6 @@ class DocumentForm
                     ->label(__('documents.fields.user_id'))
                     ->required()
                     ->numeric(),
-                TextInput::make('attachment')
-                    ->label(__('documents.fields.attachment')),
             ]);
     }
 }

@@ -18,7 +18,6 @@ return new class extends Migration
             $table->foreignIdFor(Document::class)->constrained();
             $table->foreignIdFor(Entry::class)->constrained();
             $table->timestampsTz();
-            $table->softDeletesTz();
         });
     }
 

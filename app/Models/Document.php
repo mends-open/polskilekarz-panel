@@ -16,7 +16,6 @@ class Document extends Model
     protected $fillable = [
         'patient_id',
         'user_id',
-        'attachment',
     ];
 
     public function patient(): BelongsTo
@@ -31,7 +30,9 @@ class Document extends Model
 
     public function entries(): BelongsToMany
     {
-        return $this->belongsToMany(Entry::class)->using(DocumentEntry::class);
+        return $this->belongsToMany(Entry::class)
+            ->using(DocumentEntry::class)
+            ->withTimestamps();
     }
 
     public function rules(): array
@@ -39,7 +40,6 @@ class Document extends Model
         return [
             'patient_id' => ['required', 'exists:patients,id'],
             'user_id' => ['required', 'exists:users,id'],
-            'attachment' => ['nullable', 'string'],
         ];
     }
 }

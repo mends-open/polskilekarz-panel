@@ -3,15 +3,17 @@
 namespace App\Models;
 
 use App\Models\Concerns\ValidatesAttributes;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\Pivot;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class EntityUser extends Pivot
 {
-    use SoftDeletes, ValidatesAttributes;
+    use HasFactory, ValidatesAttributes;
 
-    protected $table = 'entity_user';
+    public $incrementing = true;
+
+    public $timestamps = true;
 
     protected $fillable = [
         'entity_id',

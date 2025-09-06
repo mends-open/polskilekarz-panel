@@ -18,7 +18,15 @@ class Phone extends Model
 
     public function patients(): BelongsToMany
     {
-        return $this->belongsToMany(Patient::class)->using(PatientPhone::class);
+        return $this->belongsToMany(Patient::class)
+            ->using(PatientPhone::class)
+            ->withPivot([
+                'primary_since',
+                'call_consent_since',
+                'sms_consent_since',
+                'whatsapp_consent_since',
+            ])
+            ->withTimestamps();
     }
 
     public function rules(): array

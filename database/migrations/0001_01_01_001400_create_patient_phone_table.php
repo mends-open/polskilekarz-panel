@@ -23,13 +23,11 @@ return new class extends Migration
             $table->timestampTz('sms_consent_since')->nullable();
             $table->timestampTz('whatsapp_consent_since')->nullable();
             $table->timestampsTz();
-            $table->softDeletesTz();
 
             $table->unique(['patient_id', 'phone_id']);
 
             $table->uniqueIndex(['patient_id'])
-                ->where(fn (Builder $condition) =>
-                    $condition->whereNotNull('primary_since')
+                ->where(fn (Builder $condition) => $condition->whereNotNull('primary_since')
                 );
         });
     }

@@ -18,8 +18,7 @@ return new class extends Migration
             $table->foreignIdFor(Entity::class)->constrained();
             $table->foreignIdFor(User::class)->constrained();
             $table->timestampsTz();
-            $table->softDeletesTz();
-        });;
+        });
     }
 
     /**

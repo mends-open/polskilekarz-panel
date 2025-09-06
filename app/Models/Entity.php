@@ -12,7 +12,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 
 class Entity extends Model implements HasMedia
 {
-    use HasFactory, SoftDeletes, ValidatesAttributes, InteractsWithMedia;
+    use HasFactory, InteractsWithMedia, SoftDeletes, ValidatesAttributes;
 
     protected $fillable = [
         'name',
@@ -31,7 +31,9 @@ class Entity extends Model implements HasMedia
 
     public function users(): BelongsToMany
     {
-        return $this->belongsToMany(User::class)->using(EntityUser::class);
+        return $this->belongsToMany(User::class)
+            ->using(EntityUser::class)
+            ->withTimestamps();
     }
 
     public function rules(): array

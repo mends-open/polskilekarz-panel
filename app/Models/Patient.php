@@ -50,12 +50,23 @@ class Patient extends Model
 
     public function emails(): BelongsToMany
     {
-        return $this->belongsToMany(Email::class)->using(EmailPatient::class);
+        return $this->belongsToMany(Email::class)
+            ->using(EmailPatient::class)
+            ->withPivot(['primary_since', 'message_consent_since'])
+            ->withTimestamps();
     }
 
     public function phones(): BelongsToMany
     {
-        return $this->belongsToMany(Phone::class)->using(PatientPhone::class);
+        return $this->belongsToMany(Phone::class)
+            ->using(PatientPhone::class)
+            ->withPivot([
+                'primary_since',
+                'call_consent_since',
+                'sms_consent_since',
+                'whatsapp_consent_since',
+            ])
+            ->withTimestamps();
     }
 
     public function rules(): array
