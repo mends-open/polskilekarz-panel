@@ -1,6 +1,7 @@
 <?php
 
-use App\Models\Entity;
+use App\Models\Entry;
+use App\Models\Medication;
 use App\Models\User;
 use Illuminate\Database\Migrations\Migration;
 use Tpetry\PostgresqlEnhanced\Schema\Blueprint;
@@ -13,13 +14,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('entity_user', function (Blueprint $table) {
+        Schema::create('entry_medications', function (Blueprint $table) {
             $table->id();
-            $table->foreignIdFor(Entity::class)->constrained();
-            $table->foreignIdFor(User::class)->constrained();
+            $table->foreignIdFor(Entry::class);
+            $table->foreignIdFor(Medication::class);
+            $table->foreignIdFor(User::class);
             $table->timestampsTz();
             $table->softDeletesTz();
-        });;
+        });
     }
 
     /**
@@ -27,6 +29,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('entity_user');
+        Schema::dropIfExists('entry_medications');
     }
 };

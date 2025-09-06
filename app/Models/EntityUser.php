@@ -3,15 +3,14 @@
 namespace App\Models;
 
 use App\Models\Concerns\ValidatesAttributes;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\Pivot;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class EntityUser extends Pivot
+class EntityUser extends Model
 {
-    use SoftDeletes, ValidatesAttributes;
-
-    protected $table = 'entity_user';
+    use HasFactory, SoftDeletes, ValidatesAttributes;
 
     protected $fillable = [
         'entity_id',

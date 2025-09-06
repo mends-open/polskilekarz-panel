@@ -50,13 +50,13 @@ class Patient extends Model
 
     public function emails(): BelongsToMany
     {
-        return $this->belongsToMany(Email::class)
+        return $this->belongsToMany(Email::class, 'email_patients')
             ->wherePivotNull('deleted_at');
     }
 
     public function phones(): BelongsToMany
     {
-        return $this->belongsToMany(Phone::class)
+        return $this->belongsToMany(Phone::class, 'patient_phones')
             ->wherePivotNull('deleted_at');
     }
 

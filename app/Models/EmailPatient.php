@@ -12,8 +12,6 @@ class EmailPatient extends Model
 {
     use HasFactory, SoftDeletes, ValidatesAttributes;
 
-    protected $table = 'email_patient';
-
     protected $fillable = [
         'patient_id',
         'email_id',

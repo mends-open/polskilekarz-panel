@@ -12,8 +12,6 @@ class DocumentEntry extends Model
 {
     use HasFactory, SoftDeletes, ValidatesAttributes;
 
-    protected $table = 'document_entry';
-
     protected $fillable = [
         'document_id',
         'entry_id',
