@@ -2,9 +2,11 @@
 
 namespace Database\Seeders;
 
+use App\Models\Document;
+use App\Models\Entity;
+use App\Models\Entry;
+use App\Models\Patient;
 use App\Models\User;
-use Database\Seeders\DocumentSeeder;
-// use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -14,13 +16,23 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        $entity = Entity::factory()->create();
+        $user = User::factory()->create();
+        $entity->users()->attach($user);
+        $patient = Patient::factory()->create();
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        $entries = Entry::factory()
+            ->count(3)
+            ->for($patient)
+            ->for($user)
+            ->for($entity)
+            ->create();
 
-        $this->call(DocumentSeeder::class);
+        $document = Document::factory()
+            ->for($patient)
+            ->for($user)
+            ->create();
+
+        $document->entries()->attach($entries);
     }
 }

@@ -15,18 +15,12 @@ class Document extends Model
 
     protected $fillable = [
         'patient_id',
-        'entity_id',
         'user_id',
     ];
 
     public function patient(): BelongsTo
     {
         return $this->belongsTo(Patient::class);
-    }
-
-    public function entity(): BelongsTo
-    {
-        return $this->belongsTo(Entity::class);
     }
 
     public function user(): BelongsTo
@@ -43,7 +37,6 @@ class Document extends Model
     {
         return [
             'patient_id' => ['required', 'exists:patients,id'],
-            'entity_id' => ['required', 'exists:entities,id'],
             'user_id' => ['required', 'exists:users,id'],
         ];
     }
