@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\ValidatesAttributes;
-use App\Enums\Country;
+use App\Enums\MedicationBrandCountry;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -23,7 +23,7 @@ class MedicationBrand extends Model
     ];
 
     protected $casts = [
-        'country' => Country::class,
+        'country' => MedicationBrandCountry::class,
     ];
 
     public function medication(): BelongsTo
@@ -35,7 +35,7 @@ class MedicationBrand extends Model
     {
         return [
             'medication_id' => ['required', 'exists:medications,id'],
-            'country' => ['required', 'string', 'size:2'],
+            'country' => ['required', new \Illuminate\Validation\Rules\Enum(MedicationBrandCountry::class)],
             'brand' => ['required', 'string'],
             'administration' => ['required', 'string'],
             'form' => ['nullable', 'string'],

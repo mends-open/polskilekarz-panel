@@ -2,7 +2,7 @@
 
 namespace App\Jobs;
 
-use App\Enums\Country;
+use App\Enums\MedicationBrandCountry;
 use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -42,8 +42,8 @@ class ImportEmaMedicationsJob implements ShouldQueue
             $column = $row[1] ?? null;
             $administration = Str::of($row[2] ?? '')->squish()->value();
             $countryName = Str::of($row[3] ?? '')->squish()->value();
-
-            $country = Country::fromName($countryName);
+            $countryKey = $this->normalizeCountry($countryName);
+            $country = MedicationBrandCountry::tryFrom($countryKey);
             if (! $column || ! $country) {
                 continue;
             }
@@ -93,5 +93,17 @@ class ImportEmaMedicationsJob implements ShouldQueue
             ->lower()
             ->squish()
             ->value();
+    }
+
+    private function normalizeCountry(string $value): string
+    {
+        $key = Str::of($value)
+            ->ascii()
+            ->lower()
+            ->replace(['(', ')'], '')
+            ->snake()
+            ->value();
+
+        return $key === 'european_union' ? 'eu' : $key;
     }
 }
