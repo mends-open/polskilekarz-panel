@@ -25,8 +25,9 @@ class FetchEmaMedications extends Command
 
         Bus::batch([
             new UpsertEmaMedicationData($path),
-            new ImportEmaMedications($path),
-        ])->name('ema-medications-import')->dispatch();
+        ])->name('ema-medications-import')
+            ->then(fn () => ImportEmaMedications::dispatch($path))
+            ->dispatch();
 
         $this->info('Import batch dispatched.');
 

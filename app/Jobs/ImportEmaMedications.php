@@ -57,12 +57,16 @@ class ImportEmaMedications implements ShouldQueue
 
             foreach ($substances as $substance) {
                 foreach ($routes as $route) {
-                    Medication::firstOrCreate([
+                    $medication = Medication::withTrashed()->firstOrCreate([
                         'active_substance_id' => $substance->id,
                         'medicinal_product_id' => $product->id,
                         'country' => $country,
                         'route_of_administration' => $route,
                     ]);
+
+                    if ($medication->trashed()) {
+                        $medication->restore();
+                    }
                 }
             }
         }
