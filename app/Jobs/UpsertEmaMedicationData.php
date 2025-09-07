@@ -11,7 +11,9 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Spatie\SimpleExcel\SimpleExcelReader;
+use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class UpsertEmaMedicationData implements ShouldQueue
 {
@@ -25,21 +27,31 @@ class UpsertEmaMedicationData implements ShouldQueue
 
     public function handle(): void
     {
-        $rows = SimpleExcelReader::create($this->path)
-            ->headerOnRow(20)
-            ->headersToSnakeCase()
-            ->getRows();
+        $sheet = IOFactory::load($this->path)->getActiveSheet();
+        $headerRow = 20;
+        $highestColumn = Coordinate::columnIndexFromString($sheet->getHighestDataColumn());
+        $highestRow = $sheet->getHighestDataRow();
+
+        $headers = [];
+        for ($col = 1; $col <= $highestColumn; $col++) {
+            $headers[$col] = Str::snake((string) $sheet->getCellByColumnAndRow($col, $headerRow)->getValue());
+        }
 
         $products = [];
         $substances = [];
 
-        foreach ($rows as $row) {
-            $product = trim($row['product_name'] ?? '');
+        for ($row = $headerRow + 1; $row <= $highestRow; $row++) {
+            $rowData = [];
+            for ($col = 1; $col <= $highestColumn; $col++) {
+                $rowData[$headers[$col]] = trim((string) $sheet->getCellByColumnAndRow($col, $row)->getValue());
+            }
+
+            $product = $rowData['product_name'] ?? '';
             if ($product !== '') {
                 $products[] = ['name' => $product];
             }
 
-            foreach (explode('|', $row['active_substance'] ?? '') as $name) {
+            foreach (explode('|', $rowData['active_substance'] ?? '') as $name) {
                 $name = trim($name);
                 if ($name !== '') {
                     $substances[] = ['name' => $name];

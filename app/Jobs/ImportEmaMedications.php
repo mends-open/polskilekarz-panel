@@ -14,7 +14,9 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Spatie\SimpleExcel\SimpleExcelReader;
+use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class ImportEmaMedications implements ShouldQueue
 {
@@ -26,13 +28,23 @@ class ImportEmaMedications implements ShouldQueue
 
     public function handle(): void
     {
-        $rows = SimpleExcelReader::create($this->path)
-            ->headerOnRow(20)
-            ->headersToSnakeCase()
-            ->getRows();
+        $sheet = IOFactory::load($this->path)->getActiveSheet();
+        $headerRow = 20;
+        $highestColumn = Coordinate::columnIndexFromString($sheet->getHighestDataColumn());
+        $highestRow = $sheet->getHighestDataRow();
 
-        foreach ($rows as $row) {
-            $productName = trim($row['product_name'] ?? '');
+        $headers = [];
+        for ($col = 1; $col <= $highestColumn; $col++) {
+            $headers[$col] = Str::snake((string) $sheet->getCellByColumnAndRow($col, $headerRow)->getValue());
+        }
+
+        for ($row = $headerRow + 1; $row <= $highestRow; $row++) {
+            $rowData = [];
+            for ($col = 1; $col <= $highestColumn; $col++) {
+                $rowData[$headers[$col]] = trim((string) $sheet->getCellByColumnAndRow($col, $row)->getValue());
+            }
+
+            $productName = $rowData['product_name'] ?? '';
             if ($productName === '') {
                 continue;
             }
@@ -42,19 +54,18 @@ class ImportEmaMedications implements ShouldQueue
                 continue;
             }
 
-            $country = Country::tryFromName($row['product_authorisation_country'] ?? '');
+            $country = Country::tryFromName($rowData['product_authorisation_country'] ?? '');
             if (!$country) {
                 continue;
             }
 
-            $routes = collect(explode('|', $row['route_of_administration'] ?? ''))
+            $routes = collect(explode('|', $rowData['route_of_administration'] ?? ''))
                 ->map(fn ($r) => RouteOfAdministration::tryFromName(trim($r)))
                 ->filter();
 
-            $substances = collect(explode('|', $row['active_substance'] ?? ''))
+            $substances = collect(explode('|', $rowData['active_substance'] ?? ''))
                 ->map(fn ($s) => ActiveSubstance::firstWhere('name', trim($s)))
                 ->filter();
-
             foreach ($substances as $substance) {
                 foreach ($routes as $route) {
                     $medication = Medication::withTrashed()->firstOrCreate([
