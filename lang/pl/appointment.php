@@ -3,6 +3,14 @@
 return [
     'label' => 'Wizyta',
     'plural' => 'Wizyty',
+    'type' => [
+        'unspecified' => 'Nieokreślona',
+        'primary_care' => 'Podstawowa opieka',
+        'psychiatric' => 'Psychiatryczna',
+        'psychological' => 'Psychologiczna',
+        'prescription' => 'Recepta',
+        'documentation' => 'Dokumentacja',
+    ],
     'fields' => [
         'patient_id' => 'Pacjent',
         'user_id' => 'Użytkownik',

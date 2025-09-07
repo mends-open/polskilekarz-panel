@@ -31,7 +31,7 @@ enum Type: string implements HasLabel
 
     public function getLabel(): ?string
     {
-        return __('entries.type.' . $this->value);
+        return __('entry.type.' . $this->value);
     }
 
     public static function labels(): array

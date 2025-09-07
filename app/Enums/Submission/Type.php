@@ -13,7 +13,7 @@ enum Type: string implements HasLabel
 
     public function getLabel(): ?string
     {
-        return __('submissions.type.' . $this->value);
+        return __('submission.type.' . $this->value);
     }
 
     public static function labels(): array

@@ -14,35 +14,35 @@ class PatientInfolist
         return $schema
             ->components([
                 TextEntry::make('first_name')
-                    ->label(__('patients.fields.first_name')),
+                    ->label(__('patient.fields.first_name')),
                 TextEntry::make('last_name')
-                    ->label(__('patients.fields.last_name')),
+                    ->label(__('patient.fields.last_name')),
                 TextEntry::make('birth_date')
-                    ->label(__('patients.fields.birth_date'))
+                    ->label(__('patient.fields.birth_date'))
                     ->date(),
                 TextEntry::make('gender')
-                    ->label(__('patients.fields.gender'))
+                    ->label(__('patient.fields.gender'))
                     ->formatStateUsing(fn (?string $state) => $state ? Gender::labels()[$state] ?? $state : null),
                 RepeatableEntry::make('addresses')
-                    ->label(__('patients.fields.addresses'))
+                    ->label(__('patient.fields.addresses'))
                     ->schema([
                         TextEntry::make('line1')
-                            ->label(__('patients.fields.line1')),
+                            ->label(__('patient.fields.line1')),
                         TextEntry::make('city')
-                            ->label(__('patients.fields.city')),
+                            ->label(__('patient.fields.city')),
                         TextEntry::make('postal_code')
-                            ->label(__('patients.fields.postal_code')),
+                            ->label(__('patient.fields.postal_code')),
                         TextEntry::make('country')
-                            ->label(__('patients.fields.country')),
+                            ->label(__('patient.fields.country')),
                     ]),
                 TextEntry::make('created_at')
-                    ->label(__('patients.fields.created_at'))
+                    ->label(__('patient.fields.created_at'))
                     ->dateTime(),
                 TextEntry::make('updated_at')
-                    ->label(__('patients.fields.updated_at'))
+                    ->label(__('patient.fields.updated_at'))
                     ->dateTime(),
                 TextEntry::make('deleted_at')
-                    ->label(__('patients.fields.deleted_at'))
+                    ->label(__('patient.fields.deleted_at'))
                     ->dateTime(),
             ]);
     }

@@ -26,17 +26,17 @@ class EntityResource extends Resource
 
     public static function getModelLabel(): string
     {
-        return __('entities.label');
+        return __('entity.label');
     }
 
     public static function getPluralModelLabel(): string
     {
-        return __('entities.plural');
+        return __('entity.plural');
     }
 
     public static function getNavigationLabel(): string
     {
-        return __('entities.plural');
+        return __('entity.plural');
     }
 
     public static function form(Schema $schema): Schema

@@ -4,7 +4,8 @@ return [
     'label' => 'Appointment',
     'plural' => 'Appointments',
     'type' => [
-        'general' => 'General',
+        'unspecified' => 'Unspecified',
+        'primary_care' => 'Primary care',
         'psychiatric' => 'Psychiatric',
         'psychological' => 'Psychological',
         'prescription' => 'Prescription',

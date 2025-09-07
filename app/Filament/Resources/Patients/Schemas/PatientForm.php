@@ -16,33 +16,33 @@ class PatientForm
         return $schema
             ->components([
                 TextInput::make('first_name')
-                    ->label(__('patients.fields.first_name'))
+                    ->label(__('patient.fields.first_name'))
                     ->required(),
                 TextInput::make('last_name')
-                    ->label(__('patients.fields.last_name'))
+                    ->label(__('patient.fields.last_name'))
                     ->required(),
                 DatePicker::make('birth_date')
-                    ->label(__('patients.fields.birth_date'))
+                    ->label(__('patient.fields.birth_date'))
                     ->required(),
                 ToggleButtons::make('gender')
-                    ->label(__('patients.fields.gender'))
+                    ->label(__('patient.fields.gender'))
                     ->options(Gender::class)
                     ->inline()
                     ->required(),
                 Repeater::make('addresses')
-                    ->label(__('patients.fields.addresses'))
+                    ->label(__('patient.fields.addresses'))
                     ->schema([
                         TextInput::make('line1')
-                            ->label(__('patients.fields.line1')),
+                            ->label(__('patient.fields.line1')),
                         TextInput::make('city')
-                            ->label(__('patients.fields.city')),
+                            ->label(__('patient.fields.city')),
                         TextInput::make('postal_code')
-                            ->label(__('patients.fields.postal_code')),
+                            ->label(__('patient.fields.postal_code')),
                         TextInput::make('country')
-                            ->label(__('patients.fields.country')),
+                            ->label(__('patient.fields.country')),
                     ]),
                 TextInput::make('identifiers')
-                    ->label(__('patients.fields.identifiers')),
+                    ->label(__('patient.fields.identifiers')),
             ]);
     }
 }

@@ -14,30 +14,30 @@ class UserInfolist
         return $schema
             ->components([
                 TextEntry::make('name')
-                    ->label(__('users.fields.name')),
+                    ->label(__('user.fields.name')),
                 TextEntry::make('email')
-                    ->label(__('users.fields.email')),
+                    ->label(__('user.fields.email')),
                 RepeatableEntry::make('signatures')
-                    ->label(__('users.fields.signatures'))
+                    ->label(__('user.fields.signatures'))
                     ->schema([
                         TextEntry::make('content')
-                            ->label(__('users.fields.signature'))
+                            ->label(__('user.fields.signature'))
                             ->html(),
                     ]),
                 SpatieMediaLibraryImageEntry::make('stamps')
-                    ->label(__('users.fields.stamps'))
+                    ->label(__('user.fields.stamps'))
                     ->collection('stamps'),
                 TextEntry::make('email_verified_at')
-                    ->label(__('users.fields.email_verified_at'))
+                    ->label(__('user.fields.email_verified_at'))
                     ->dateTime(),
                 TextEntry::make('created_at')
-                    ->label(__('users.fields.created_at'))
+                    ->label(__('user.fields.created_at'))
                     ->dateTime(),
                 TextEntry::make('updated_at')
-                    ->label(__('users.fields.updated_at'))
+                    ->label(__('user.fields.updated_at'))
                     ->dateTime(),
                 TextEntry::make('deleted_at')
-                    ->label(__('users.fields.deleted_at'))
+                    ->label(__('user.fields.deleted_at'))
                     ->dateTime(),
             ]);
     }

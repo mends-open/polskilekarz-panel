@@ -17,31 +17,31 @@ class PatientsTable
         return $table
             ->columns([
                 TextColumn::make('first_name')
-                    ->label(__('patients.fields.first_name'))
+                    ->label(__('patient.fields.first_name'))
                     ->searchable(),
                 TextColumn::make('last_name')
-                    ->label(__('patients.fields.last_name'))
+                    ->label(__('patient.fields.last_name'))
                     ->searchable(),
                 TextColumn::make('birth_date')
-                    ->label(__('patients.fields.birth_date'))
+                    ->label(__('patient.fields.birth_date'))
                     ->date()
                     ->sortable(),
                 TextColumn::make('gender')
-                    ->label(__('patients.fields.gender'))
+                    ->label(__('patient.fields.gender'))
                     ->formatStateUsing(fn (?string $state) => $state ? Gender::labels()[$state] ?? $state : null)
                     ->searchable(),
                 TextColumn::make('created_at')
-                    ->label(__('patients.fields.created_at'))
+                    ->label(__('patient.fields.created_at'))
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('updated_at')
-                    ->label(__('patients.fields.updated_at'))
+                    ->label(__('patient.fields.updated_at'))
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('deleted_at')
-                    ->label(__('patients.fields.deleted_at'))
+                    ->label(__('patient.fields.deleted_at'))
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),

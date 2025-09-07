@@ -14,35 +14,35 @@ class EntityInfolist
         return $schema
             ->components([
                 TextEntry::make('name')
-                    ->label(__('entities.fields.name')),
+                    ->label(__('entity.fields.name')),
                 RepeatableEntry::make('headers')
-                    ->label(__('entities.fields.headers'))
+                    ->label(__('entity.fields.headers'))
                     ->schema([
                         TextEntry::make('content')
-                            ->label(__('entities.fields.header'))
+                            ->label(__('entity.fields.header'))
                             ->html(),
                     ]),
                 RepeatableEntry::make('footers')
-                    ->label(__('entities.fields.footers'))
+                    ->label(__('entity.fields.footers'))
                     ->schema([
                         TextEntry::make('content')
-                            ->label(__('entities.fields.footer'))
+                            ->label(__('entity.fields.footer'))
                             ->html(),
                     ]),
                 SpatieMediaLibraryImageEntry::make('stamps')
-                    ->label(__('entities.fields.stamps'))
+                    ->label(__('entity.fields.stamps'))
                     ->collection('stamps'),
                 SpatieMediaLibraryImageEntry::make('logos')
-                    ->label(__('entities.fields.logos'))
+                    ->label(__('entity.fields.logos'))
                     ->collection('logos'),
                 TextEntry::make('created_at')
-                    ->label(__('entities.fields.created_at'))
+                    ->label(__('entity.fields.created_at'))
                     ->dateTime(),
                 TextEntry::make('updated_at')
-                    ->label(__('entities.fields.updated_at'))
+                    ->label(__('entity.fields.updated_at'))
                     ->dateTime(),
                 TextEntry::make('deleted_at')
-                    ->label(__('entities.fields.deleted_at'))
+                    ->label(__('entity.fields.deleted_at'))
                     ->dateTime(),
             ]);
     }

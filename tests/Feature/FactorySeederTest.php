@@ -222,7 +222,7 @@ it('seeds patients with contacts and appointments', function () {
     expect($patient)->not->toBeNull();
     expect($patient->emails()->count())->toBe(1);
     expect($patient->phones()->count())->toBe(1);
-    expect(Type::tryFrom(Appointment::first()->type))->toBe(Type::General);
+    expect(Type::tryFrom(Appointment::first()->type))->toBe(Type::PrimaryCare);
 });
 
 it('deletes email patient pivot', function () {

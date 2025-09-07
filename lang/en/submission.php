@@ -4,6 +4,7 @@ return [
     'label' => 'Submission',
     'plural' => 'Submissions',
     'type' => [
+        'unspecified' => 'Unspecified',
         'registration' => 'Registration',
         'pre_visit' => 'Pre-visit',
         'post_visit' => 'Post-visit',

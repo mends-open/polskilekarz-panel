@@ -10,6 +10,7 @@ return [
         'unknown' => 'Unknown',
     ],
     'identifier' => [
+        'unspecified' => 'Unspecified',
         'identity_document' => 'Identity document',
         'passport' => 'Passport',
         'drivers_license' => "Driver's license",
