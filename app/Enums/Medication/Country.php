@@ -2,6 +2,8 @@
 
 namespace App\Enums\Medication;
 
+use Illuminate\Support\Str;
+
 enum Country: int
 {
     case Unspecified = 0;
@@ -37,4 +39,21 @@ enum Country: int
     case Spain = 30;
     case Sweden = 31;
     case UnitedKingdomNorthernIreland = 32;
+
+    public static function tryFromName(string $name): ?self
+    {
+        $caseName = Str::of($name)
+            ->replace(['(', ')', '-', ',', '/', '.'], ' ')
+            ->squish()
+            ->studly()
+            ->toString();
+
+        foreach (self::cases() as $case) {
+            if ($case->name === $caseName) {
+                return $case;
+            }
+        }
+
+        return null;
+    }
 }

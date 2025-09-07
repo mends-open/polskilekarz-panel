@@ -21,6 +21,12 @@ return new class extends Migration
             $table->smallInteger('route_of_administration');
             $table->timestampsTz();
             $table->softDeletesTz();
+            $table->unique([
+                'active_substance_id',
+                'medicinal_product_id',
+                'country',
+                'route_of_administration',
+            ], 'medications_unique');
         });
     }
 
