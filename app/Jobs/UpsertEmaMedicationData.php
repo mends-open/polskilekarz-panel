@@ -11,6 +11,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Database\QueryException;
 
 class UpsertEmaMedicationData implements ShouldQueue
 {
@@ -53,12 +54,29 @@ class UpsertEmaMedicationData implements ShouldQueue
 
         fclose($handle);
 
-        $products = collect($products)->unique('name')->values()->all();
-        $substances = collect($substances)->unique('name')->values()->all();
+        $products = collect($products)
+            ->unique(fn ($item) => mb_strtolower($item['name']))
+            ->values();
+        $substances = collect($substances)
+            ->unique(fn ($item) => mb_strtolower($item['name']))
+            ->values();
 
-        MedicinalProduct::upsert($products, ['name']);
-        ActiveSubstance::upsert($substances, ['name']);
+        $products->chunk(1000)->each(function ($chunk) {
+            try {
+                MedicinalProduct::upsert($chunk->all(), ['name']);
+            } catch (QueryException $e) {
+                Log::warning('Product upsert failed', ['error' => $e->getMessage()]);
+            }
+        });
 
-        Log::info('Upserted '.count($products).' products and '.count($substances).' active substances.');
+        $substances->chunk(1000)->each(function ($chunk) {
+            try {
+                ActiveSubstance::upsert($chunk->all(), ['name']);
+            } catch (QueryException $e) {
+                Log::warning('Substance upsert failed', ['error' => $e->getMessage()]);
+            }
+        });
+
+        Log::info('Upserted '.$products->count().' products and '.$substances->count().' active substances.');
     }
 }
