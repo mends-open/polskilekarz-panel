@@ -43,7 +43,7 @@ class Entry extends Model
 
     public function medications(): BelongsToMany
     {
-        return $this->belongsToMany(Medication::class)
+        return $this->belongsToMany(ActiveSubstance::class)
             ->using(EntryMedication::class)
             ->withTimestamps();
     }

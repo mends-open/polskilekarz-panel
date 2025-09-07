@@ -2,12 +2,12 @@
 
 namespace Database\Factories;
 
-use App\Models\Medication;
+use App\Models\ActiveSubstance;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class MedicationFactory extends Factory
 {
-    protected $model = Medication::class;
+    protected $model = ActiveSubstance::class;
 
     public function definition(): array
     {

@@ -8,8 +8,7 @@ enum Type: string implements HasLabel
 {
     case Unspecified = 'unspecified';
     case Registration = 'registration';
-    case PreVisit = 'pre_visit';
-    case PostVisit = 'post_visit';
+    case PrescriptionRequest = 'prescription_request';
 
     public function getLabel(): ?string
     {
