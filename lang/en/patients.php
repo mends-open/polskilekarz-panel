@@ -3,6 +3,25 @@
 return [
     'label' => 'Patient',
     'plural' => 'Patients',
+    'gender' => [
+        'male' => 'Male',
+        'female' => 'Female',
+        'other' => 'Other',
+        'unknown' => 'Unknown',
+    ],
+    'identifier' => [
+        'identity_document' => 'Identity document',
+        'passport' => 'Passport',
+        'drivers_license' => "Driver's license",
+        'ehic' => 'European Health Insurance Card',
+        'pesel' => 'PESEL',
+        'bsn' => 'BSN',
+        'id_nr' => 'ID Nr',
+        'bis' => 'BIS number',
+        'nir' => 'NIR',
+        'nuss' => 'NUSS',
+        'codice_fiscale' => 'Codice Fiscale',
+    ],
     'fields' => [
         'first_name' => 'First name',
         'last_name' => 'Last name',

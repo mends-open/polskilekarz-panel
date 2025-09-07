@@ -3,6 +3,11 @@
 return [
     'label' => 'Submission',
     'plural' => 'Submissions',
+    'type' => [
+        'registration' => 'Registration',
+        'pre_visit' => 'Pre-visit',
+        'post_visit' => 'Post-visit',
+    ],
     'fields' => [
         'patient_id' => 'Patient',
         'user_id' => 'User',
