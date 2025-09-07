@@ -16,7 +16,6 @@ return new class extends Migration
         Schema::create('submissions', function (Blueprint $table) {
             $table->id();
             $table->foreignIdFor(Patient::class)->constrained();
-            $table->foreignIdFor(User::class)->constrained();
             $table->text('type');
             $table->jsonb('data')->nullable();
             $table->timestampsTz();

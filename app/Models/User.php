@@ -29,7 +29,6 @@ class User extends Authenticatable implements HasMedia
         'email',
         'password',
         'signatures',
-        'stamps',
     ];
 
     /**
@@ -51,7 +50,6 @@ class User extends Authenticatable implements HasMedia
     {
         return [
             'signatures' => 'array',
-            'stamps' => 'array',
         ];
     }
 
@@ -91,7 +89,6 @@ class User extends Authenticatable implements HasMedia
     {
         return [
             'signatures' => ['nullable', 'array'],
-            'stamps' => ['nullable', 'array'],
         ];
     }
 

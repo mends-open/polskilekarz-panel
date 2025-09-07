@@ -19,15 +19,11 @@ class Entity extends Model implements HasMedia
         'name',
         'headers',
         'footers',
-        'stamps',
-        'logos',
     ];
 
     protected $casts = [
         'headers' => 'array',
         'footers' => 'array',
-        'stamps' => 'array',
-        'logos' => 'array',
     ];
 
     public function users(): BelongsToMany
@@ -43,8 +39,6 @@ class Entity extends Model implements HasMedia
             'name' => ['required', 'string'],
             'headers' => ['nullable', 'array'],
             'footers' => ['nullable', 'array'],
-            'stamps' => ['nullable', 'array'],
-            'logos' => ['nullable', 'array'],
         ];
     }
 

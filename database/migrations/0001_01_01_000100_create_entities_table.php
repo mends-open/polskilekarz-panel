@@ -16,8 +16,6 @@ return new class extends Migration
             $table->text('name');
             $table->jsonb('headers')->nullable();
             $table->jsonb('footers')->nullable();
-            $table->jsonb('stamps')->nullable();
-            $table->jsonb('logos')->nullable();
             $table->timestampsTz();
             $table->softDeletesTz();
         });
