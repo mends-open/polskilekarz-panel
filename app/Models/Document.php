@@ -19,14 +19,19 @@ class Document extends Model
         'user_id',
     ];
 
-    public function patient(): BelongsTo
+    public function entity(): BelongsTo
     {
-        return $this->belongsTo(Patient::class);
+        return $this->belongsTo(Entity::class);
     }
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function patient(): BelongsTo
+    {
+        return $this->belongsTo(Patient::class);
     }
 
     public function entries(): BelongsToMany

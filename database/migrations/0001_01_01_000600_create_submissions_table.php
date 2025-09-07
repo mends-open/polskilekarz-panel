@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Entity;
 use App\Models\Patient;
 use App\Models\User;
 use Illuminate\Database\Migrations\Migration;
@@ -15,6 +16,8 @@ return new class extends Migration
     {
         Schema::create('submissions', function (Blueprint $table) {
             $table->id();
+            $table->foreignIdFor(Entity::class)->constrained();
+            $table->foreignIdFor(User::class)->constrained();
             $table->foreignIdFor(Patient::class)->constrained();
             $table->text('type');
             $table->jsonb('data')->nullable();

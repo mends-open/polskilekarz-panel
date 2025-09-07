@@ -26,9 +26,9 @@ class Entry extends Model
         'data' => 'array',
     ];
 
-    public function patient(): BelongsTo
+    public function entity(): BelongsTo
     {
-        return $this->belongsTo(Patient::class);
+        return $this->belongsTo(Entity::class);
     }
 
     public function user(): BelongsTo
@@ -36,9 +36,9 @@ class Entry extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function entity(): BelongsTo
+    public function patient(): BelongsTo
     {
-        return $this->belongsTo(Entity::class);
+        return $this->belongsTo(Patient::class);
     }
 
     public function medications(): BelongsToMany
