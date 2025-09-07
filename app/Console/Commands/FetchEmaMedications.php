@@ -25,7 +25,8 @@ class FetchEmaMedications extends Command
 
         $localPath = Storage::path('ema-medications.xlsx');
 
-        Http::sink($localPath)->get($endpoint);
+        $response = Http::sink($localPath)->get($endpoint);
+        $response->throw();
 
         Log::info('Downloaded EMA spreadsheet', [
             'endpoint' => $endpoint,
@@ -34,19 +35,14 @@ class FetchEmaMedications extends Command
 
         $chunks = $this->convertToCsvChunks($localPath);
 
-        Bus::batch(
-            collect($chunks)->map(fn ($chunk) => new UpsertEmaMedicationData($chunk))->all()
-        )->name('ema-medications-upsert')
-            ->then(function () use ($chunks) {
-                Log::info('Upsert batch finished; dispatching import jobs', ['chunks' => count($chunks)]);
+        foreach ($chunks as $chunk) {
+            Bus::chain([
+                new UpsertEmaMedicationData($chunk),
+                new ImportEmaMedications($chunk),
+            ])->dispatch();
+        }
 
-                Bus::batch(
-                    collect($chunks)->map(fn ($chunk) => new ImportEmaMedications($chunk))->all()
-                )->name('ema-medications-import')->dispatch();
-            })
-            ->dispatch();
-
-        $this->info('Import batches dispatched.');
+        $this->info('Import jobs dispatched.');
 
         return self::SUCCESS;
     }
