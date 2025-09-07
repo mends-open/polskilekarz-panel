@@ -14,9 +14,6 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
-use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
-use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class ImportEmaMedications implements ShouldQueue
 {
@@ -28,34 +25,19 @@ class ImportEmaMedications implements ShouldQueue
 
     public function handle(): void
     {
-        $sheet = IOFactory::load($this->path)->getActiveSheet();
-        $headerRow = 20;
-        $highestColumn = Coordinate::columnIndexFromString($sheet->getHighestDataColumn());
-        $highestRow = $sheet->getHighestDataRow();
-
-        Log::info('Importing EMA medications', [
-            'path' => $this->path,
-            'rows' => $highestRow - $headerRow,
-            'columns' => $highestColumn,
-        ]);
-
-        $headers = [];
-        for ($col = 1; $col <= $highestColumn; $col++) {
-            $column = Coordinate::stringFromColumnIndex($col);
-            $value = (string) $sheet->getCell($column.$headerRow)->getValue();
-            $value = trim(strtok($value, "\n"));
-            $headers[$col] = Str::snake($value);
+        $handle = fopen($this->path, 'r');
+        if (!$handle) {
+            Log::warning('Unable to open EMA chunk for import', ['path' => $this->path]);
+            return;
         }
 
-        $imported = 0;
-        for ($row = $headerRow + 1; $row <= $highestRow; $row++) {
-            $rowData = [];
-            for ($col = 1; $col <= $highestColumn; $col++) {
-                $column = Coordinate::stringFromColumnIndex($col);
-                $rowData[$headers[$col]] = trim((string) $sheet->getCell($column.$row)->getValue());
-            }
+        Log::info('Importing EMA medications from CSV chunk', ['path' => $this->path]);
 
-            $productName = $rowData['product_name'] ?? '';
+        $imported = 0;
+        while (($row = fgetcsv($handle)) !== false) {
+            [$productName, $countryName, $routeNames, $substanceNames] = $row;
+
+            $productName = trim($productName);
             if ($productName === '') {
                 continue;
             }
@@ -65,18 +47,19 @@ class ImportEmaMedications implements ShouldQueue
                 continue;
             }
 
-            $country = Country::tryFromName($rowData['product_authorisation_country'] ?? '');
+            $country = Country::tryFromName($countryName ?? '');
             if (!$country) {
                 continue;
             }
 
-            $routes = collect(explode('|', $rowData['route_of_administration'] ?? ''))
+            $routes = collect(explode('|', $routeNames ?? ''))
                 ->map(fn ($r) => RouteOfAdministration::tryFromName(trim($r)))
                 ->filter();
 
-            $substances = collect(explode('|', $rowData['active_substance'] ?? ''))
+            $substances = collect(explode('|', $substanceNames ?? ''))
                 ->map(fn ($s) => ActiveSubstance::firstWhere('name', trim($s)))
                 ->filter();
+
             foreach ($substances as $substance) {
                 foreach ($routes as $route) {
                     $medication = Medication::withTrashed()->firstOrCreate([
@@ -95,6 +78,8 @@ class ImportEmaMedications implements ShouldQueue
             }
         }
 
-        Log::info('Imported medications from EMA sheet.', ['count' => $imported]);
+        fclose($handle);
+
+        Log::info('Imported medications from EMA chunk.', ['count' => $imported, 'path' => $this->path]);
     }
 }

@@ -11,9 +11,6 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
-use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
-use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class UpsertEmaMedicationData implements ShouldQueue
 {
@@ -27,47 +24,34 @@ class UpsertEmaMedicationData implements ShouldQueue
 
     public function handle(): void
     {
-        $sheet = IOFactory::load($this->path)->getActiveSheet();
-        $headerRow = 20;
-        $highestColumn = Coordinate::columnIndexFromString($sheet->getHighestDataColumn());
-        $highestRow = $sheet->getHighestDataRow();
-
-        Log::info('Parsing EMA spreadsheet for upsert', [
-            'path' => $this->path,
-            'rows' => $highestRow - $headerRow,
-            'columns' => $highestColumn,
-        ]);
-
-        $headers = [];
-        for ($col = 1; $col <= $highestColumn; $col++) {
-            $column = Coordinate::stringFromColumnIndex($col);
-            $value = (string) $sheet->getCell($column.$headerRow)->getValue();
-            $value = trim(strtok($value, "\n"));
-            $headers[$col] = Str::snake($value);
+        $handle = fopen($this->path, 'r');
+        if (!$handle) {
+            Log::warning('Unable to open EMA chunk for upsert', ['path' => $this->path]);
+            return;
         }
+
+        Log::info('Parsing EMA CSV chunk for upsert', ['path' => $this->path]);
 
         $products = [];
         $substances = [];
 
-        for ($row = $headerRow + 1; $row <= $highestRow; $row++) {
-            $rowData = [];
-            for ($col = 1; $col <= $highestColumn; $col++) {
-                $column = Coordinate::stringFromColumnIndex($col);
-                $rowData[$headers[$col]] = trim((string) $sheet->getCell($column.$row)->getValue());
-            }
+        while (($row = fgetcsv($handle)) !== false) {
+            [$product, $country, $routes, $active] = $row;
 
-            $product = $rowData['product_name'] ?? '';
+            $product = trim($product);
             if ($product !== '') {
                 $products[] = ['name' => $product];
             }
 
-            foreach (explode('|', $rowData['active_substance'] ?? '') as $name) {
+            foreach (explode('|', $active ?? '') as $name) {
                 $name = trim($name);
                 if ($name !== '') {
                     $substances[] = ['name' => $name];
                 }
             }
         }
+
+        fclose($handle);
 
         $products = collect($products)->unique('name')->values()->all();
         $substances = collect($substances)->unique('name')->values()->all();
