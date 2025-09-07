@@ -98,13 +98,21 @@ class ImportEmaMedications implements ShouldQueue
         fclose($handle);
 
         foreach (array_chunk($medicationRows, 500) as $chunk) {
-            Medication::upsert(
-                $chunk,
-                ['active_substance_id', 'medicinal_product_id', 'country', 'route_of_administration'],
-                ['deleted_at', 'updated_at']
-            );
+            Medication::insertOrIgnore($chunk);
+
+            foreach ($chunk as $row) {
+                Medication::withTrashed()
+                    ->where('active_substance_id', $row['active_substance_id'])
+                    ->where('medicinal_product_id', $row['medicinal_product_id'])
+                    ->where('country', $row['country'])
+                    ->where('route_of_administration', $row['route_of_administration'])
+                    ->update(['deleted_at' => null, 'updated_at' => now()]);
+            }
         }
 
-        Log::info('Imported medications from EMA chunk.', ['count' => count($medicationRows), 'path' => $this->path]);
+        Log::info('Imported medications from EMA chunk.', [
+            'count' => count($medicationRows),
+            'path' => $this->path,
+        ]);
     }
 }

@@ -63,20 +63,20 @@ class UpsertEmaMedicationData implements ShouldQueue
 
         $products->chunk(1000)->each(function ($chunk) {
             try {
-                MedicinalProduct::upsert($chunk->all(), ['name']);
+                MedicinalProduct::insertOrIgnore($chunk->all());
             } catch (QueryException $e) {
-                Log::warning('Product upsert failed', ['error' => $e->getMessage()]);
+                Log::warning('Product insert failed', ['error' => $e->getMessage()]);
             }
         });
 
         $substances->chunk(1000)->each(function ($chunk) {
             try {
-                ActiveSubstance::upsert($chunk->all(), ['name']);
+                ActiveSubstance::insertOrIgnore($chunk->all());
             } catch (QueryException $e) {
-                Log::warning('Substance upsert failed', ['error' => $e->getMessage()]);
+                Log::warning('Substance insert failed', ['error' => $e->getMessage()]);
             }
         });
 
-        Log::info('Upserted '.$products->count().' products and '.$substances->count().' active substances.');
+        Log::info('Inserted '.$products->count().' products and '.$substances->count().' active substances.');
     }
 }
