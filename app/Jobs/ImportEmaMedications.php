@@ -33,12 +33,21 @@ class ImportEmaMedications implements ShouldQueue
         $highestColumn = Coordinate::columnIndexFromString($sheet->getHighestDataColumn());
         $highestRow = $sheet->getHighestDataRow();
 
+        Log::info('Importing EMA medications', [
+            'path' => $this->path,
+            'rows' => $highestRow - $headerRow,
+            'columns' => $highestColumn,
+        ]);
+
         $headers = [];
         for ($col = 1; $col <= $highestColumn; $col++) {
             $column = Coordinate::stringFromColumnIndex($col);
-            $headers[$col] = Str::snake((string) $sheet->getCell($column.$headerRow)->getValue());
+            $value = (string) $sheet->getCell($column.$headerRow)->getValue();
+            $value = trim(strtok($value, "\n"));
+            $headers[$col] = Str::snake($value);
         }
 
+        $imported = 0;
         for ($row = $headerRow + 1; $row <= $highestRow; $row++) {
             $rowData = [];
             for ($col = 1; $col <= $highestColumn; $col++) {
@@ -80,10 +89,12 @@ class ImportEmaMedications implements ShouldQueue
                     if ($medication->trashed()) {
                         $medication->restore();
                     }
+
+                    $imported++;
                 }
             }
         }
 
-        Log::info('Imported medications from EMA sheet.');
+        Log::info('Imported medications from EMA sheet.', ['count' => $imported]);
     }
 }

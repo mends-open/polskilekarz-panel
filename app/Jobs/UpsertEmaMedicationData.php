@@ -32,10 +32,18 @@ class UpsertEmaMedicationData implements ShouldQueue
         $highestColumn = Coordinate::columnIndexFromString($sheet->getHighestDataColumn());
         $highestRow = $sheet->getHighestDataRow();
 
+        Log::info('Parsing EMA spreadsheet for upsert', [
+            'path' => $this->path,
+            'rows' => $highestRow - $headerRow,
+            'columns' => $highestColumn,
+        ]);
+
         $headers = [];
         for ($col = 1; $col <= $highestColumn; $col++) {
             $column = Coordinate::stringFromColumnIndex($col);
-            $headers[$col] = Str::snake((string) $sheet->getCell($column.$headerRow)->getValue());
+            $value = (string) $sheet->getCell($column.$headerRow)->getValue();
+            $value = trim(strtok($value, "\n"));
+            $headers[$col] = Str::snake($value);
         }
 
         $products = [];
