@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('entities', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->text('name');
             $table->jsonb('headers')->nullable();
             $table->jsonb('footers')->nullable();
             $table->jsonb('stamps')->nullable();

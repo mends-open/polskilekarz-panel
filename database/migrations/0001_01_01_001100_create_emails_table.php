@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('emails', function (Blueprint $table) {
             $table->id();
-            $table->string('email')->unique();
+            $table->caseInsensitiveText('email')->unique();
             $table->timestampsTz();
             $table->softDeletesTz();
         });

@@ -16,18 +16,18 @@ return new class extends Migration
 
             $table->morphs('model');
             $table->uuid()->nullable()->unique();
-            $table->string('collection_name');
-            $table->string('name');
-            $table->string('file_name');
-            $table->string('mime_type')->nullable();
-            $table->string('disk');
-            $table->string('conversions_disk')->nullable();
-            $table->unsignedBigInteger('size');
+            $table->text('collection_name');
+            $table->text('name');
+            $table->text('file_name');
+            $table->text('mime_type')->nullable();
+            $table->text('disk');
+            $table->text('conversions_disk')->nullable();
+            $table->bigInteger('size');
             $table->jsonb('manipulations');
             $table->jsonb('custom_properties');
             $table->jsonb('generated_conversions');
             $table->jsonb('responsive_images');
-            $table->unsignedInteger('order_column')->nullable()->index();
+            $table->bigInteger('order_column')->nullable()->index();
 
             $table->timestampsTz();
             $table->softDeletesTz();
