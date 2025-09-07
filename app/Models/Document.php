@@ -12,11 +12,12 @@ use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 
 class Document extends Model
 {
-    use HasFactory, SoftDeletes, ValidatesAttributes, AutomaticDateFormat;
+    use AutomaticDateFormat, HasFactory, SoftDeletes, ValidatesAttributes;
 
     protected $fillable = [
         'patient_id',
         'user_id',
+        'entity_id',
     ];
 
     public function entity(): BelongsTo
@@ -46,6 +47,7 @@ class Document extends Model
         return [
             'patient_id' => ['required', 'exists:patients,id'],
             'user_id' => ['required', 'exists:users,id'],
+            'entity_id' => ['required', 'exists:entities,id'],
         ];
     }
 }

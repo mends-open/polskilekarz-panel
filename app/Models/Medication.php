@@ -21,7 +21,6 @@ class Medication extends Model
     {
         return $this->belongsToMany(Entry::class)
             ->using(EntryMedication::class)
-            ->withPivot('user_id')
             ->withTimestamps();
     }
 

@@ -12,7 +12,7 @@ use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 
 class Entry extends Model
 {
-    use HasFactory, SoftDeletes, ValidatesAttributes, AutomaticDateFormat;
+    use AutomaticDateFormat, HasFactory, SoftDeletes, ValidatesAttributes;
 
     protected $fillable = [
         'patient_id',
@@ -45,7 +45,6 @@ class Entry extends Model
     {
         return $this->belongsToMany(Medication::class)
             ->using(EntryMedication::class)
-            ->withPivot('user_id')
             ->withTimestamps();
     }
 

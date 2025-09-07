@@ -14,9 +14,6 @@ class EntityFactory extends Factory
         return [
             'name' => $this->faker->company(),
             'headers' => [],
-            'footers' => [],
-            'stamps' => [],
-            'logos' => [],
         ];
     }
 }

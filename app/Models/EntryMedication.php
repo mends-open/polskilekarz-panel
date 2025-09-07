@@ -10,7 +10,7 @@ use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 
 class EntryMedication extends Pivot
 {
-    use HasFactory, ValidatesAttributes, AutomaticDateFormat;
+    use AutomaticDateFormat, HasFactory, ValidatesAttributes;
 
     public $incrementing = true;
 
@@ -19,7 +19,6 @@ class EntryMedication extends Pivot
     protected $fillable = [
         'entry_id',
         'medication_id',
-        'user_id',
     ];
 
     public function entry(): BelongsTo
@@ -32,17 +31,11 @@ class EntryMedication extends Pivot
         return $this->belongsTo(Medication::class);
     }
 
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
-
     public function rules(): array
     {
         return [
             'entry_id' => ['required', 'exists:entries,id'],
             'medication_id' => ['required', 'exists:medications,id'],
-            'user_id' => ['required', 'exists:users,id'],
         ];
     }
 }
