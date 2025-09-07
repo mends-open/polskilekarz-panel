@@ -80,11 +80,6 @@ class User extends Authenticatable implements HasMedia
         return $this->hasMany(Submission::class);
     }
 
-    public function entryMedications(): HasMany
-    {
-        return $this->hasMany(EntryMedication::class);
-    }
-
     public function rules(): array
     {
         return [
