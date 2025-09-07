@@ -41,13 +41,21 @@ class UpsertEmaMedicationData implements ShouldQueue
 
             $product = trim($product);
             if ($product !== '') {
-                $products[] = ['name' => $product];
+                $products[] = [
+                    'name' => $product,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
             }
 
-            foreach (explode('|', $active ?? '') as $name) {
+            foreach (preg_split('/[|+,;]/u', $active ?? '') as $name) {
                 $name = trim($name);
                 if ($name !== '') {
-                    $substances[] = ['name' => $name];
+                    $substances[] = [
+                        'name' => $name,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
                 }
             }
         }
@@ -77,6 +85,6 @@ class UpsertEmaMedicationData implements ShouldQueue
             }
         });
 
-        Log::info('Inserted '.$products->count().' products and '.$substances->count().' active substances.');
+        Log::info('Upserted '.$products->count().' products and '.$substances->count().' active substances.');
     }
 }

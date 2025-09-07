@@ -12,7 +12,7 @@ class FetchEmaMedications extends Command
     protected $description = 'Queue EMA medication import';
 
     /**
-     * Queue the EMA medication import job.
+     * Dispatch the EMA medication import and exit immediately.
      */
     public function handle(): int
     {

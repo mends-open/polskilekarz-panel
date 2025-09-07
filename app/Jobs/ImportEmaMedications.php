@@ -61,7 +61,7 @@ class ImportEmaMedications implements ShouldQueue
                 ->map(fn ($r) => RouteOfAdministration::tryFromName(trim($r)))
                 ->filter();
 
-            $substances = collect(explode('|', $substanceNames ?? ''))
+            $substances = collect(preg_split('/[|+,;]/u', $substanceNames ?? ''))
                 ->map(function ($s) use (&$substanceIds) {
                     $name = trim($s);
                     if ($name === '') {
