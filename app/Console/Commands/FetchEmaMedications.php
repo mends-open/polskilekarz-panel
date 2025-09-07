@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use App\Jobs\ImportEmaMedications;
 use App\Jobs\UpsertEmaMedicationData;
-use Illuminate\Bus\Batch;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Http;
@@ -27,7 +26,7 @@ class FetchEmaMedications extends Command
         Bus::batch([
             new UpsertEmaMedicationData($path),
         ])->name('ema-medications-import')
-            ->then(fn (Batch $batch) => ImportEmaMedications::dispatch($path))
+            ->then(fn () => ImportEmaMedications::dispatch($path))
             ->dispatch();
 
         $this->info('Import batch dispatched.');
