@@ -7,10 +7,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 
 class Appointment extends Model
 {
-    use HasFactory, SoftDeletes, ValidatesAttributes;
+    use HasFactory, SoftDeletes, ValidatesAttributes, AutomaticDateFormat;
 
     protected $fillable = [
         'patient_id',

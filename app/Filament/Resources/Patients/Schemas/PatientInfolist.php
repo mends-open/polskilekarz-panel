@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Patients\Schemas;
 
-use App\Enums\Patient\PatientGender;
+use App\Enums\Patient\Gender;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Schema;
@@ -22,7 +22,7 @@ class PatientInfolist
                     ->date(),
                 TextEntry::make('gender')
                     ->label(__('patients.fields.gender'))
-                    ->formatStateUsing(fn (?string $state) => $state ? PatientGender::labels()[$state] ?? $state : null),
+                    ->formatStateUsing(fn (?string $state) => $state ? Gender::labels()[$state] ?? $state : null),
                 RepeatableEntry::make('addresses')
                     ->label(__('patients.fields.addresses'))
                     ->schema([

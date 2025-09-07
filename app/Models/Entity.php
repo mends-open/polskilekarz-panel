@@ -9,10 +9,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
+use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 
 class Entity extends Model implements HasMedia
 {
-    use HasFactory, InteractsWithMedia, SoftDeletes, ValidatesAttributes;
+    use HasFactory, InteractsWithMedia, SoftDeletes, ValidatesAttributes, AutomaticDateFormat;
 
     protected $fillable = [
         'name',

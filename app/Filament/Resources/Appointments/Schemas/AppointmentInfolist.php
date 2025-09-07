@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Appointments\Schemas;
 
-use App\Enums\Appointment\AppointmentType;
+use App\Enums\Appointment\Type;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Schema;
 
@@ -20,7 +20,7 @@ class AppointmentInfolist
                     ->numeric(),
                 TextEntry::make('type')
                     ->label(__('appointments.fields.type'))
-                    ->formatStateUsing(fn (?string $state) => $state ? AppointmentType::labels()[$state] ?? $state : null),
+                    ->formatStateUsing(fn (?string $state) => $state ? Type::labels()[$state] ?? $state : null),
                 TextEntry::make('duration')
                     ->label(__('appointments.fields.duration'))
                     ->numeric(),

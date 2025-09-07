@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Patients\Schemas;
 
-use App\Enums\Patient\PatientGender;
+use App\Enums\Patient\Gender;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\TextInput;
@@ -26,7 +26,7 @@ class PatientForm
                     ->required(),
                 ToggleButtons::make('gender')
                     ->label(__('patients.fields.gender'))
-                    ->options(PatientGender::class)
+                    ->options(Gender::class)
                     ->inline()
                     ->required(),
                 Repeater::make('addresses')

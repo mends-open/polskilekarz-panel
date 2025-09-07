@@ -12,11 +12,12 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
+use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 
 class User extends Authenticatable implements HasMedia
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, InteractsWithMedia, Notifiable, SoftDeletes, ValidatesAttributes;
+    use HasFactory, InteractsWithMedia, Notifiable, SoftDeletes, ValidatesAttributes, AutomaticDateFormat;
 
     /**
      * The attributes that are mass assignable.

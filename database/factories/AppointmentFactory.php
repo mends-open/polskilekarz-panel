@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Enums\Appointment\AppointmentType;
+use App\Enums\Appointment\Type;
 use App\Models\Appointment;
 use App\Models\Patient;
 use App\Models\User;
@@ -19,7 +19,7 @@ class AppointmentFactory extends Factory
         return [
             'patient_id' => Patient::factory(),
             'user_id' => User::factory(),
-            'type' => $this->faker->randomElement(AppointmentType::cases())->value,
+            'type' => $this->faker->randomElement(Type::cases())->value,
             'duration' => $this->faker->numberBetween(15, 60),
             'scheduled_at' => $scheduled,
             'confirmed_at' => null,

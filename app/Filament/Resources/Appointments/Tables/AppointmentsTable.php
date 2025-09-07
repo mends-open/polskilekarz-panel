@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Appointments\Tables;
 
-use App\Enums\Appointment\AppointmentType;
+use App\Enums\Appointment\Type;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -26,7 +26,7 @@ class AppointmentsTable
                     ->sortable(),
                 TextColumn::make('type')
                     ->label(__('appointments.fields.type'))
-                    ->formatStateUsing(fn (?string $state) => $state ? AppointmentType::labels()[$state] ?? $state : null)
+                    ->formatStateUsing(fn (?string $state) => $state ? Type::labels()[$state] ?? $state : null)
                     ->searchable(),
                 TextColumn::make('duration')
                     ->label(__('appointments.fields.duration'))

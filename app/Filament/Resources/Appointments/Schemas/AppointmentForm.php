@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Appointments\Schemas;
 
-use App\Enums\Appointment\AppointmentType;
+use App\Enums\Appointment\Type;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -24,7 +24,7 @@ class AppointmentForm
                     ->numeric(),
                 Select::make('type')
                     ->label(__('appointments.fields.type'))
-                    ->options(AppointmentType::class)
+                    ->options(Type::class)
                     ->required(),
                 TextInput::make('duration')
                     ->label(__('appointments.fields.duration'))

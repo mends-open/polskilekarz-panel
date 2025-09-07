@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Submissions\Tables;
 
-use App\Enums\Submission\SubmissionType;
+use App\Enums\Submission\Type;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -26,7 +26,7 @@ class SubmissionsTable
                     ->sortable(),
                 TextColumn::make('type')
                     ->label(__('submissions.fields.type'))
-                    ->formatStateUsing(fn (?string $state) => $state ? SubmissionType::labels()[$state] ?? $state : null)
+                    ->formatStateUsing(fn (?string $state) => $state ? Type::labels()[$state] ?? $state : null)
                     ->searchable(),
                 TextColumn::make('created_at')
                     ->label(__('submissions.fields.created_at'))

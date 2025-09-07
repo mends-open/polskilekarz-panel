@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Patients\Tables;
 
-use App\Enums\Patient\PatientGender;
+use App\Enums\Patient\Gender;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -28,7 +28,7 @@ class PatientsTable
                     ->sortable(),
                 TextColumn::make('gender')
                     ->label(__('patients.fields.gender'))
-                    ->formatStateUsing(fn (?string $state) => $state ? PatientGender::labels()[$state] ?? $state : null)
+                    ->formatStateUsing(fn (?string $state) => $state ? Gender::labels()[$state] ?? $state : null)
                     ->searchable(),
                 TextColumn::make('created_at')
                     ->label(__('patients.fields.created_at'))

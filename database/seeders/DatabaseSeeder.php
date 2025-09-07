@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Enums\Appointment\AppointmentType;
+use App\Enums\Appointment\Type;
 use App\Models\Appointment;
 use App\Models\Email;
 use App\Models\Entity;
@@ -40,7 +40,7 @@ class DatabaseSeeder extends Seeder
             Appointment::factory()
                 ->for($patient)
                 ->for($user)
-                ->state(['type' => AppointmentType::General->value])
+                ->state(['type' => Type::PrimaryCare->value])
                 ->create();
         });
     }

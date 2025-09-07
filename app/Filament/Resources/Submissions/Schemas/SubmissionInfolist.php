@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Submissions\Schemas;
 
-use App\Enums\Submission\SubmissionType;
+use App\Enums\Submission\Type;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Schema;
 
@@ -20,7 +20,7 @@ class SubmissionInfolist
                     ->numeric(),
                 TextEntry::make('type')
                     ->label(__('submissions.fields.type'))
-                    ->formatStateUsing(fn (?string $state) => $state ? SubmissionType::labels()[$state] ?? $state : null),
+                    ->formatStateUsing(fn (?string $state) => $state ? Type::labels()[$state] ?? $state : null),
                 TextEntry::make('created_at')
                     ->label(__('submissions.fields.created_at'))
                     ->dateTime(),

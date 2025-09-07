@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Submissions\Schemas;
 
-use App\Enums\Submission\SubmissionType;
+use App\Enums\Submission\Type;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
@@ -23,7 +23,7 @@ class SubmissionForm
                     ->numeric(),
                 Select::make('type')
                     ->label(__('submissions.fields.type'))
-                    ->options(SubmissionType::class)
+                    ->options(Type::class)
                     ->required(),
                 TextInput::make('data')
                     ->label(__('submissions.fields.data')),
