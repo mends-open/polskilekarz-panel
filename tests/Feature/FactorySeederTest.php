@@ -1,6 +1,6 @@
 <?php
 
-use App\Enums\Appointment\AppointmentType;
+use App\Enums\Appointment\Type;
 use App\Models\Appointment;
 use App\Models\DocumentEntry;
 use App\Models\Email;
@@ -182,7 +182,7 @@ it('creates appointment via factory', function () {
 
     expect($appointment->patient)->not->toBeNull();
     expect($appointment->user)->not->toBeNull();
-    expect(AppointmentType::tryFrom($appointment->type))->not->toBeNull();
+    expect(Type::tryFrom($appointment->type))->not->toBeNull();
 });
 
 it('creates email patient pivot via factory', function () {
@@ -222,7 +222,7 @@ it('seeds patients with contacts and appointments', function () {
     expect($patient)->not->toBeNull();
     expect($patient->emails()->count())->toBe(1);
     expect($patient->phones()->count())->toBe(1);
-    expect(AppointmentType::tryFrom(Appointment::first()->type))->toBe(AppointmentType::General);
+    expect(Type::tryFrom(Appointment::first()->type))->toBe(Type::General);
 });
 
 it('deletes email patient pivot', function () {
