@@ -13,7 +13,8 @@ return new class extends Migration
     {
         Schema::create('medications', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->unique();
+            $table->caseInsensitiveText('name')->unique();
+            $table->jsonb('brands');
             $table->timestampsTz();
             $table->softDeletesTz();
         });

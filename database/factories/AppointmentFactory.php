@@ -2,8 +2,9 @@
 
 namespace Database\Factories;
 
-use App\Enums\Appointment\AppointmentType;
+use App\Enums\Appointment\Type;
 use App\Models\Appointment;
+use App\Models\Entity;
 use App\Models\Patient;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -19,7 +20,8 @@ class AppointmentFactory extends Factory
         return [
             'patient_id' => Patient::factory(),
             'user_id' => User::factory(),
-            'type' => $this->faker->randomElement(AppointmentType::cases())->value,
+            'entity_id' => Entity::factory(),
+            'type' => $this->faker->randomElement(Type::cases())->value,
             'duration' => $this->faker->numberBetween(15, 60),
             'scheduled_at' => $scheduled,
             'confirmed_at' => null,
@@ -28,4 +30,3 @@ class AppointmentFactory extends Factory
         ];
     }
 }
-

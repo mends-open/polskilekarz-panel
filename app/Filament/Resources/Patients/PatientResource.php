@@ -26,17 +26,17 @@ class PatientResource extends Resource
 
     public static function getModelLabel(): string
     {
-        return __('patients.label');
+        return __('patient.label');
     }
 
     public static function getPluralModelLabel(): string
     {
-        return __('patients.plural');
+        return __('patient.plural');
     }
 
     public static function getNavigationLabel(): string
     {
-        return __('patients.plural');
+        return __('patient.plural');
     }
 
     public static function form(Schema $schema): Schema

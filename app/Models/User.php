@@ -12,11 +12,12 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
+use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 
 class User extends Authenticatable implements HasMedia
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, InteractsWithMedia, Notifiable, SoftDeletes, ValidatesAttributes;
+    use HasFactory, InteractsWithMedia, Notifiable, SoftDeletes, ValidatesAttributes, AutomaticDateFormat;
 
     /**
      * The attributes that are mass assignable.
@@ -28,7 +29,6 @@ class User extends Authenticatable implements HasMedia
         'email',
         'password',
         'signatures',
-        'stamps',
     ];
 
     /**
@@ -50,7 +50,6 @@ class User extends Authenticatable implements HasMedia
     {
         return [
             'signatures' => 'array',
-            'stamps' => 'array',
         ];
     }
 
@@ -81,16 +80,10 @@ class User extends Authenticatable implements HasMedia
         return $this->hasMany(Submission::class);
     }
 
-    public function entryMedications(): HasMany
-    {
-        return $this->hasMany(EntryMedication::class);
-    }
-
     public function rules(): array
     {
         return [
             'signatures' => ['nullable', 'array'],
-            'stamps' => ['nullable', 'array'],
         ];
     }
 

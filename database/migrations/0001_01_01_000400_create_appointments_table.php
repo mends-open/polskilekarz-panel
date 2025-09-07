@@ -1,10 +1,11 @@
 <?php
 
+use App\Models\Entity;
 use App\Models\Patient;
 use App\Models\User;
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+use Tpetry\PostgresqlEnhanced\Schema\Blueprint;
+use Tpetry\PostgresqlEnhanced\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -15,14 +16,15 @@ return new class extends Migration
     {
         Schema::create('appointments', function (Blueprint $table) {
             $table->id();
-            $table->foreignIdFor(Patient::class)->constrained();
+            $table->foreignIdFor(Entity::class)->constrained();
             $table->foreignIdFor(User::class)->constrained();
-            $table->string('type');
-            $table->smallInteger('duration');
-            $table->dateTimeTz('scheduled_at');
-            $table->dateTimeTz('confirmed_at')->nullable();
-            $table->dateTimeTz('started_at')->nullable();
-            $table->dateTimeTz('cancelled_at')->nullable();
+            $table->foreignIdFor(Patient::class)->constrained();
+            $table->text('type');
+            $table->smallInteger('duration')->comment('in minutes');
+            $table->timestampTz('scheduled_at');
+            $table->timestampTz('confirmed_at')->nullable();
+            $table->timestampTz('started_at')->nullable();
+            $table->timestampTz('cancelled_at')->nullable();
             $table->timestampsTz();
             $table->softDeletesTz();
         });

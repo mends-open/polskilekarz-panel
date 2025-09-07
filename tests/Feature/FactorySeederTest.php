@@ -1,6 +1,6 @@
 <?php
 
-use App\Enums\Appointment\AppointmentType;
+use App\Enums\Appointment\Type;
 use App\Models\Appointment;
 use App\Models\DocumentEntry;
 use App\Models\Email;
@@ -32,9 +32,6 @@ beforeEach(function () {
         $table->id();
         $table->string('name');
         $table->json('headers')->nullable();
-        $table->json('footers')->nullable();
-        $table->json('stamps')->nullable();
-        $table->json('logos')->nullable();
         $table->timestamps();
         $table->softDeletes();
     });
@@ -96,6 +93,7 @@ beforeEach(function () {
         $table->id();
         $table->foreignId('patient_id');
         $table->foreignId('user_id');
+        $table->foreignId('entity_id');
         $table->string('type');
         $table->smallInteger('duration');
         $table->dateTimeTz('scheduled_at');
@@ -128,7 +126,6 @@ beforeEach(function () {
         $table->id();
         $table->foreignId('entry_id');
         $table->foreignId('medication_id');
-        $table->foreignId('user_id');
         $table->timestampsTz();
     });
 
@@ -136,6 +133,7 @@ beforeEach(function () {
         $table->id();
         $table->foreignId('patient_id');
         $table->foreignId('user_id');
+        $table->foreignId('entity_id');
         $table->timestampsTz();
         $table->softDeletesTz();
     });
@@ -182,7 +180,8 @@ it('creates appointment via factory', function () {
 
     expect($appointment->patient)->not->toBeNull();
     expect($appointment->user)->not->toBeNull();
-    expect(AppointmentType::tryFrom($appointment->type))->not->toBeNull();
+    expect($appointment->entity)->not->toBeNull();
+    expect(Type::tryFrom($appointment->type))->not->toBeNull();
 });
 
 it('creates email patient pivot via factory', function () {
@@ -212,17 +211,17 @@ it('creates entry medication pivot via factory', function () {
 it('seeds patients with contacts and appointments', function () {
     (new DatabaseSeeder)->run();
 
-    expect(User::count())->toBe(1);
+    expect(User::count())->toBe(3);
     expect(Entity::count())->toBe(1);
-    expect(Patient::count())->toBe(5);
-    expect(Email::count())->toBe(5);
-    expect(Phone::count())->toBe(5);
-    expect(Appointment::count())->toBe(5);
+    expect(Patient::count())->toBe(10);
+    expect(Email::count())->toBe(10);
+    expect(Phone::count())->toBe(10);
+    expect(Appointment::count())->toBe(20);
     $patient = Patient::first();
     expect($patient)->not->toBeNull();
     expect($patient->emails()->count())->toBe(1);
     expect($patient->phones()->count())->toBe(1);
-    expect(AppointmentType::tryFrom(Appointment::first()->type))->toBe(AppointmentType::General);
+    expect(Type::tryFrom(Appointment::first()->type))->toBe(Type::PrimaryCare);
 });
 
 it('deletes email patient pivot', function () {

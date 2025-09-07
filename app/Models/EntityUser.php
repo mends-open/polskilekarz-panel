@@ -6,10 +6,11 @@ use App\Models\Concerns\ValidatesAttributes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\Pivot;
+use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 
 class EntityUser extends Pivot
 {
-    use HasFactory, ValidatesAttributes;
+    use HasFactory, ValidatesAttributes, AutomaticDateFormat;
 
     public $incrementing = true;
 

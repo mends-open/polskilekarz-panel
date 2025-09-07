@@ -18,7 +18,6 @@ return new class extends Migration
             $table->id();
             $table->foreignIdFor(Entry::class);
             $table->foreignIdFor(Medication::class);
-            $table->foreignIdFor(User::class);
             $table->timestampsTz();
         });
     }

@@ -3,6 +3,14 @@
 return [
     'label' => 'Appointment',
     'plural' => 'Appointments',
+    'type' => [
+        'unspecified' => 'Unspecified',
+        'primary_care' => 'Primary care',
+        'psychiatric' => 'Psychiatric',
+        'psychological' => 'Psychological',
+        'prescription' => 'Prescription',
+        'documentation' => 'Documentation',
+    ],
     'fields' => [
         'patient_id' => 'Patient',
         'user_id' => 'User',

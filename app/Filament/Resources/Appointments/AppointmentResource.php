@@ -26,17 +26,17 @@ class AppointmentResource extends Resource
 
     public static function getModelLabel(): string
     {
-        return __('appointments.label');
+        return __('appointment.label');
     }
 
     public static function getPluralModelLabel(): string
     {
-        return __('appointments.plural');
+        return __('appointment.plural');
     }
 
     public static function getNavigationLabel(): string
     {
-        return __('appointments.plural');
+        return __('appointment.plural');
     }
 
     public static function form(Schema $schema): Schema

@@ -7,14 +7,16 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 
 class Appointment extends Model
 {
-    use HasFactory, SoftDeletes, ValidatesAttributes;
+    use AutomaticDateFormat, HasFactory, SoftDeletes, ValidatesAttributes;
 
     protected $fillable = [
         'patient_id',
         'user_id',
+        'entity_id',
         'type',
         'duration',
         'scheduled_at',
@@ -30,9 +32,9 @@ class Appointment extends Model
         'cancelled_at' => 'datetime',
     ];
 
-    public function patient(): BelongsTo
+    public function entity(): BelongsTo
     {
-        return $this->belongsTo(Patient::class);
+        return $this->belongsTo(Entity::class);
     }
 
     public function user(): BelongsTo
@@ -40,11 +42,17 @@ class Appointment extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function patient(): BelongsTo
+    {
+        return $this->belongsTo(Patient::class);
+    }
+
     public function rules(): array
     {
         return [
             'patient_id' => ['required', 'exists:patients,id'],
             'user_id' => ['required', 'exists:users,id'],
+            'entity_id' => ['required', 'exists:entities,id'],
             'type' => ['required', 'string'],
             'duration' => ['required', 'integer'],
             'scheduled_at' => ['required', 'date'],

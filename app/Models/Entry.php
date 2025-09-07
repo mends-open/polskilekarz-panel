@@ -8,10 +8,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 
 class Entry extends Model
 {
-    use HasFactory, SoftDeletes, ValidatesAttributes;
+    use AutomaticDateFormat, HasFactory, SoftDeletes, ValidatesAttributes;
 
     protected $fillable = [
         'patient_id',
@@ -25,9 +26,9 @@ class Entry extends Model
         'data' => 'array',
     ];
 
-    public function patient(): BelongsTo
+    public function entity(): BelongsTo
     {
-        return $this->belongsTo(Patient::class);
+        return $this->belongsTo(Entity::class);
     }
 
     public function user(): BelongsTo
@@ -35,16 +36,15 @@ class Entry extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function entity(): BelongsTo
+    public function patient(): BelongsTo
     {
-        return $this->belongsTo(Entity::class);
+        return $this->belongsTo(Patient::class);
     }
 
     public function medications(): BelongsToMany
     {
         return $this->belongsToMany(Medication::class)
             ->using(EntryMedication::class)
-            ->withPivot('user_id')
             ->withTimestamps();
     }
 

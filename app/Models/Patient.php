@@ -8,10 +8,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 
 class Patient extends Model
 {
-    use HasFactory, SoftDeletes, ValidatesAttributes;
+    use HasFactory, SoftDeletes, ValidatesAttributes, AutomaticDateFormat;
 
     protected $fillable = [
         'first_name',

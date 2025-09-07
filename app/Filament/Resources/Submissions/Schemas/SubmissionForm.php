@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Submissions\Schemas;
 
-use App\Enums\Submission\SubmissionType;
+use App\Enums\Submission\Type;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
@@ -14,19 +14,19 @@ class SubmissionForm
         return $schema
             ->components([
                 TextInput::make('patient_id')
-                    ->label(__('submissions.fields.patient_id'))
+                    ->label(__('submission.fields.patient_id'))
                     ->required()
                     ->numeric(),
                 TextInput::make('user_id')
-                    ->label(__('submissions.fields.user_id'))
+                    ->label(__('submission.fields.user_id'))
                     ->required()
                     ->numeric(),
                 Select::make('type')
-                    ->label(__('submissions.fields.type'))
-                    ->options(SubmissionType::class)
+                    ->label(__('submission.fields.type'))
+                    ->options(Type::class)
                     ->required(),
                 TextInput::make('data')
-                    ->label(__('submissions.fields.data')),
+                    ->label(__('submission.fields.data')),
             ]);
     }
 }

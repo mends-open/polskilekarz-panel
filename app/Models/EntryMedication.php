@@ -6,10 +6,11 @@ use App\Models\Concerns\ValidatesAttributes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\Pivot;
+use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 
 class EntryMedication extends Pivot
 {
-    use HasFactory, ValidatesAttributes;
+    use AutomaticDateFormat, HasFactory, ValidatesAttributes;
 
     public $incrementing = true;
 
@@ -18,7 +19,6 @@ class EntryMedication extends Pivot
     protected $fillable = [
         'entry_id',
         'medication_id',
-        'user_id',
     ];
 
     public function entry(): BelongsTo
@@ -31,17 +31,11 @@ class EntryMedication extends Pivot
         return $this->belongsTo(Medication::class);
     }
 
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
-
     public function rules(): array
     {
         return [
             'entry_id' => ['required', 'exists:entries,id'],
             'medication_id' => ['required', 'exists:medications,id'],
-            'user_id' => ['required', 'exists:users,id'],
         ];
     }
 }

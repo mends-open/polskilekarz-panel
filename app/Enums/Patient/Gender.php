@@ -4,7 +4,7 @@ namespace App\Enums\Patient;
 
 use Filament\Support\Contracts\HasLabel;
 
-enum PatientGender: string implements HasLabel
+enum Gender: string implements HasLabel
 {
     // http://hl7.org/fhir/administrative-gender
     case Male = 'male';
@@ -14,7 +14,7 @@ enum PatientGender: string implements HasLabel
 
     public function getLabel(): ?string
     {
-        return __('enums.patient_gender.' . $this->value);
+        return __('patient.gender.' . $this->value);
     }
 
     public static function labels(): array

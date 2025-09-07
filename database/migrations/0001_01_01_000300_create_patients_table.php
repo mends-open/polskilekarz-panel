@@ -13,10 +13,10 @@ return new class extends Migration
     {
         Schema::create('patients', function (Blueprint $table) {
             $table->id();
-            $table->string('first_name');
-            $table->string('last_name');
+            $table->text('first_name');
+            $table->text('last_name');
             $table->date('birth_date');
-            $table->string('gender');
+            $table->text('gender');
             $table->json('addresses')->nullable();
             $table->json('identifiers')->nullable();;
             $table->timestampsTz();

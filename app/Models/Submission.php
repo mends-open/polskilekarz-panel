@@ -7,10 +7,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 
 class Submission extends Model
 {
-    use HasFactory, SoftDeletes, ValidatesAttributes;
+    use HasFactory, SoftDeletes, ValidatesAttributes, AutomaticDateFormat;
 
     protected $fillable = [
         'patient_id',
@@ -23,14 +24,19 @@ class Submission extends Model
         'data' => 'array',
     ];
 
-    public function patient(): BelongsTo
+    public function entity(): BelongsTo
     {
-        return $this->belongsTo(Patient::class);
+        return $this->belongsTo(Entity::class);
     }
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function patient(): BelongsTo
+    {
+        return $this->belongsTo(Patient::class);
     }
 
     public function rules(): array

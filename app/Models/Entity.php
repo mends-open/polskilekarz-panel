@@ -9,24 +9,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
+use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 
 class Entity extends Model implements HasMedia
 {
-    use HasFactory, InteractsWithMedia, SoftDeletes, ValidatesAttributes;
+    use HasFactory, InteractsWithMedia, SoftDeletes, ValidatesAttributes, AutomaticDateFormat;
 
     protected $fillable = [
         'name',
         'headers',
         'footers',
-        'stamps',
-        'logos',
     ];
 
     protected $casts = [
         'headers' => 'array',
         'footers' => 'array',
-        'stamps' => 'array',
-        'logos' => 'array',
     ];
 
     public function users(): BelongsToMany
@@ -42,8 +39,6 @@ class Entity extends Model implements HasMedia
             'name' => ['required', 'string'],
             'headers' => ['nullable', 'array'],
             'footers' => ['nullable', 'array'],
-            'stamps' => ['nullable', 'array'],
-            'logos' => ['nullable', 'array'],
         ];
     }
 

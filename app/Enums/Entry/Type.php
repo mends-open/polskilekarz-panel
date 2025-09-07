@@ -4,8 +4,9 @@ namespace App\Enums\Entry;
 
 use Filament\Support\Contracts\HasLabel;
 
-enum EntryType: string implements HasLabel
+enum Type: string implements HasLabel
 {
+    case Unspecified = 'unspecified';
     // Operational (internal)
     case Task = 'task';
     case Appointment = 'appointment';
@@ -23,13 +24,14 @@ enum EntryType: string implements HasLabel
     case Recommendation = 'recommendation';
     case MedicalCertificate = 'medical_certificate';
     case SickLeave = 'sick_leave';
+    case PsychologicalAssessment = 'psychological_assessment';
     case CrossBorderPrescription = 'cross_border_prescription';
     case Referral = 'referral';
     case Attachment = 'attachment';
 
     public function getLabel(): ?string
     {
-        return __('enums.entry_type.' . $this->value);
+        return __('entry.type.' . $this->value);
     }
 
     public static function labels(): array

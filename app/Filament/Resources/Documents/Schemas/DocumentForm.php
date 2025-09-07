@@ -12,11 +12,11 @@ class DocumentForm
         return $schema
             ->components([
                 TextInput::make('patient_id')
-                    ->label(__('documents.fields.patient_id'))
+                    ->label(__('document.fields.patient_id'))
                     ->required()
                     ->numeric(),
                 TextInput::make('user_id')
-                    ->label(__('documents.fields.user_id'))
+                    ->label(__('document.fields.user_id'))
                     ->required()
                     ->numeric(),
             ]);

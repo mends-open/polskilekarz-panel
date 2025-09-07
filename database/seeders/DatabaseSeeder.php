@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Enums\Appointment\AppointmentType;
+use App\Enums\Appointment\Type;
 use App\Models\Appointment;
 use App\Models\Email;
 use App\Models\Entity;
@@ -19,10 +19,10 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $entity = Entity::factory()->create();
-        $user = User::factory()->create();
-        $entity->users()->attach($user);
+        $users = User::factory()->count(3)->create();
+        $entity->users()->attach($users);
 
-        Patient::factory()->count(5)->create()->each(function (Patient $patient) use ($user) {
+        Patient::factory()->count(10)->create()->each(function (Patient $patient) use ($users, $entity) {
             $email = Email::factory()->create();
             $patient->emails()->attach($email, [
                 'primary_since' => now(),
@@ -37,10 +37,19 @@ class DatabaseSeeder extends Seeder
                 'whatsapp_consent_since' => now(),
             ]);
 
+            $primaryUser = $users->first();
+
             Appointment::factory()
                 ->for($patient)
-                ->for($user)
-                ->state(['type' => AppointmentType::General->value])
+                ->for($primaryUser)
+                ->for($entity)
+                ->state(['type' => Type::PrimaryCare->value])
+                ->create();
+
+            Appointment::factory()
+                ->for($patient)
+                ->for($users->random())
+                ->for($entity)
                 ->create();
         });
     }
