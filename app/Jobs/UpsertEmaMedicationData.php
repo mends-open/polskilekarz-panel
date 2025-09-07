@@ -17,6 +17,8 @@ class UpsertEmaMedicationData implements ShouldQueue
 {
     use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public int $timeout = 600;
+
     public function __construct(public string $path)
     {
     }
