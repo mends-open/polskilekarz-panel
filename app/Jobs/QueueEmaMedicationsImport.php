@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Reader\IReadFilter;
 use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
 
@@ -100,7 +101,8 @@ class QueueEmaMedicationsImport implements ShouldQueue
         for ($row = 1; $row <= 50; $row++) {
             $rowHeaders = [];
             for ($col = 1; $col <= $highestColumn; $col++) {
-                $value = (string) $sheet->getCellByColumnAndRow($col, $row)->getValue();
+                $coordinate = Coordinate::stringFromColumnIndex($col) . $row;
+                $value = (string) $sheet->getCell($coordinate)->getValue();
                 $rowHeaders[$col] = trim(strtok($value, "\n"));
             }
 
@@ -147,14 +149,19 @@ class QueueEmaMedicationsImport implements ShouldQueue
 
             $end = min($start + $chunkSize - 1, $highestRow);
             for ($row = $start; $row <= $end; $row++) {
-                $product = trim((string) $sheet->getCellByColumnAndRow($map['product_name'], $row)->getValue());
+                $productCoordinate = Coordinate::stringFromColumnIndex($map['product_name']) . $row;
+                $product = trim((string) $sheet->getCell($productCoordinate)->getValue());
                 if ($product === '') {
                     continue;
                 }
 
-                $country = trim((string) $sheet->getCellByColumnAndRow($map['product_authorisation_country'], $row)->getValue());
-                $routes = trim((string) $sheet->getCellByColumnAndRow($map['route_of_administration'], $row)->getValue());
-                $substances = trim((string) $sheet->getCellByColumnAndRow($map['active_substance'], $row)->getValue());
+                $countryCoordinate = Coordinate::stringFromColumnIndex($map['product_authorisation_country']) . $row;
+                $routesCoordinate = Coordinate::stringFromColumnIndex($map['route_of_administration']) . $row;
+                $substancesCoordinate = Coordinate::stringFromColumnIndex($map['active_substance']) . $row;
+
+                $country = trim((string) $sheet->getCell($countryCoordinate)->getValue());
+                $routes = trim((string) $sheet->getCell($routesCoordinate)->getValue());
+                $substances = trim((string) $sheet->getCell($substancesCoordinate)->getValue());
 
                 fputcsv($handle, [$product, $country, $routes, $substances]);
             }
