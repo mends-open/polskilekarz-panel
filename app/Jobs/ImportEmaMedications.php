@@ -35,13 +35,15 @@ class ImportEmaMedications implements ShouldQueue
 
         $headers = [];
         for ($col = 1; $col <= $highestColumn; $col++) {
-            $headers[$col] = Str::snake((string) $sheet->getCellByColumnAndRow($col, $headerRow)->getValue());
+            $column = Coordinate::stringFromColumnIndex($col);
+            $headers[$col] = Str::snake((string) $sheet->getCell($column.$headerRow)->getValue());
         }
 
         for ($row = $headerRow + 1; $row <= $highestRow; $row++) {
             $rowData = [];
             for ($col = 1; $col <= $highestColumn; $col++) {
-                $rowData[$headers[$col]] = trim((string) $sheet->getCellByColumnAndRow($col, $row)->getValue());
+                $column = Coordinate::stringFromColumnIndex($col);
+                $rowData[$headers[$col]] = trim((string) $sheet->getCell($column.$row)->getValue());
             }
 
             $productName = $rowData['product_name'] ?? '';
