@@ -11,12 +11,15 @@ class FetchEmaMedications extends Command
 
     protected $description = 'Queue EMA medication import';
 
+    /**
+     * Dispatch the EMA medication import job and exit quickly.
+     */
     public function handle(): int
     {
         QueueEmaMedicationsImport::dispatch($this->option('endpoint'));
 
         $this->info('EMA medication import queued.');
 
-        return self::SUCCESS;
+        return Command::SUCCESS;
     }
 }

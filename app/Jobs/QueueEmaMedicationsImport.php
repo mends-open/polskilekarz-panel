@@ -14,8 +14,8 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
-use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Reader\IReadFilter;
+use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
 
 class QueueEmaMedicationsImport implements ShouldQueue
 {
@@ -43,12 +43,17 @@ class QueueEmaMedicationsImport implements ShouldQueue
 
         $chunks = $this->convertToCsvChunks($localPath);
 
+        $upsertJobs = [];
+        $importJobs = [];
         foreach ($chunks as $chunk) {
-            Bus::chain([
-                new UpsertEmaMedicationData($chunk),
-                new ImportEmaMedications($chunk),
-            ])->dispatch();
+            $upsertJobs[] = new UpsertEmaMedicationData($chunk);
+            $importJobs[] = new ImportEmaMedications($chunk);
         }
+
+        Bus::batch($upsertJobs)
+            ->name('ema-medications-upsert')
+            ->then(fn () => Bus::batch($importJobs)->name('ema-medications-import')->dispatch())
+            ->dispatch();
 
         Log::info('Dispatched EMA medication import jobs', ['chunks' => count($chunks)]);
     }
@@ -58,18 +63,57 @@ class QueueEmaMedicationsImport implements ShouldQueue
      *
      * @return array<int, string> Absolute paths to the generated chunk files
      */
-    private function convertToCsvChunks(string $xlsxPath, int $chunkSize = 1000): array
+    private function convertToCsvChunks(string $xlsxPath, int $chunkSize = 500): array
     {
-        $sheet = IOFactory::load($xlsxPath)->getActiveSheet();
-        $headerRow = 20;
-        $highestColumn = Coordinate::columnIndexFromString($sheet->getHighestDataColumn());
-        $highestRow = $sheet->getHighestDataRow();
+        $reader = new Xlsx();
+        $reader->setReadDataOnly(true);
 
+        $info = $reader->listWorksheetInfo($xlsxPath);
+        $worksheetInfo = $info[0];
+        $highestRow = (int) $worksheetInfo['totalRows'];
+        $highestColumn = (int) $worksheetInfo['lastColumnIndex'];
+
+        $filter = new class implements IReadFilter {
+            private int $startRow = 0;
+            private int $endRow = 0;
+
+            public function setRows(int $startRow, int $chunkSize): void
+            {
+                $this->startRow = $startRow;
+                $this->endRow = $startRow + $chunkSize - 1;
+            }
+
+            public function readCell($column, $row, $worksheetName = ''): bool
+            {
+                return $row >= $this->startRow && $row <= $this->endRow;
+            }
+        };
+
+        $reader->setReadFilter($filter);
+
+        // Locate header row within the first 50 lines
+        $filter->setRows(1, 50);
+        $sheet = $reader->load($xlsxPath)->getActiveSheet();
+
+        $headerRow = null;
         $headers = [];
-        for ($col = 1; $col <= $highestColumn; $col++) {
-            $column = Coordinate::stringFromColumnIndex($col);
-            $value = (string) $sheet->getCell($column.$headerRow)->getValue();
-            $headers[$col] = trim(strtok($value, "\n"));
+        for ($row = 1; $row <= 50; $row++) {
+            $rowHeaders = [];
+            for ($col = 1; $col <= $highestColumn; $col++) {
+                $value = (string) $sheet->getCellByColumnAndRow($col, $row)->getValue();
+                $rowHeaders[$col] = trim(strtok($value, "\n"));
+            }
+
+            if (in_array('Product name', $rowHeaders, true)) {
+                $headerRow = $row;
+                $headers = $rowHeaders;
+                break;
+            }
+        }
+
+        if ($headerRow === null) {
+            Log::warning('EMA header row not found', ['file' => $xlsxPath]);
+            return [];
         }
 
         $map = [
@@ -86,47 +130,41 @@ class QueueEmaMedicationsImport implements ShouldQueue
             }
         }
 
-        $paths = [];
-        $chunkIndex = 0;
-        $rowCount = 0;
-        $handle = null;
-
-        $open = function () use (&$chunkIndex, &$paths, &$handle, &$rowCount) {
-            $path = Storage::path('ema-medications-chunk-' . $chunkIndex . '.csv');
-            $handle = fopen($path, 'w');
-            $paths[] = $path;
-            $rowCount = 0;
-            $chunkIndex++;
-        };
-
-        $open();
-
-        for ($row = $headerRow + 1; $row <= $highestRow; $row++) {
-            $productCol = Coordinate::stringFromColumnIndex($map['product_name']);
-            $product = trim((string) $sheet->getCell($productCol . $row)->getValue());
-            if ($product === '') {
-                continue;
-            }
-
-            $countryCol = Coordinate::stringFromColumnIndex($map['product_authorisation_country']);
-            $routeCol = Coordinate::stringFromColumnIndex($map['route_of_administration']);
-            $substanceCol = Coordinate::stringFromColumnIndex($map['active_substance']);
-
-            $country = trim((string) $sheet->getCell($countryCol . $row)->getValue());
-            $routes = trim((string) $sheet->getCell($routeCol . $row)->getValue());
-            $substances = trim((string) $sheet->getCell($substanceCol . $row)->getValue());
-
-            fputcsv($handle, [$product, $country, $routes, $substances]);
-            $rowCount++;
-
-            if ($rowCount >= $chunkSize) {
-                fclose($handle);
-                $open();
-            }
+        if (in_array(null, $map, true)) {
+            Log::warning('Required EMA columns missing', ['map' => $map]);
+            return [];
         }
 
-        if (is_resource($handle)) {
+        $paths = [];
+        $chunkIndex = 0;
+
+        for ($start = $headerRow + 1; $start <= $highestRow; $start += $chunkSize) {
+            $filter->setRows($start, $chunkSize);
+            $sheet = $reader->load($xlsxPath)->getActiveSheet();
+
+            $path = Storage::path('ema-medications-chunk-' . $chunkIndex . '.csv');
+            $handle = fopen($path, 'w');
+
+            $end = min($start + $chunkSize - 1, $highestRow);
+            for ($row = $start; $row <= $end; $row++) {
+                $product = trim((string) $sheet->getCellByColumnAndRow($map['product_name'], $row)->getValue());
+                if ($product === '') {
+                    continue;
+                }
+
+                $country = trim((string) $sheet->getCellByColumnAndRow($map['product_authorisation_country'], $row)->getValue());
+                $routes = trim((string) $sheet->getCellByColumnAndRow($map['route_of_administration'], $row)->getValue());
+                $substances = trim((string) $sheet->getCellByColumnAndRow($map['active_substance'], $row)->getValue());
+
+                fputcsv($handle, [$product, $country, $routes, $substances]);
+            }
+
             fclose($handle);
+            $paths[] = $path;
+            $chunkIndex++;
+
+            unset($sheet);
+            gc_collect_cycles();
         }
 
         Log::info('Converted EMA spreadsheet to CSV chunks', [
