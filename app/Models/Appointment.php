@@ -11,11 +11,12 @@ use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 
 class Appointment extends Model
 {
-    use HasFactory, SoftDeletes, ValidatesAttributes, AutomaticDateFormat;
+    use AutomaticDateFormat, HasFactory, SoftDeletes, ValidatesAttributes;
 
     protected $fillable = [
         'patient_id',
         'user_id',
+        'entity_id',
         'type',
         'duration',
         'scheduled_at',
@@ -51,6 +52,7 @@ class Appointment extends Model
         return [
             'patient_id' => ['required', 'exists:patients,id'],
             'user_id' => ['required', 'exists:users,id'],
+            'entity_id' => ['required', 'exists:entities,id'],
             'type' => ['required', 'string'],
             'duration' => ['required', 'integer'],
             'scheduled_at' => ['required', 'date'],
