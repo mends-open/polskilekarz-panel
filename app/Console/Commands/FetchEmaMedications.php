@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Jobs\QueueEmaMedicationsImport;
+use App\Jobs\DownloadEmaMedications;
 use Illuminate\Console\Command;
 
 class FetchEmaMedications extends Command
@@ -12,11 +12,11 @@ class FetchEmaMedications extends Command
     protected $description = 'Queue EMA medication import';
 
     /**
-     * Queue the EMA medication import job.
+     * Queue the EMA medication import pipeline.
      */
     public function handle(): int
     {
-        QueueEmaMedicationsImport::dispatch($this->option('endpoint'));
+        DownloadEmaMedications::dispatch($this->option('endpoint'));
 
         $this->info('EMA medication import queued.');
 
