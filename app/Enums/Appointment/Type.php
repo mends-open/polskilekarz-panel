@@ -4,9 +4,10 @@ namespace App\Enums\Appointment;
 
 use Filament\Support\Contracts\HasLabel;
 
-enum AppointmentType: string implements HasLabel
+enum Type: string implements HasLabel
 {
-    case General = 'general';
+    case Unspecified = 'unspecified';
+    case PrimaryCare = 'primary_care';
     case Psychiatric = 'psychiatric';
     case Psychological = 'psychological';
     case Prescription = 'prescription';
@@ -14,7 +15,7 @@ enum AppointmentType: string implements HasLabel
 
     public function getLabel(): ?string
     {
-        return __('enums.appointment_type.' . $this->value);
+        return __('appointments.type.' . $this->value);
     }
 
     public static function labels(): array

@@ -1,20 +1,19 @@
 <?php
 
-namespace App\Enums\Patient;
+namespace App\Enums\Submission;
 
 use Filament\Support\Contracts\HasLabel;
 
-enum PatientGender: string implements HasLabel
+enum Type: string implements HasLabel
 {
-    // http://hl7.org/fhir/administrative-gender
-    case Male = 'male';
-    case Female = 'female';
-    case Other = 'other';
-    case Unknown = 'unknown';
+    case Unspecified = 'unspecified';
+    case Registration = 'registration';
+    case PreVisit = 'pre_visit';
+    case PostVisit = 'post_visit';
 
     public function getLabel(): ?string
     {
-        return __('enums.patient_gender.' . $this->value);
+        return __('submissions.type.' . $this->value);
     }
 
     public static function labels(): array

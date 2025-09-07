@@ -4,8 +4,9 @@ namespace App\Enums\Patient;
 
 use Filament\Support\Contracts\HasLabel;
 
-enum PatientIdentifier: string implements HasLabel
+enum Identifier: string implements HasLabel
 {
+    case Unspecified = 'unspecified';
     // Document Identifiers
     case IdentityDocument = 'identity_document'; // Country agnostic
     case Passport = 'passport'; // Self-explanatory
@@ -23,7 +24,7 @@ enum PatientIdentifier: string implements HasLabel
 
     public function getLabel(): ?string
     {
-        return __('enums.patient_identifier.' . $this->value);
+        return __('patients.identifier.' . $this->value);
     }
 
     public static function labels(): array
