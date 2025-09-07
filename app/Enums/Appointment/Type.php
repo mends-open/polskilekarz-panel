@@ -15,7 +15,7 @@ enum Type: string implements HasLabel
 
     public function getLabel(): ?string
     {
-        return __('appointments.type.' . $this->value);
+        return __('appointment.type.' . $this->value);
     }
 
     public static function labels(): array

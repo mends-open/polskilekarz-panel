@@ -13,37 +13,37 @@ class AppointmentInfolist
         return $schema
             ->components([
                 TextEntry::make('patient_id')
-                    ->label(__('appointments.fields.patient_id'))
+                    ->label(__('appointment.fields.patient_id'))
                     ->numeric(),
                 TextEntry::make('user_id')
-                    ->label(__('appointments.fields.user_id'))
+                    ->label(__('appointment.fields.user_id'))
                     ->numeric(),
                 TextEntry::make('type')
-                    ->label(__('appointments.fields.type'))
+                    ->label(__('appointment.fields.type'))
                     ->formatStateUsing(fn (?string $state) => $state ? Type::labels()[$state] ?? $state : null),
                 TextEntry::make('duration')
-                    ->label(__('appointments.fields.duration'))
+                    ->label(__('appointment.fields.duration'))
                     ->numeric(),
                 TextEntry::make('scheduled_at')
-                    ->label(__('appointments.fields.scheduled_at'))
+                    ->label(__('appointment.fields.scheduled_at'))
                     ->dateTime(),
                 TextEntry::make('confirmed_at')
-                    ->label(__('appointments.fields.confirmed_at'))
+                    ->label(__('appointment.fields.confirmed_at'))
                     ->dateTime(),
                 TextEntry::make('started_at')
-                    ->label(__('appointments.fields.started_at'))
+                    ->label(__('appointment.fields.started_at'))
                     ->dateTime(),
                 TextEntry::make('cancelled_at')
-                    ->label(__('appointments.fields.cancelled_at'))
+                    ->label(__('appointment.fields.cancelled_at'))
                     ->dateTime(),
                 TextEntry::make('created_at')
-                    ->label(__('appointments.fields.created_at'))
+                    ->label(__('appointment.fields.created_at'))
                     ->dateTime(),
                 TextEntry::make('updated_at')
-                    ->label(__('appointments.fields.updated_at'))
+                    ->label(__('appointment.fields.updated_at'))
                     ->dateTime(),
                 TextEntry::make('deleted_at')
-                    ->label(__('appointments.fields.deleted_at'))
+                    ->label(__('appointment.fields.deleted_at'))
                     ->dateTime(),
             ]);
     }

@@ -26,17 +26,17 @@ class SubmissionResource extends Resource
 
     public static function getModelLabel(): string
     {
-        return __('submissions.label');
+        return __('submission.label');
     }
 
     public static function getPluralModelLabel(): string
     {
-        return __('submissions.plural');
+        return __('submission.plural');
     }
 
     public static function getNavigationLabel(): string
     {
-        return __('submissions.plural');
+        return __('submission.plural');
     }
 
     public static function form(Schema $schema): Schema

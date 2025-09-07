@@ -17,49 +17,49 @@ class AppointmentsTable
         return $table
             ->columns([
                 TextColumn::make('patient_id')
-                    ->label(__('appointments.fields.patient_id'))
+                    ->label(__('appointment.fields.patient_id'))
                     ->numeric()
                     ->sortable(),
                 TextColumn::make('user_id')
-                    ->label(__('appointments.fields.user_id'))
+                    ->label(__('appointment.fields.user_id'))
                     ->numeric()
                     ->sortable(),
                 TextColumn::make('type')
-                    ->label(__('appointments.fields.type'))
+                    ->label(__('appointment.fields.type'))
                     ->formatStateUsing(fn (?string $state) => $state ? Type::labels()[$state] ?? $state : null)
                     ->searchable(),
                 TextColumn::make('duration')
-                    ->label(__('appointments.fields.duration'))
+                    ->label(__('appointment.fields.duration'))
                     ->numeric()
                     ->sortable(),
                 TextColumn::make('scheduled_at')
-                    ->label(__('appointments.fields.scheduled_at'))
+                    ->label(__('appointment.fields.scheduled_at'))
                     ->dateTime()
                     ->sortable(),
                 TextColumn::make('confirmed_at')
-                    ->label(__('appointments.fields.confirmed_at'))
+                    ->label(__('appointment.fields.confirmed_at'))
                     ->dateTime()
                     ->sortable(),
                 TextColumn::make('started_at')
-                    ->label(__('appointments.fields.started_at'))
+                    ->label(__('appointment.fields.started_at'))
                     ->dateTime()
                     ->sortable(),
                 TextColumn::make('cancelled_at')
-                    ->label(__('appointments.fields.cancelled_at'))
+                    ->label(__('appointment.fields.cancelled_at'))
                     ->dateTime()
                     ->sortable(),
                 TextColumn::make('created_at')
-                    ->label(__('appointments.fields.created_at'))
+                    ->label(__('appointment.fields.created_at'))
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('updated_at')
-                    ->label(__('appointments.fields.updated_at'))
+                    ->label(__('appointment.fields.updated_at'))
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('deleted_at')
-                    ->label(__('appointments.fields.deleted_at'))
+                    ->label(__('appointment.fields.deleted_at'))
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),

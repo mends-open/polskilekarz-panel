@@ -26,17 +26,17 @@ class DocumentResource extends Resource
 
     public static function getModelLabel(): string
     {
-        return __('documents.label');
+        return __('document.label');
     }
 
     public static function getPluralModelLabel(): string
     {
-        return __('documents.plural');
+        return __('document.plural');
     }
 
     public static function getNavigationLabel(): string
     {
-        return __('documents.plural');
+        return __('document.plural');
     }
 
     public static function form(Schema $schema): Schema

@@ -14,7 +14,7 @@ enum Gender: string implements HasLabel
 
     public function getLabel(): ?string
     {
-        return __('patients.gender.' . $this->value);
+        return __('patient.gender.' . $this->value);
     }
 
     public static function labels(): array

@@ -16,27 +16,27 @@ class UsersTable
         return $table
             ->columns([
                 TextColumn::make('name')
-                    ->label(__('users.fields.name'))
+                    ->label(__('user.fields.name'))
                     ->searchable(),
                 TextColumn::make('email')
-                    ->label(__('users.fields.email'))
+                    ->label(__('user.fields.email'))
                     ->searchable(),
                 TextColumn::make('email_verified_at')
-                    ->label(__('users.fields.email_verified_at'))
+                    ->label(__('user.fields.email_verified_at'))
                     ->dateTime()
                     ->sortable(),
                 TextColumn::make('created_at')
-                    ->label(__('users.fields.created_at'))
+                    ->label(__('user.fields.created_at'))
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('updated_at')
-                    ->label(__('users.fields.updated_at'))
+                    ->label(__('user.fields.updated_at'))
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('deleted_at')
-                    ->label(__('users.fields.deleted_at'))
+                    ->label(__('user.fields.deleted_at'))
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),

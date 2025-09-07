@@ -16,26 +16,26 @@ class UserForm
         return $schema
             ->components([
                 TextInput::make('name')
-                    ->label(__('users.fields.name'))
+                    ->label(__('user.fields.name'))
                     ->required(),
                 TextInput::make('email')
-                    ->label(__('users.fields.email'))
+                    ->label(__('user.fields.email'))
                     ->email()
                     ->required(),
                 DateTimePicker::make('email_verified_at')
-                    ->label(__('users.fields.email_verified_at')),
+                    ->label(__('user.fields.email_verified_at')),
                 TextInput::make('password')
-                    ->label(__('users.fields.password'))
+                    ->label(__('user.fields.password'))
                     ->password()
                     ->required(),
                 Repeater::make('signatures')
-                    ->label(__('users.fields.signatures'))
+                    ->label(__('user.fields.signatures'))
                     ->schema([
                         RichEditor::make('content')
-                            ->label(__('users.fields.signature')),
+                            ->label(__('user.fields.signature')),
                     ]),
                 SpatieMediaLibraryFileUpload::make('stamps')
-                    ->label(__('users.fields.stamps'))
+                    ->label(__('user.fields.stamps'))
                     ->collection('stamps')
                     ->multiple(),
             ]);
