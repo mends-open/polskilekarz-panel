@@ -36,6 +36,7 @@ class ImportEmaMedications implements ShouldQueue
         $productIds = [];
         $substanceIds = [];
         $medicationRows = [];
+        $seen = [];
 
         while (($row = fgetcsv($handle)) !== false) {
             [$productName, $countryName, $routeNames, $substanceNames] = array_pad($row, 4, null);
@@ -74,6 +75,13 @@ class ImportEmaMedications implements ShouldQueue
 
             foreach ($substances as $substanceId) {
                 foreach ($routes as $route) {
+                    $key = $substanceId.'|'.$productId.'|'.$country->value.'|'.$route->value;
+                    if (isset($seen[$key])) {
+                        continue;
+                    }
+
+                    $seen[$key] = true;
+
                     $medicationRows[] = [
                         'active_substance_id' => $substanceId,
                         'medicinal_product_id' => $productId,
