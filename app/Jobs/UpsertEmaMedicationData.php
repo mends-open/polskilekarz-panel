@@ -36,7 +36,7 @@ class UpsertEmaMedicationData implements ShouldQueue
         $substances = [];
 
         while (($row = fgetcsv($handle)) !== false) {
-            [$product, $country, $routes, $active] = $row;
+            [$product, , , $active] = array_pad($row, 4, null);
 
             $product = trim($product);
             if ($product !== '') {

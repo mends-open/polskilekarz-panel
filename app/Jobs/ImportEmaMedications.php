@@ -33,18 +33,22 @@ class ImportEmaMedications implements ShouldQueue
 
         Log::info('Importing EMA medications from CSV chunk', ['path' => $this->path]);
 
-        $imported = 0;
+        $productIds = [];
+        $substanceIds = [];
+        $medicationRows = [];
+
         while (($row = fgetcsv($handle)) !== false) {
-            [$productName, $countryName, $routeNames, $substanceNames] = $row;
+            [$productName, $countryName, $routeNames, $substanceNames] = array_pad($row, 4, null);
 
             $productName = trim($productName);
             if ($productName === '') {
                 continue;
             }
 
-            $product = MedicinalProduct::firstWhere('name', $productName);
-            if (!$product) {
-                continue;
+            $productId = $productIds[$productName] ?? null;
+            if (!$productId) {
+                $product = MedicinalProduct::firstOrCreate(['name' => $productName]);
+                $productId = $productIds[$productName] = $product->id;
             }
 
             $country = Country::tryFromName($countryName ?? '');
@@ -57,29 +61,42 @@ class ImportEmaMedications implements ShouldQueue
                 ->filter();
 
             $substances = collect(explode('|', $substanceNames ?? ''))
-                ->map(fn ($s) => ActiveSubstance::firstWhere('name', trim($s)))
-                ->filter();
-
-            foreach ($substances as $substance) {
-                foreach ($routes as $route) {
-                    $medication = Medication::withTrashed()->firstOrCreate([
-                        'active_substance_id' => $substance->id,
-                        'medicinal_product_id' => $product->id,
-                        'country' => $country,
-                        'route_of_administration' => $route,
-                    ]);
-
-                    if ($medication->trashed()) {
-                        $medication->restore();
+                ->map(function ($s) use (&$substanceIds) {
+                    $name = trim($s);
+                    if ($name === '') {
+                        return null;
                     }
 
-                    $imported++;
+                    return $substanceIds[$name]
+                        ??= ActiveSubstance::firstOrCreate(['name' => $name])->id;
+                })
+                ->filter();
+
+            foreach ($substances as $substanceId) {
+                foreach ($routes as $route) {
+                    $medicationRows[] = [
+                        'active_substance_id' => $substanceId,
+                        'medicinal_product_id' => $productId,
+                        'country' => $country->value,
+                        'route_of_administration' => $route->value,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                        'deleted_at' => null,
+                    ];
                 }
             }
         }
 
         fclose($handle);
 
-        Log::info('Imported medications from EMA chunk.', ['count' => $imported, 'path' => $this->path]);
+        foreach (array_chunk($medicationRows, 500) as $chunk) {
+            Medication::upsert(
+                $chunk,
+                ['active_substance_id', 'medicinal_product_id', 'country', 'route_of_administration'],
+                ['deleted_at', 'updated_at']
+            );
+        }
+
+        Log::info('Imported medications from EMA chunk.', ['count' => count($medicationRows), 'path' => $this->path]);
     }
 }
