@@ -19,9 +19,10 @@ class FetchEmaMedications extends Command
     public function handle(): int
     {
         $storage = config('ema.storage_dir', 'ema');
+        $disk = config('ema.storage_disk');
         $endpoint = $this->option('endpoint') ?? config('ema.endpoint');
 
-        Storage::deleteDirectory($storage);
+        Storage::disk($disk)->deleteDirectory($storage);
         DownloadEmaMedications::dispatch($endpoint);
 
         $this->info('EMA medication import queued.');

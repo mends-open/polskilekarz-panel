@@ -21,7 +21,9 @@ class ChunkEmaMedicationsCsv implements ShouldQueue
 
     public function handle(): void
     {
-        $csvPath = Storage::path($this->path);
+        $disk = config('ema.storage_disk');
+        $store = Storage::disk($disk);
+        $csvPath = $store->path($this->path);
         $handle = fopen($csvPath, 'r');
         if (!$handle) {
             Log::warning('Unable to open EMA CSV for chunking', ['path' => $csvPath]);
@@ -29,17 +31,17 @@ class ChunkEmaMedicationsCsv implements ShouldQueue
         }
 
         $storage = config('ema.storage_dir', 'ema');
-        Storage::makeDirectory("{$storage}/chunks");
+        $store->makeDirectory("{$storage}/chunks");
 
         $chunkIndex = 1;
         $rowCount = 0;
-        $chunkHandle = fopen(Storage::path(sprintf('%s/chunks/chunk-%04d.csv', $storage, $chunkIndex)), 'w');
+        $chunkHandle = fopen($store->path(sprintf('%s/chunks/chunk-%04d.csv', $storage, $chunkIndex)), 'w');
 
         while (($row = fgetcsv($handle)) !== false) {
             if ($rowCount > 0 && $rowCount % $this->chunkSize === 0) {
                 fclose($chunkHandle);
                 $chunkIndex++;
-                $chunkHandle = fopen(Storage::path(sprintf('%s/chunks/chunk-%04d.csv', $storage, $chunkIndex)), 'w');
+                $chunkHandle = fopen($store->path(sprintf('%s/chunks/chunk-%04d.csv', $storage, $chunkIndex)), 'w');
             }
 
             fputcsv($chunkHandle, $row);
@@ -49,7 +51,7 @@ class ChunkEmaMedicationsCsv implements ShouldQueue
         fclose($chunkHandle);
         fclose($handle);
 
-        Storage::delete($this->path);
+        $store->delete($this->path);
 
         Log::info('Chunked EMA CSV', [
             'chunks' => $chunkIndex,
