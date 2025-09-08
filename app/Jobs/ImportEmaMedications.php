@@ -2,11 +2,11 @@
 
 namespace App\Jobs;
 
-use App\Enums\Medication\Country;
-use App\Enums\Medication\RouteOfAdministration;
-use App\Models\ActiveSubstance;
+use App\Enums\EMAProduct\Country;
+use App\Enums\EMAProduct\RouteOfAdministration;
+use App\Models\EMASubstance;
 use App\Models\Medication;
-use App\Models\MedicinalProduct;
+use App\Models\EMAProduct;
 use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -48,7 +48,7 @@ class ImportEmaMedications implements ShouldQueue
 
             $productId = $productIds[$productName] ?? null;
             if (!$productId) {
-                $product = MedicinalProduct::firstOrCreate(['name' => $productName]);
+                $product = EMAProduct::firstOrCreate(['name' => $productName]);
                 $productId = $productIds[$productName] = $product->id;
             }
 
@@ -66,7 +66,7 @@ class ImportEmaMedications implements ShouldQueue
                 ? collect()
                 : collect([
                     $substanceIds[$substanceName]
-                        ??= ActiveSubstance::firstOrCreate(['name' => $substanceName])->id,
+                        ??= EMASubstance::firstOrCreate(['name' => $substanceName])->id,
                 ]);
 
             foreach ($substances as $substanceId) {

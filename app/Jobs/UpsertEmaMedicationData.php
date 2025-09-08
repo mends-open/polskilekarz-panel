@@ -2,8 +2,8 @@
 
 namespace App\Jobs;
 
-use App\Models\ActiveSubstance;
-use App\Models\MedicinalProduct;
+use App\Models\EMASubstance;
+use App\Models\EMAProduct;
 use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -67,7 +67,7 @@ class UpsertEmaMedicationData implements ShouldQueue
 
         $products->chunk(1000)->each(function ($chunk) {
             try {
-                MedicinalProduct::insertOrIgnore($chunk->all());
+                EMAProduct::insertOrIgnore($chunk->all());
             } catch (QueryException $e) {
                 Log::warning('Product insert failed', ['error' => $e->getMessage()]);
             }
@@ -75,7 +75,7 @@ class UpsertEmaMedicationData implements ShouldQueue
 
         $substances->chunk(1000)->each(function ($chunk) {
             try {
-                ActiveSubstance::insertOrIgnore($chunk->all());
+                EMASubstance::insertOrIgnore($chunk->all());
             } catch (QueryException $e) {
                 Log::warning('Substance insert failed', ['error' => $e->getMessage()]);
             }
