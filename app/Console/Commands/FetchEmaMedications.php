@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Jobs\DownloadEmaMedications;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Storage;
 
 class FetchEmaMedications extends Command
 {
@@ -16,6 +17,7 @@ class FetchEmaMedications extends Command
      */
     public function handle(): int
     {
+        Storage::deleteDirectory('ema');
         DownloadEmaMedications::dispatch($this->option('endpoint'));
 
         $this->info('EMA medication import queued.');

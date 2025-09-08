@@ -48,15 +48,13 @@ class UpsertEmaMedicationData implements ShouldQueue
                 ];
             }
 
-            foreach (preg_split('/[|+,;]/u', $active ?? '') as $name) {
-                $name = trim($name);
-                if ($name !== '') {
-                    $substances[] = [
-                        'name' => $name,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ];
-                }
+            $active = trim($active ?? '');
+            if ($active !== '') {
+                $substances[] = [
+                    'name' => $active,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
             }
         }
 

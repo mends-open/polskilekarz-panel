@@ -21,6 +21,7 @@ class ProcessEmaCsvChunks implements ShouldQueue
     {
         $files = collect(Storage::files('ema/chunks'))->sort()->values();
         if ($files->isEmpty()) {
+            Storage::deleteDirectory('ema');
             Log::info('EMA CSV chunk processing complete');
             return;
         }

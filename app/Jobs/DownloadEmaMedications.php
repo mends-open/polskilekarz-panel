@@ -28,6 +28,7 @@ class DownloadEmaMedications implements ShouldQueue
     {
         $endpoint = $this->endpoint ?? 'https://www.ema.europa.eu/en/documents/other/article-57-product-data_en.xlsx';
 
+        Storage::deleteDirectory('ema');
         Storage::makeDirectory('ema');
         $xlsxPath = Storage::path('ema/medications.xlsx');
 
