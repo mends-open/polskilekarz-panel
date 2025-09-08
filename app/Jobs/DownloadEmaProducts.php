@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
 
-class DownloadEmaMedications implements ShouldQueue
+class DownloadEmaProducts implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -31,7 +31,7 @@ class DownloadEmaMedications implements ShouldQueue
         $store = Storage::disk($disk);
         $store->deleteDirectory($storage);
         $store->makeDirectory($storage);
-        $xlsxPath = $store->path("{$storage}/medications.xlsx");
+        $xlsxPath = $store->path("{$storage}/products.xlsx");
 
         Http::sink($xlsxPath)->get($endpoint)->throw();
 
@@ -40,7 +40,7 @@ class DownloadEmaMedications implements ShouldQueue
             'path' => $xlsxPath,
         ]);
 
-        $csvRelative = "{$storage}/medications.csv";
+        $csvRelative = "{$storage}/products.csv";
         $csvPath = $store->path($csvRelative);
 
         $this->convertToCsv($xlsxPath, $csvPath);
@@ -49,7 +49,7 @@ class DownloadEmaMedications implements ShouldQueue
             'path' => $csvPath,
         ]);
 
-        ChunkEmaMedicationsCsv::dispatch($csvRelative);
+        ChunkEmaProductsCsv::dispatch($csvRelative);
     }
 
     private function convertToCsv(string $xlsxPath, string $csvPath): void

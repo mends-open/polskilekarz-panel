@@ -86,6 +86,26 @@ class ImportEmaProducts implements ShouldQueue
 
         fclose($handle);
 
+        $substanceIds = array_unique(array_column($products, 'ema_substance_id'));
+        $existing = EmaProduct::whereIn('ema_substance_id', $substanceIds)
+            ->get(['ema_substance_id', 'name', 'routes_of_administration', 'countries']);
+
+        foreach ($existing as $record) {
+            $key = $record->ema_substance_id.'|'.mb_strtolower($record->name);
+            if (!isset($products[$key])) {
+                continue;
+            }
+
+            $products[$key]['routes_of_administration'] = array_values(array_unique(array_merge(
+                $record->routes_of_administration ?? [],
+                $products[$key]['routes_of_administration']
+            )));
+            $products[$key]['countries'] = array_values(array_unique(array_merge(
+                $record->countries ?? [],
+                $products[$key]['countries']
+            )));
+        }
+
         foreach (array_chunk($products, 500, true) as $chunk) {
             $records = array_map(function ($product) {
                 $model = new EmaProduct();
