@@ -17,8 +17,6 @@ class UpsertEmaMedicationData implements ShouldQueue
 {
     use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $timeout = 600;
-
     public function __construct(public string $path)
     {
     }
@@ -83,6 +81,10 @@ class UpsertEmaMedicationData implements ShouldQueue
             }
         });
 
-        Log::info('Upserted '.$products->count().' products and '.$substances->count().' active substances.');
+        Log::info('Upserted products and active substances', [
+            'products' => $products->count(),
+            'substances' => $substances->count(),
+            'path' => $this->path,
+        ]);
     }
 }

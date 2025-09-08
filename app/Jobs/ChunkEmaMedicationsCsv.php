@@ -14,10 +14,9 @@ class ChunkEmaMedicationsCsv implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $timeout = 600;
-
-    public function __construct(public string $path, public int $chunkSize = 500)
+    public function __construct(public string $path, public int $chunkSize = 0)
     {
+        $this->chunkSize = $chunkSize ?: (int) config('ema.chunk_size', 500);
     }
 
     public function handle(): void
@@ -29,20 +28,22 @@ class ChunkEmaMedicationsCsv implements ShouldQueue
             return;
         }
 
-        Storage::makeDirectory('ema/chunks');
+        $storage = config('ema.storage_dir', 'ema');
+        Storage::makeDirectory("{$storage}/chunks");
 
-        $chunkIndex = 0;
+        $chunkIndex = 1;
         $rowCount = 0;
-        $chunkHandle = fopen(Storage::path('ema/chunks/chunk-' . $chunkIndex . '.csv'), 'w');
+        $chunkHandle = fopen(Storage::path(sprintf('%s/chunks/chunk-%04d.csv', $storage, $chunkIndex)), 'w');
 
         while (($row = fgetcsv($handle)) !== false) {
-            fputcsv($chunkHandle, $row);
-            $rowCount++;
-            if ($rowCount % $this->chunkSize === 0) {
+            if ($rowCount > 0 && $rowCount % $this->chunkSize === 0) {
                 fclose($chunkHandle);
                 $chunkIndex++;
-                $chunkHandle = fopen(Storage::path('ema/chunks/chunk-' . $chunkIndex . '.csv'), 'w');
+                $chunkHandle = fopen(Storage::path(sprintf('%s/chunks/chunk-%04d.csv', $storage, $chunkIndex)), 'w');
             }
+
+            fputcsv($chunkHandle, $row);
+            $rowCount++;
         }
 
         fclose($chunkHandle);
@@ -50,7 +51,10 @@ class ChunkEmaMedicationsCsv implements ShouldQueue
 
         Storage::delete($this->path);
 
-        Log::info('Chunked EMA CSV', ['chunks' => $chunkIndex + 1]);
+        Log::info('Chunked EMA CSV', [
+            'chunks' => $chunkIndex,
+            'rows' => $rowCount,
+        ]);
 
         ProcessEmaCsvChunks::dispatch();
     }

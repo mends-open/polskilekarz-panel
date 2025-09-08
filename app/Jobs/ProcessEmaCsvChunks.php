@@ -15,13 +15,12 @@ class ProcessEmaCsvChunks implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $timeout = 600;
-
     public function handle(): void
     {
-        $files = collect(Storage::files('ema/chunks'))->sort()->values();
+        $storage = config('ema.storage_dir', 'ema');
+        $files = collect(Storage::files("{$storage}/chunks"))->sort()->values();
         if ($files->isEmpty()) {
-            Storage::deleteDirectory('ema');
+            Storage::deleteDirectory($storage);
             Log::info('EMA CSV chunk processing complete');
             return;
         }

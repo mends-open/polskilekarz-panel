@@ -18,19 +18,18 @@ class DownloadEmaMedications implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $timeout = 600;
-
     public function __construct(public ?string $endpoint = null)
     {
     }
 
     public function handle(): void
     {
-        $endpoint = $this->endpoint ?? 'https://www.ema.europa.eu/en/documents/other/article-57-product-data_en.xlsx';
+        $storage = config('ema.storage_dir', 'ema');
+        $endpoint = $this->endpoint ?? config('ema.endpoint');
 
-        Storage::deleteDirectory('ema');
-        Storage::makeDirectory('ema');
-        $xlsxPath = Storage::path('ema/medications.xlsx');
+        Storage::deleteDirectory($storage);
+        Storage::makeDirectory($storage);
+        $xlsxPath = Storage::path("{$storage}/medications.xlsx");
 
         Http::sink($xlsxPath)->get($endpoint)->throw();
 
@@ -39,12 +38,14 @@ class DownloadEmaMedications implements ShouldQueue
             'path' => $xlsxPath,
         ]);
 
-        $csvRelative = 'ema/medications.csv';
+        $csvRelative = "{$storage}/medications.csv";
         $csvPath = Storage::path($csvRelative);
 
         $this->convertToCsv($xlsxPath, $csvPath);
 
-        Log::info('Converted EMA spreadsheet to CSV', ['path' => $csvPath]);
+        Log::info('Converted EMA spreadsheet to CSV', [
+            'path' => $csvPath,
+        ]);
 
         ChunkEmaMedicationsCsv::dispatch($csvRelative);
     }
