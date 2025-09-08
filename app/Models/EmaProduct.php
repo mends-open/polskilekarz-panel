@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
+use Tpetry\PostgresqlEnhanced\Eloquent\Casts\IntegerArrayCast;
 
 class EmaProduct extends Model
 {
@@ -22,8 +23,8 @@ class EmaProduct extends Model
     ];
 
     protected $casts = [
-        'routes_of_administration' => 'array',
-        'countries' => 'array',
+        'routes_of_administration' => IntegerArrayCast::class,
+        'countries' => IntegerArrayCast::class,
     ];
 
     public function substance(): BelongsTo

@@ -87,8 +87,14 @@ class ImportEmaProducts implements ShouldQueue
         fclose($handle);
 
         foreach (array_chunk($products, 500, true) as $chunk) {
+            $records = array_map(function ($product) {
+                $model = new EmaProduct();
+                $model->forceFill($product);
+                return $model->getAttributes();
+            }, $chunk);
+
             EmaProduct::upsert(
-                array_values($this->prepareForUpsert($chunk)),
+                array_values($records),
                 ['ema_substance_id', 'name'],
                 ['routes_of_administration', 'countries', 'updated_at', 'deleted_at']
             );
@@ -98,18 +104,5 @@ class ImportEmaProducts implements ShouldQueue
             'count' => count($products),
             'path' => $this->path,
         ]);
-    }
-
-    private function prepareForUpsert(array $products): array
-    {
-        return array_map(function ($product) {
-            $product['routes_of_administration'] = '{'
-                . implode(',', array_map('intval', $product['routes_of_administration']))
-                . '}';
-            $product['countries'] = '{'
-                . implode(',', array_map('intval', $product['countries']))
-                . '}';
-            return $product;
-        }, $products);
     }
 }
