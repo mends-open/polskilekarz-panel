@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use App\Models\Concerns\ValidatesAttributes;
+use App\Models\EmaSubstance;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 
-class EMAProduct extends Model
+class EmaProduct extends Model
 {
     use AutomaticDateFormat, HasFactory, SoftDeletes, ValidatesAttributes;
 
@@ -27,7 +28,7 @@ class EMAProduct extends Model
 
     public function substance(): BelongsTo
     {
-        return $this->belongsTo(EMASubstance::class, 'ema_substance_id');
+        return $this->belongsTo(EmaSubstance::class, 'ema_substance_id');
     }
 
     public function rules(): array

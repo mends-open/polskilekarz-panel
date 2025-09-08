@@ -22,7 +22,7 @@ class DocumentResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
-    protected static ?string $recordTitleAttribute = 'EMASubstance';
+    protected static ?string $recordTitleAttribute = 'EmaSubstance';
 
     public static function getModelLabel(): string
     {

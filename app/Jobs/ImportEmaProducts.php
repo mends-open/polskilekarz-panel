@@ -2,10 +2,10 @@
 
 namespace App\Jobs;
 
-use App\Enums\EMAProduct\Country;
-use App\Enums\EMAProduct\RouteOfAdministration;
-use App\Models\EMAProduct;
-use App\Models\EMASubstance;
+use App\Enums\EmaProduct\Country;
+use App\Enums\EmaProduct\RouteOfAdministration;
+use App\Models\EmaProduct;
+use App\Models\EmaSubstance;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -58,7 +58,7 @@ class ImportEmaProducts implements ShouldQueue
                 ->filter();
 
             foreach ($substances as $substanceName) {
-                $substance = EMASubstance::firstOrCreate(['name' => $substanceName]);
+                $substance = EmaSubstance::firstOrCreate(['name' => $substanceName]);
                 $key = $substance->id.'|'.mb_strtolower($productName);
 
                 $product = $products[$key] ?? [
@@ -87,8 +87,8 @@ class ImportEmaProducts implements ShouldQueue
         fclose($handle);
 
         foreach (array_chunk($products, 500, true) as $chunk) {
-            EMAProduct::upsert(
-                array_values($chunk),
+            EmaProduct::upsert(
+                array_values($this->prepareForUpsert($chunk)),
                 ['ema_substance_id', 'name'],
                 ['routes_of_administration', 'countries', 'updated_at', 'deleted_at']
             );
@@ -98,5 +98,18 @@ class ImportEmaProducts implements ShouldQueue
             'count' => count($products),
             'path' => $this->path,
         ]);
+    }
+
+    private function prepareForUpsert(array $products): array
+    {
+        return array_map(function ($product) {
+            $product['routes_of_administration'] = '{'
+                . implode(',', array_map('intval', $product['routes_of_administration']))
+                . '}';
+            $product['countries'] = '{'
+                . implode(',', array_map('intval', $product['countries']))
+                . '}';
+            return $product;
+        }, $products);
     }
 }
