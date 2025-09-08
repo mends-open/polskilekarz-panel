@@ -41,13 +41,6 @@ class Entry extends Model
         return $this->belongsTo(Patient::class);
     }
 
-    public function medications(): BelongsToMany
-    {
-        return $this->belongsToMany(ActiveSubstance::class)
-            ->using(EntryMedication::class)
-            ->withTimestamps();
-    }
-
     public function documents(): BelongsToMany
     {
         return $this->belongsToMany(Document::class)
