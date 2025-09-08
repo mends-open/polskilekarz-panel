@@ -2,6 +2,8 @@
 
 namespace App\Enums\Medication;
 
+use Illuminate\Support\Str;
+
 enum RouteOfAdministration: int
 {
     case Unspecified = 0;
@@ -100,4 +102,21 @@ enum RouteOfAdministration: int
     case TransdermalUse = 93;
     case UrethralUse = 94;
     case VaginalUse = 95;
+
+    public static function tryFromName(string $name): ?self
+    {
+        $caseName = Str::of($name)
+            ->replace(['(', ')', '-', ',', '/', '.'], ' ')
+            ->squish()
+            ->studly()
+            ->toString();
+
+        foreach (self::cases() as $case) {
+            if ($case->name === $caseName) {
+                return $case;
+            }
+        }
+
+        return null;
+    }
 }
