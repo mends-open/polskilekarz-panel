@@ -11,7 +11,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Spatie\SimpleExcel\SimpleExcelReader;
+use Illuminate\Database\QueryException;
 
 class UpsertEmaMedicationData implements ShouldQueue
 {
@@ -23,34 +23,68 @@ class UpsertEmaMedicationData implements ShouldQueue
 
     public function handle(): void
     {
-        $rows = SimpleExcelReader::create($this->path)
-            ->headerOnRow(20)
-            ->headersToSnakeCase()
-            ->getRows();
+        $handle = fopen($this->path, 'r');
+        if (!$handle) {
+            Log::warning('Unable to open EMA chunk for upsert', ['path' => $this->path]);
+            return;
+        }
+
+        Log::info('Parsing EMA CSV chunk for upsert', ['path' => $this->path]);
 
         $products = [];
         $substances = [];
 
-        foreach ($rows as $row) {
-            $product = trim($row['product_name'] ?? '');
+        while (($row = fgetcsv($handle)) !== false) {
+            [$product, , , $active] = array_pad($row, 4, null);
+
+            $product = trim($product);
             if ($product !== '') {
-                $products[] = ['name' => $product];
+                $products[] = [
+                    'name' => $product,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
             }
 
-            foreach (explode('|', $row['active_substance'] ?? '') as $name) {
-                $name = trim($name);
-                if ($name !== '') {
-                    $substances[] = ['name' => $name];
-                }
+            $active = trim($active ?? '');
+            if ($active !== '') {
+                $substances[] = [
+                    'name' => $active,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
             }
         }
 
-        $products = collect($products)->unique('name')->values()->all();
-        $substances = collect($substances)->unique('name')->values()->all();
+        fclose($handle);
 
-        MedicinalProduct::upsert($products, ['name']);
-        ActiveSubstance::upsert($substances, ['name']);
+        $products = collect($products)
+            ->unique(fn ($item) => mb_strtolower($item['name']))
+            ->values();
+        $substances = collect($substances)
+            ->unique(fn ($item) => mb_strtolower($item['name']))
+            ->values();
 
-        Log::info('Upserted '.count($products).' products and '.count($substances).' active substances.');
+        $products->chunk(1000)->each(function ($chunk) {
+            try {
+                MedicinalProduct::insertOrIgnore($chunk->all());
+            } catch (QueryException $e) {
+                Log::warning('Product insert failed', ['error' => $e->getMessage()]);
+            }
+        });
+
+        $substances->chunk(1000)->each(function ($chunk) {
+            try {
+                ActiveSubstance::insertOrIgnore($chunk->all());
+            } catch (QueryException $e) {
+                Log::warning('Substance insert failed', ['error' => $e->getMessage()]);
+            }
+        });
+
+        Log::info('Upserted products and active substances', [
+            'products' => $products->count(),
+            'substances' => $substances->count(),
+            'path' => $this->path,
+        ]);
     }
 }

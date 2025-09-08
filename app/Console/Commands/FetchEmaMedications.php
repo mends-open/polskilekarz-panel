@@ -2,34 +2,33 @@
 
 namespace App\Console\Commands;
 
-use App\Jobs\ImportEmaMedications;
-use App\Jobs\UpsertEmaMedicationData;
+use App\Jobs\DownloadEmaMedications;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class FetchEmaMedications extends Command
 {
     protected $signature = 'medications:fetch {--endpoint=}';
 
-    protected $description = 'Fetch EMA product data and dispatch import jobs';
+    protected $description = 'Queue EMA medication import';
 
+    /**
+     * Dispatches the EMA medication import job and exits immediately.
+     */
     public function handle(): int
     {
-        $endpoint = $this->option('endpoint') ?? 'https://www.ema.europa.eu/en/documents/other/article-57-product-data_en.xlsx';
+        $storage = config('ema.storage_dir', 'ema');
+        $endpoint = $this->option('endpoint') ?? config('ema.endpoint');
 
-        $path = Storage::path('ema-medications.xlsx');
+        Storage::deleteDirectory($storage);
+        DownloadEmaMedications::dispatch($endpoint);
 
-        Http::sink($path)->get($endpoint);
+        $this->info('EMA medication import queued.');
+        Log::info('EMA medication import queued', [
+            'endpoint' => $endpoint,
+        ]);
 
-        Bus::batch([
-            new UpsertEmaMedicationData($path),
-            new ImportEmaMedications($path),
-        ])->name('ema-medications-import')->dispatch();
-
-        $this->info('Import batch dispatched.');
-
-        return self::SUCCESS;
+        return Command::SUCCESS;
     }
 }

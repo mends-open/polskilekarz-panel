@@ -14,7 +14,7 @@
         "laravel/octane": "^2.12",
         "laravel/reverb": "^1.0",
         "laravel/tinker": "^2.10.1",
-        "spatie/simple-excel": "^3.8",
+        "phpoffice/phpspreadsheet": "^5.1",
         "tpetry/laravel-postgresql-enhanced": "^3.0"
     },
     "require-dev": {
