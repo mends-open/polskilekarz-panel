@@ -115,7 +115,7 @@ beforeEach(function () {
         $table->softDeletesTz();
     });
 
-    Schema::create('medications', function (Blueprint $table) {
+    Schema::create('ema_active_substances', function (Blueprint $table) {
         $table->id();
         $table->string('name');
         $table->timestamps();
@@ -150,7 +150,7 @@ afterEach(function () {
     Schema::drop('document_entry');
     Schema::drop('documents');
     Schema::drop('entry_medication');
-    Schema::drop('medications');
+    Schema::drop('ema_active_substances');
     Schema::drop('entries');
     Schema::drop('appointments');
     Schema::drop('patient_phone');

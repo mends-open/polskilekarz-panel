@@ -2,8 +2,8 @@
 
 namespace App\Jobs;
 
-use App\Models\ActiveSubstance;
-use App\Models\MedicinalProduct;
+use App\Models\EmaActiveSubstance;
+use App\Models\EmaMedicinalProduct;
 use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -35,7 +35,7 @@ class UpsertEmaMedicationData implements ShouldQueue
         $substances = [];
 
         while (($row = fgetcsv($handle)) !== false) {
-            [$product, , , $active] = array_pad($row, 4, null);
+            [$product, , , $actives] = array_pad($row, 4, null);
 
             $product = trim($product);
             if ($product !== '') {
@@ -46,14 +46,16 @@ class UpsertEmaMedicationData implements ShouldQueue
                 ];
             }
 
-            $active = trim($active ?? '');
-            if ($active !== '') {
-                $substances[] = [
-                    'name' => $active,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-            }
+            collect(explode('|', $actives ?? ''))
+                ->map(fn ($a) => trim($a))
+                ->filter()
+                ->each(function ($name) use (&$substances) {
+                    $substances[] = [
+                        'name' => $name,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                });
         }
 
         fclose($handle);
@@ -67,7 +69,7 @@ class UpsertEmaMedicationData implements ShouldQueue
 
         $products->chunk(1000)->each(function ($chunk) {
             try {
-                MedicinalProduct::insertOrIgnore($chunk->all());
+                EmaMedicinalProduct::insertOrIgnore($chunk->all());
             } catch (QueryException $e) {
                 Log::warning('Product insert failed', ['error' => $e->getMessage()]);
             }
@@ -75,7 +77,7 @@ class UpsertEmaMedicationData implements ShouldQueue
 
         $substances->chunk(1000)->each(function ($chunk) {
             try {
-                ActiveSubstance::insertOrIgnore($chunk->all());
+                EmaActiveSubstance::insertOrIgnore($chunk->all());
             } catch (QueryException $e) {
                 Log::warning('Substance insert failed', ['error' => $e->getMessage()]);
             }

@@ -2,12 +2,12 @@
 
 namespace Database\Factories;
 
-use App\Models\ActiveSubstance;
+use App\Models\EmaActiveSubstance;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-class MedicationFactory extends Factory
+class EmaActiveSubstanceFactory extends Factory
 {
-    protected $model = ActiveSubstance::class;
+    protected $model = EmaActiveSubstance::class;
 
     public function definition(): array
     {

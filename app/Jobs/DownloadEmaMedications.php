@@ -24,12 +24,13 @@ class DownloadEmaMedications implements ShouldQueue
 
     public function handle(): void
     {
+        $disk = config('ema.storage_disk', 'local');
         $storage = config('ema.storage_dir', 'ema');
         $endpoint = $this->endpoint ?? config('ema.endpoint');
 
-        Storage::deleteDirectory($storage);
-        Storage::makeDirectory($storage);
-        $xlsxPath = Storage::path("{$storage}/medications.xlsx");
+        Storage::disk($disk)->deleteDirectory($storage);
+        Storage::disk($disk)->makeDirectory($storage);
+        $xlsxPath = Storage::disk($disk)->path("{$storage}/medications.xlsx");
 
         Http::sink($xlsxPath)->get($endpoint)->throw();
 
@@ -39,7 +40,7 @@ class DownloadEmaMedications implements ShouldQueue
         ]);
 
         $csvRelative = "{$storage}/medications.csv";
-        $csvPath = Storage::path($csvRelative);
+        $csvPath = Storage::disk($disk)->path($csvRelative);
 
         $this->convertToCsv($xlsxPath, $csvPath);
 

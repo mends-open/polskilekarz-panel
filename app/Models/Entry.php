@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\ValidatesAttributes;
+use App\Models\EmaActiveSubstance;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -43,7 +44,7 @@ class Entry extends Model
 
     public function medications(): BelongsToMany
     {
-        return $this->belongsToMany(ActiveSubstance::class)
+        return $this->belongsToMany(EmaActiveSubstance::class, 'entry_medication', 'entry_id', 'medication_id')
             ->using(EntryMedication::class)
             ->withTimestamps();
     }

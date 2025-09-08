@@ -17,23 +17,24 @@ class ProcessEmaCsvChunks implements ShouldQueue
 
     public function handle(): void
     {
+        $disk = config('ema.storage_disk', 'local');
         $storage = config('ema.storage_dir', 'ema');
-        $files = collect(Storage::files("{$storage}/chunks"))->sort()->values();
+        $files = collect(Storage::disk($disk)->files("{$storage}/chunks"))->sort()->values();
         if ($files->isEmpty()) {
-            Storage::deleteDirectory($storage);
+            Storage::disk($disk)->deleteDirectory($storage);
             Log::info('EMA CSV chunk processing complete');
             return;
         }
 
         $file = $files->first();
-        $path = Storage::path($file);
+        $path = Storage::disk($disk)->path($file);
 
         Log::info('Dispatching processing jobs for EMA chunk', ['file' => $file]);
 
         Bus::chain([
             new UpsertEmaMedicationData($path),
             new ImportEmaMedications($path),
-            fn () => Storage::delete($file),
+            fn () => Storage::disk($disk)->delete($file),
             new self(),
         ])->dispatch();
     }

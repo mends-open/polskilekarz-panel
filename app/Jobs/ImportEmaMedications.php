@@ -4,9 +4,9 @@ namespace App\Jobs;
 
 use App\Enums\Medication\Country;
 use App\Enums\Medication\RouteOfAdministration;
-use App\Models\ActiveSubstance;
-use App\Models\Medication;
-use App\Models\MedicinalProduct;
+use App\Models\EmaActiveSubstance;
+use App\Models\EmaMedication;
+use App\Models\EmaMedicinalProduct;
 use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -35,8 +35,7 @@ class ImportEmaMedications implements ShouldQueue
 
         $productIds = [];
         $substanceIds = [];
-        $medicationRows = [];
-        $seen = [];
+        $rows = [];
 
         while (($row = fgetcsv($handle)) !== false) {
             [$productName, $countryName, $routeNames, $substanceNames] = array_pad($row, 4, null);
@@ -48,7 +47,7 @@ class ImportEmaMedications implements ShouldQueue
 
             $productId = $productIds[$productName] ?? null;
             if (!$productId) {
-                $product = MedicinalProduct::firstOrCreate(['name' => $productName]);
+                $product = EmaMedicinalProduct::firstOrCreate(['name' => $productName]);
                 $productId = $productIds[$productName] = $product->id;
             }
 
@@ -59,55 +58,55 @@ class ImportEmaMedications implements ShouldQueue
 
             $routes = collect(explode('|', $routeNames ?? ''))
                 ->map(fn ($r) => RouteOfAdministration::tryFromName(trim($r)))
-                ->filter();
+                ->filter()
+                ->map(fn ($r) => $r->value);
 
-            $substanceName = trim($substanceNames ?? '');
-            $substances = $substanceName === ''
-                ? collect()
-                : collect([
-                    $substanceIds[$substanceName]
-                        ??= ActiveSubstance::firstOrCreate(['name' => $substanceName])->id,
-                ]);
+            $substances = collect(explode('|', $substanceNames ?? ''))
+                ->map(fn ($s) => trim($s))
+                ->filter()
+                ->map(function ($name) use (&$substanceIds) {
+                    return $substanceIds[$name]
+                        ??= EmaActiveSubstance::firstOrCreate(['name' => $name])->id;
+                });
 
             foreach ($substances as $substanceId) {
-                foreach ($routes as $route) {
-                    $key = $substanceId.'|'.$productId.'|'.$country->value.'|'.$route->value;
-                    if (isset($seen[$key])) {
-                        continue;
-                    }
-
-                    $seen[$key] = true;
-
-                    $medicationRows[] = [
+                $key = $productId.'|'.$substanceId;
+                if (!isset($rows[$key])) {
+                    $rows[$key] = [
                         'active_substance_id' => $substanceId,
                         'medicinal_product_id' => $productId,
-                        'country' => $country->value,
-                        'route_of_administration' => $route->value,
+                        'countries' => [],
+                        'routes_of_administration' => [],
                         'created_at' => now(),
                         'updated_at' => now(),
                         'deleted_at' => null,
                     ];
                 }
+                $rows[$key]['countries'][] = $country->value;
+                $rows[$key]['routes_of_administration'] = array_merge(
+                    $rows[$key]['routes_of_administration'],
+                    $routes->all()
+                );
             }
         }
 
         fclose($handle);
 
-        foreach (array_chunk($medicationRows, 500) as $chunk) {
-            Medication::insertOrIgnore($chunk);
+        foreach ($rows as &$row) {
+            $row['countries'] = array_values(array_unique($row['countries']));
+            $row['routes_of_administration'] = array_values(array_unique($row['routes_of_administration']));
+        }
 
-            foreach ($chunk as $row) {
-                Medication::withTrashed()
-                    ->where('active_substance_id', $row['active_substance_id'])
-                    ->where('medicinal_product_id', $row['medicinal_product_id'])
-                    ->where('country', $row['country'])
-                    ->where('route_of_administration', $row['route_of_administration'])
-                    ->update(['deleted_at' => null, 'updated_at' => now()]);
-            }
+        foreach (array_chunk(array_values($rows), 500) as $chunk) {
+            EmaMedication::upsert(
+                $chunk,
+                ['active_substance_id', 'medicinal_product_id'],
+                ['countries', 'routes_of_administration', 'deleted_at', 'updated_at']
+            );
         }
 
         Log::info('Imported medications from EMA chunk.', [
-            'count' => count($medicationRows),
+            'count' => count($rows),
             'path' => $this->path,
         ]);
     }

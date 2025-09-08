@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\ActiveSubstance;
-use App\Models\MedicinalProduct;
+use App\Models\EmaActiveSubstance;
+use App\Models\EmaMedicinalProduct;
 use Illuminate\Database\Migrations\Migration;
 use Tpetry\PostgresqlEnhanced\Schema\Blueprint;
 use Tpetry\PostgresqlEnhanced\Support\Facades\Schema;
@@ -13,20 +13,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('medications', function (Blueprint $table) {
+        Schema::create('ema_medications', function (Blueprint $table) {
             $table->id();
-            $table->foreignIdFor(ActiveSubstance::class)->constrained();
-            $table->foreignIdFor(MedicinalProduct::class)->constrained();
-            $table->smallInteger('country');
-            $table->smallInteger('route_of_administration');
+            $table->foreignIdFor(EmaActiveSubstance::class)->constrained('ema_active_substances');
+            $table->foreignIdFor(EmaMedicinalProduct::class)->constrained('ema_medicinal_products');
+            $table->smallInteger('countries')->array();
+            $table->smallInteger('routes_of_administration')->array();
             $table->timestampsTz();
             $table->softDeletesTz();
             $table->unique([
                 'active_substance_id',
                 'medicinal_product_id',
-                'country',
-                'route_of_administration',
-            ], 'medications_unique');
+            ], 'ema_medications_unique');
         });
     }
 
@@ -35,6 +33,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('medications');
+        Schema::dropIfExists('ema_medications');
     }
 };

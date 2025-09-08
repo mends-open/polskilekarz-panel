@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('active_substances', function (Blueprint $table) {
+        Schema::create('ema_active_substances', function (Blueprint $table) {
             $table->id();
             $table->caseInsensitiveText('name')->unique();
             $table->timestampsTz();
@@ -24,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('active_substances');
+        Schema::dropIfExists('ema_active_substances');
     }
 };

@@ -4,7 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Entry;
 use App\Models\EntryMedication;
-use App\Models\ActiveSubstance;
+use App\Models\EmaActiveSubstance;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class EntryMedicationFactory extends Factory
@@ -15,7 +15,7 @@ class EntryMedicationFactory extends Factory
     {
         return [
             'entry_id' => Entry::factory(),
-            'medication_id' => ActiveSubstance::factory(),
+            'medication_id' => EmaActiveSubstance::factory(),
         ];
     }
 }
