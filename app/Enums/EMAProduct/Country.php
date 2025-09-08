@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Enums\Medication;
+namespace App\Enums\EMAProduct;
 
 use Illuminate\Support\Str;
 
