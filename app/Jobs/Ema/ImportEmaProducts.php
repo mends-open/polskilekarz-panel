@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Jobs;
+namespace App\Jobs\Ema;
 
 use App\Enums\EmaProduct\Country;
 use App\Enums\EmaProduct\RouteOfAdministration;
