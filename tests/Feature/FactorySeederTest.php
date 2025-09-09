@@ -1,13 +1,10 @@
 <?php
 
-use App\Enums\Appointment\Type;
-use App\Models\Appointment;
 use App\Models\DocumentEntry;
 use App\Models\Email;
 use App\Models\EmailPatient;
 use App\Models\Entity;
 use App\Models\EntityUser;
-use App\Models\EntryMedication;
 use App\Models\Patient;
 use App\Models\PatientPhone;
 use App\Models\Phone;
@@ -48,7 +45,7 @@ beforeEach(function () {
         $table->string('first_name');
         $table->string('last_name');
         $table->date('birth_date');
-        $table->string('gender');
+        $table->smallInteger('gender');
         $table->json('addresses')->nullable();
         $table->json('identifiers')->nullable();
         $table->timestamps();
@@ -89,44 +86,15 @@ beforeEach(function () {
         $table->timestampsTz();
     });
 
-    Schema::create('appointments', function (Blueprint $table) {
-        $table->id();
-        $table->foreignId('patient_id');
-        $table->foreignId('user_id');
-        $table->foreignId('entity_id');
-        $table->string('type');
-        $table->smallInteger('duration');
-        $table->dateTimeTz('scheduled_at');
-        $table->dateTimeTz('confirmed_at')->nullable();
-        $table->dateTimeTz('started_at')->nullable();
-        $table->dateTimeTz('cancelled_at')->nullable();
-        $table->timestampsTz();
-        $table->softDeletesTz();
-    });
-
     Schema::create('entries', function (Blueprint $table) {
         $table->id();
         $table->foreignId('patient_id');
         $table->foreignId('user_id');
         $table->foreignId('entity_id');
-        $table->string('type');
+        $table->smallInteger('type');
         $table->json('data')->nullable();
         $table->timestampsTz();
         $table->softDeletesTz();
-    });
-
-    Schema::create('medications', function (Blueprint $table) {
-        $table->id();
-        $table->string('name');
-        $table->timestamps();
-        $table->softDeletes();
-    });
-
-    Schema::create('entry_medication', function (Blueprint $table) {
-        $table->id();
-        $table->foreignId('entry_id');
-        $table->foreignId('medication_id');
-        $table->timestampsTz();
     });
 
     Schema::create('documents', function (Blueprint $table) {
@@ -149,10 +117,7 @@ beforeEach(function () {
 afterEach(function () {
     Schema::drop('document_entry');
     Schema::drop('documents');
-    Schema::drop('entry_medication');
-    Schema::drop('medications');
     Schema::drop('entries');
-    Schema::drop('appointments');
     Schema::drop('patient_phone');
     Schema::drop('phones');
     Schema::drop('email_patient');
@@ -175,15 +140,6 @@ it('creates phone via factory', function () {
     expect(Phone::count())->toBe(1);
 });
 
-it('creates appointment via factory', function () {
-    $appointment = Appointment::factory()->create();
-
-    expect($appointment->patient)->not->toBeNull();
-    expect($appointment->user)->not->toBeNull();
-    expect($appointment->entity)->not->toBeNull();
-    expect(Type::tryFrom($appointment->type))->not->toBeNull();
-});
-
 it('creates email patient pivot via factory', function () {
     EmailPatient::factory()->create();
 
@@ -202,13 +158,7 @@ it('creates entity user pivot via factory', function () {
     expect(EntityUser::count())->toBe(1);
 });
 
-it('creates entry medication pivot via factory', function () {
-    EntryMedication::factory()->create();
-
-    expect(EntryMedication::count())->toBe(1);
-});
-
-it('seeds patients with contacts and appointments', function () {
+it('seeds patients with contacts', function () {
     (new DatabaseSeeder)->run();
 
     expect(User::count())->toBe(3);
@@ -216,12 +166,10 @@ it('seeds patients with contacts and appointments', function () {
     expect(Patient::count())->toBe(10);
     expect(Email::count())->toBe(10);
     expect(Phone::count())->toBe(10);
-    expect(Appointment::count())->toBe(20);
     $patient = Patient::first();
     expect($patient)->not->toBeNull();
     expect($patient->emails()->count())->toBe(1);
     expect($patient->phones()->count())->toBe(1);
-    expect(Type::tryFrom(Appointment::first()->type))->toBe(Type::PrimaryCare);
 });
 
 it('deletes email patient pivot', function () {
@@ -278,18 +226,4 @@ it('deletes entity user pivot', function () {
 
     $entity->refresh();
     expect($entity->users()->count())->toBe(0);
-});
-
-it('deletes entry medication pivot', function () {
-    $pivot = EntryMedication::factory()->create();
-    $entry = $pivot->entry;
-
-    expect($entry->medications()->count())->toBe(1);
-
-    $pivot->delete();
-
-    expect(EntryMedication::count())->toBe(0);
-
-    $entry->refresh();
-    expect($entry->medications()->count())->toBe(0);
 });

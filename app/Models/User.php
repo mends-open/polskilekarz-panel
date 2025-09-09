@@ -60,11 +60,6 @@ class User extends Authenticatable implements HasMedia
             ->withTimestamps();
     }
 
-    public function appointments(): HasMany
-    {
-        return $this->hasMany(Appointment::class);
-    }
-
     public function entries(): HasMany
     {
         return $this->hasMany(Entry::class);

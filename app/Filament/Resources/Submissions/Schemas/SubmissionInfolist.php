@@ -20,7 +20,7 @@ class SubmissionInfolist
                     ->numeric(),
                 TextEntry::make('type')
                     ->label(__('submission.fields.type'))
-                    ->formatStateUsing(fn (?string $state) => $state ? Type::labels()[$state] ?? $state : null),
+                    ->formatStateUsing(fn (?int $state) => $state !== null ? Type::labels()[$state] ?? (string) $state : null),
                 TextEntry::make('created_at')
                     ->label(__('submission.fields.created_at'))
                     ->dateTime(),

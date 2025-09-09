@@ -29,11 +29,6 @@ class Patient extends Model
         'identifiers' => 'array',
     ];
 
-    public function appointments(): HasMany
-    {
-        return $this->hasMany(Appointment::class);
-    }
-
     public function entries(): HasMany
     {
         return $this->hasMany(Entry::class);
@@ -76,7 +71,7 @@ class Patient extends Model
             'first_name' => ['required', 'string'],
             'last_name' => ['required', 'string'],
             'birth_date' => ['required', 'date'],
-            'gender' => ['required', 'string'],
+            'gender' => ['required', 'integer'],
             'addresses' => ['nullable', 'array'],
             'identifiers' => ['nullable', 'array'],
         ];

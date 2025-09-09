@@ -4,30 +4,29 @@ namespace App\Enums\Entry;
 
 use Filament\Support\Contracts\HasLabel;
 
-enum Type: string implements HasLabel
+enum Type: int implements HasLabel
 {
-    case Unspecified = 'unspecified';
+    case Unspecified = 0;
     // Operational (internal)
-    case Task = 'task';
-    case Appointment = 'appointment';
-    case Note = 'note';
-    case Warning = 'warning';
-    case Danger = 'danger';
+    case Task = 1;
+    case Note = 2;
+    case Warning = 3;
+    case Danger = 4;
 
     // Clinical narratives
-    case Interview = 'interview';
-    case Observation = 'observation';
-    case Condition = 'condition';
-    case Allergy = 'allergy';
-    case Pregnancy = 'pregnancy';
-    case Lactation = 'lactation';
-    case Recommendation = 'recommendation';
-    case MedicalCertificate = 'medical_certificate';
-    case SickLeave = 'sick_leave';
-    case PsychologicalAssessment = 'psychological_assessment';
-    case CrossBorderPrescription = 'cross_border_prescription';
-    case Referral = 'referral';
-    case Attachment = 'attachment';
+    case Interview = 5;
+    case Observation = 6;
+    case Condition = 7;
+    case Allergy = 8;
+    case Pregnancy = 9;
+    case Lactation = 10;
+    case Recommendation = 11;
+    case MedicalCertificate = 12;
+    case SickLeave = 13;
+    case PsychologicalAssessment = 14;
+    case CrossBorderPrescription = 15;
+    case Referral = 16;
+    case Attachment = 17;
 
     public function getLabel(): ?string
     {
@@ -45,3 +44,4 @@ enum Type: string implements HasLabel
         return $labels;
     }
 }
+

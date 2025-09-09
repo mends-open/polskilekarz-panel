@@ -4,11 +4,11 @@ namespace App\Enums\Submission;
 
 use Filament\Support\Contracts\HasLabel;
 
-enum Type: string implements HasLabel
+enum Type: int implements HasLabel
 {
-    case Unspecified = 'unspecified';
-    case Registration = 'registration';
-    case PrescriptionRequest = 'prescription_request';
+    case Unspecified = 0;
+    case Registration = 1;
+    case PrescriptionRequest = 2;
 
     public function getLabel(): ?string
     {
@@ -26,3 +26,4 @@ enum Type: string implements HasLabel
         return $labels;
     }
 }
+
