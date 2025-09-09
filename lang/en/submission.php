@@ -4,10 +4,9 @@ return [
     'label' => 'Submission',
     'plural' => 'Submissions',
     'type' => [
-        'unspecified' => 'Unspecified',
-        'registration' => 'Registration',
-        'pre_visit' => 'Pre-visit',
-        'post_visit' => 'Post-visit',
+        0 => 'Unspecified',
+        1 => 'Registration',
+        2 => 'Prescription request',
     ],
     'fields' => [
         'patient_id' => 'Patient',

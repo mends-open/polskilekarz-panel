@@ -4,23 +4,23 @@ namespace App\Enums\Patient;
 
 use Filament\Support\Contracts\HasLabel;
 
-enum Identifier: string implements HasLabel
+enum Identifier: int implements HasLabel
 {
-    case Unspecified = 'unspecified';
+    case Unspecified = 0;
     // Document Identifiers
-    case IdentityDocument = 'identity_document'; // Country agnostic
-    case Passport = 'passport'; // Self-explanatory
-    case DriversLicense = 'drivers_license'; // Self-explanatory
-    case EHIC = 'ehic'; // European Health Insurance Card
+    case IdentityDocument = 1; // Country agnostic
+    case Passport = 2; // Self-explanatory
+    case DriversLicense = 3; // Self-explanatory
+    case EHIC = 4; // European Health Insurance Card
 
     // National Identifiers
-    case PESEL = 'pesel'; // Powszechny Elektroniczny System Ewidencji Ludności, PL
-    case BSN = 'bsn'; // Burgerservicenummer, NL
-    case IdNr = 'id_nr'; // Die Identifikationsnummer, DE
-    case BIS = 'bis'; // BIS-nummer, BE
-    case NIR = 'nir'; // Numéro d'Inscription au Répertoire, FR
-    case NUSS = 'nuss'; // Número de la Seguridad Social, ES
-    case CodiceFiscale = 'codice_fiscale'; // Codice Fiscale, IT
+    case PESEL = 5; // Powszechny Elektroniczny System Ewidencji Ludności, PL
+    case BSN = 6; // Burgerservicenummer, NL
+    case IdNr = 7; // Die Identifikationsnummer, DE
+    case BIS = 8; // BIS-nummer, BE
+    case NIR = 9; // Numéro d'Inscription au Répertoire, FR
+    case NUSS = 10; // Número de la Seguridad Social, ES
+    case CodiceFiscale = 11; // Codice Fiscale, IT
 
     public function getLabel(): ?string
     {
@@ -38,3 +38,4 @@ enum Identifier: string implements HasLabel
         return $labels;
     }
 }
+

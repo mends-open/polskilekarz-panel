@@ -16,9 +16,9 @@ return new class extends Migration
             $table->text('first_name');
             $table->text('last_name');
             $table->date('birth_date');
-            $table->text('gender');
+            $table->smallInteger('gender');
             $table->json('addresses')->nullable();
-            $table->json('identifiers')->nullable();;
+            $table->json('identifiers')->nullable();
             $table->timestampsTz();
             $table->softDeletesTz();
         });

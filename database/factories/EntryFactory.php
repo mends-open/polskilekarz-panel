@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\Entry\Type as EntryType;
 use App\Models\Entry;
 use App\Models\Entity;
 use App\Models\Patient;
@@ -18,7 +19,7 @@ class EntryFactory extends Factory
             'patient_id' => Patient::factory(),
             'user_id' => User::factory(),
             'entity_id' => Entity::factory(),
-            'type' => $this->faker->word(),
+            'type' => $this->faker->randomElement(EntryType::cases())->value,
             'data' => [],
         ];
     }
