@@ -44,7 +44,7 @@ class Submission extends Model
         return [
             'patient_id' => ['required', 'exists:patients,id'],
             'user_id' => ['required', 'exists:users,id'],
-            'type' => ['required', 'string'],
+            'type' => ['required', 'integer'],
             'data' => ['nullable', 'array'],
         ];
     }

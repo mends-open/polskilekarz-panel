@@ -54,7 +54,7 @@ class Entry extends Model
             'patient_id' => ['required', 'exists:patients,id'],
             'user_id' => ['required', 'exists:users,id'],
             'entity_id' => ['required', 'exists:entities,id'],
-            'type' => ['required', 'string'],
+            'type' => ['required', 'integer'],
             'data' => ['nullable', 'array'],
         ];
     }

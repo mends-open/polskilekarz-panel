@@ -2,8 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Enums\Appointment\Type;
-use App\Models\Appointment;
 use App\Models\Email;
 use App\Models\Entity;
 use App\Models\Patient;
@@ -37,20 +35,6 @@ class DatabaseSeeder extends Seeder
                 'whatsapp_consent_since' => now(),
             ]);
 
-            $primaryUser = $users->first();
-
-            Appointment::factory()
-                ->for($patient)
-                ->for($primaryUser)
-                ->for($entity)
-                ->state(['type' => Type::PrimaryCare->value])
-                ->create();
-
-            Appointment::factory()
-                ->for($patient)
-                ->for($users->random())
-                ->for($entity)
-                ->create();
         });
     }
 }

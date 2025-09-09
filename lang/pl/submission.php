@@ -4,10 +4,9 @@ return [
     'label' => 'Zgłoszenie',
     'plural' => 'Zgłoszenia',
     'type' => [
-        'unspecified' => 'Nieokreślony',
-        'registration' => 'Rejestracja',
-        'pre_visit' => 'Przed wizytą',
-        'post_visit' => 'Po wizycie',
+        0 => 'Nieokreślony',
+        1 => 'Rejestracja',
+        2 => 'Prośba o receptę',
     ],
     'fields' => [
         'patient_id' => 'Pacjent',

@@ -19,7 +19,7 @@ return new class extends Migration
             $table->foreignIdFor(Entity::class)->constrained();
             $table->foreignIdFor(User::class)->constrained();
             $table->foreignIdFor(Patient::class)->constrained();
-            $table->text('type');
+            $table->smallInteger('type');
             $table->jsonb('data')->nullable();
             $table->timestampsTz();
             $table->softDeletesTz();
