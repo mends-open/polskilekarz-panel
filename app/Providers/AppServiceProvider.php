@@ -2,6 +2,22 @@
 
 namespace App\Providers;
 
+use App\Models\Document;
+use App\Models\DocumentEntry;
+use App\Models\Email;
+use App\Models\EmailPatient;
+use App\Models\EmaProduct;
+use App\Models\EmaSubstance;
+use App\Models\Entity;
+use App\Models\EntityUser;
+use App\Models\Entry;
+use App\Models\EntryRelation;
+use App\Models\Media;
+use App\Models\Patient;
+use App\Models\PatientPhone;
+use App\Models\Phone;
+use App\Models\Submission;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\ServiceProvider;
@@ -22,11 +38,23 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Relation::enforceMorphMap(
-            collect(File::files(app_path('Models')))
-                ->map(fn ($file) => $file->getBasename('.php'))
-                ->mapWithKeys(fn ($name) => [Str::snake($name) => "App\\Models\\{$name}"])
-                ->all()
-        );
+        Relation::enforceMorphMap([
+            0 => User::class,
+            1 => Entity::class,
+            2 => EntityUser::class,
+            3 => Patient::class,
+            4 => Entry::class,
+            5 => EntryRelation::class,
+            6 => Submission::class,
+            7 => Document::class,
+            8 => DocumentEntry::class,
+            9 => Email::class,
+            10 => Phone::class,
+            11 => EmailPatient::class,
+            12 => PatientPhone::class,
+            13 => Media::class,
+            14 => EmaSubstance::class,
+            15 => EmaProduct::class,
+        ]);
     }
 }
