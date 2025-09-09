@@ -15,8 +15,8 @@ return new class extends Migration
         Schema::create('entry_relations', function (Blueprint $table) {
             $table->id();
             $table->foreignIdFor(Entry::class)->constrained();
-            $table->bigInteger('related_id');
-            $table->smallInteger('related_type');
+            $table->bigInteger('relationable_id');
+            $table->smallInteger('relationable_type');
             $table->timestampsTz();
             $table->softDeletesTz();
         });
