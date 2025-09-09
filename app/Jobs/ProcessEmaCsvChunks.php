@@ -17,8 +17,8 @@ class ProcessEmaCsvChunks implements ShouldQueue
 
     public function handle(): void
     {
-        $storage = config('ema.storage_dir', 'ema');
-        $disk = config('ema.storage_disk');
+        $storage = config('medications.ema.storage_dir', 'ema');
+        $disk = config('medications.ema.storage_disk');
         $store = Storage::disk($disk);
         $files = collect($store->files("{$storage}/chunks"))->sort()->values();
         if ($files->isEmpty()) {
