@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Enums\EMAProduct;
+namespace App\Enums\EmaProduct;
 
 use Illuminate\Support\Str;
 

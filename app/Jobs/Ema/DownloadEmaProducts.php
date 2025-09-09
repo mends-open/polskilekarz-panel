@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Jobs;
+namespace App\Jobs\Ema;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
 
-class DownloadEmaMedications implements ShouldQueue
+class DownloadEmaProducts implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -24,12 +24,14 @@ class DownloadEmaMedications implements ShouldQueue
 
     public function handle(): void
     {
-        $storage = config('ema.storage_dir', 'ema');
-        $endpoint = $this->endpoint ?? config('ema.endpoint');
+        $storage = config('medications.ema.storage_dir', 'ema');
+        $disk = config('medications.ema.storage_disk');
+        $endpoint = $this->endpoint ?? config('medications.ema.endpoint');
 
-        Storage::deleteDirectory($storage);
-        Storage::makeDirectory($storage);
-        $xlsxPath = Storage::path("{$storage}/medications.xlsx");
+        $store = Storage::disk($disk);
+        $store->deleteDirectory($storage);
+        $store->makeDirectory($storage);
+        $xlsxPath = $store->path("{$storage}/products.xlsx");
 
         Http::sink($xlsxPath)->get($endpoint)->throw();
 
@@ -38,8 +40,8 @@ class DownloadEmaMedications implements ShouldQueue
             'path' => $xlsxPath,
         ]);
 
-        $csvRelative = "{$storage}/medications.csv";
-        $csvPath = Storage::path($csvRelative);
+        $csvRelative = "{$storage}/products.csv";
+        $csvPath = $store->path($csvRelative);
 
         $this->convertToCsv($xlsxPath, $csvPath);
 
@@ -47,7 +49,7 @@ class DownloadEmaMedications implements ShouldQueue
             'path' => $csvPath,
         ]);
 
-        ChunkEmaMedicationsCsv::dispatch($csvRelative);
+        ChunkEmaProductsCsv::dispatch($csvRelative);
     }
 
     private function convertToCsv(string $xlsxPath, string $csvPath): void

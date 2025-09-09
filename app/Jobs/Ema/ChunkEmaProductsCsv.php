@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Jobs;
+namespace App\Jobs\Ema;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -10,36 +10,38 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
-class ChunkEmaMedicationsCsv implements ShouldQueue
+class ChunkEmaProductsCsv implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public function __construct(public string $path, public int $chunkSize = 0)
     {
-        $this->chunkSize = $chunkSize ?: (int) config('ema.chunk_size', 500);
+        $this->chunkSize = $chunkSize ?: (int) config('medications.ema.chunk_size', 500);
     }
 
     public function handle(): void
     {
-        $csvPath = Storage::path($this->path);
+        $disk = config('medications.ema.storage_disk');
+        $store = Storage::disk($disk);
+        $csvPath = $store->path($this->path);
         $handle = fopen($csvPath, 'r');
         if (!$handle) {
             Log::warning('Unable to open EMA CSV for chunking', ['path' => $csvPath]);
             return;
         }
 
-        $storage = config('ema.storage_dir', 'ema');
-        Storage::makeDirectory("{$storage}/chunks");
+        $storage = config('medications.ema.storage_dir', 'ema');
+        $store->makeDirectory("{$storage}/chunks");
 
         $chunkIndex = 1;
         $rowCount = 0;
-        $chunkHandle = fopen(Storage::path(sprintf('%s/chunks/chunk-%04d.csv', $storage, $chunkIndex)), 'w');
+        $chunkHandle = fopen($store->path(sprintf('%s/chunks/chunk-%04d.csv', $storage, $chunkIndex)), 'w');
 
         while (($row = fgetcsv($handle)) !== false) {
             if ($rowCount > 0 && $rowCount % $this->chunkSize === 0) {
                 fclose($chunkHandle);
                 $chunkIndex++;
-                $chunkHandle = fopen(Storage::path(sprintf('%s/chunks/chunk-%04d.csv', $storage, $chunkIndex)), 'w');
+                $chunkHandle = fopen($store->path(sprintf('%s/chunks/chunk-%04d.csv', $storage, $chunkIndex)), 'w');
             }
 
             fputcsv($chunkHandle, $row);
@@ -49,7 +51,7 @@ class ChunkEmaMedicationsCsv implements ShouldQueue
         fclose($chunkHandle);
         fclose($handle);
 
-        Storage::delete($this->path);
+        $store->delete($this->path);
 
         Log::info('Chunked EMA CSV', [
             'chunks' => $chunkIndex,
