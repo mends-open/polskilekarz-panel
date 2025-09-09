@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('entities', function (Blueprint $table) {
             $table->id();
-            $table->text('name');
+            $table->caseInsensitiveText('name');
             $table->jsonb('headers')->nullable();
             $table->timestampsTz();
             $table->softDeletesTz();

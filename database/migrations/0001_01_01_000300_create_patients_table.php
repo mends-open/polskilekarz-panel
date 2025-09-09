@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('patients', function (Blueprint $table) {
             $table->id();
-            $table->text('first_name');
-            $table->text('last_name');
+            $table->caseInsensitiveText('first_name');
+            $table->caseInsensitiveText('last_name');
             $table->date('birth_date');
             $table->smallInteger('gender');
             $table->jsonb('addresses')->nullable();
