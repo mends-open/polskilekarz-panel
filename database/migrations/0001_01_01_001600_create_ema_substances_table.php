@@ -11,10 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('medications', function (Blueprint $table) {
+        Schema::create('ema_substances', function (Blueprint $table) {
             $table->id();
             $table->caseInsensitiveText('name')->unique();
-            $table->jsonb('brands');
             $table->timestampsTz();
             $table->softDeletesTz();
         });
@@ -25,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('medications');
+        Schema::dropIfExists('ema_substances');
     }
 };

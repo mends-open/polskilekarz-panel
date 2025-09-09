@@ -12,16 +12,16 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('job_batches', function (Blueprint $table) {
-            $table->text('id')->primary();
-            $table->text('name');
+            $table->uuid('id')->primary();
+            $table->string('name');
             $table->integer('total_jobs');
             $table->integer('pending_jobs');
             $table->integer('failed_jobs');
             $table->text('failed_job_ids');
-            $table->text('options')->nullable();
-            $table->timestampTz('cancelled_at')->nullable();
-            $table->timestampTz('created_at');
-            $table->timestampTz('finished_at')->nullable();
+            $table->mediumText('options')->nullable();
+            $table->integer('cancelled_at')->nullable();
+            $table->integer('created_at');
+            $table->integer('finished_at')->nullable();
         });
     }
 

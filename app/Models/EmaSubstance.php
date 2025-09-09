@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use App\Models\Concerns\ValidatesAttributes;
+use App\Models\EmaProduct;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 
-class Medication extends Model
+class EmaSubstance extends Model
 {
     use HasFactory, SoftDeletes, ValidatesAttributes, AutomaticDateFormat;
 
@@ -17,11 +18,9 @@ class Medication extends Model
         'name',
     ];
 
-    public function entries(): BelongsToMany
+    public function products(): HasMany
     {
-        return $this->belongsToMany(Entry::class)
-            ->using(EntryMedication::class)
-            ->withTimestamps();
+        return $this->hasMany(EmaProduct::class, 'ema_substance_id');
     }
 
     public function rules(): array
