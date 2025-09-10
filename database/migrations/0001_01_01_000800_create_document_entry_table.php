@@ -14,7 +14,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('document_entry', function (Blueprint $table) {
-            $table->id();
+            $table->identity(always: true)->primary();
             $table->foreignIdFor(Document::class)->constrained();
             $table->foreignIdFor(Entry::class)->constrained();
             $table->timestampsTz();

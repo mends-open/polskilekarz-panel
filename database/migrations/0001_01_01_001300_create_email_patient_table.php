@@ -15,7 +15,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('email_patient', function (Blueprint $table) {
-            $table->id();
+            $table->identity(always: true)->primary();
             $table->foreignIdFor(Patient::class)->constrained();
             $table->foreignIdFor(Email::class)->constrained();
             $table->timestampTz('primary_since')->nullable();

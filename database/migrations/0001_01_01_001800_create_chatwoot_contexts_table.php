@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('chatwoot_contexts', function (Blueprint $table) {
-            $table->id();
+            $table->identity(always: true)->primary();
             $table->bigInteger('contextable_id');
             $table->smallInteger('contextable_type');
             $table->bigInteger('chatwoot_account_id');
