@@ -5,29 +5,34 @@ namespace App\Models;
 use App\Models\Concerns\ValidatesAttributes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 
-class ShortLink extends Model
+class CloudflareLinkClick extends Model
 {
     use AutomaticDateFormat, HasFactory, SoftDeletes, ValidatesAttributes;
 
     protected $fillable = [
-        'slug',
-        'url',
+        'cloudflare_link_id',
+        'headers',
     ];
 
-    public function clicks(): HasMany
+    protected $casts = [
+        'headers' => 'array',
+    ];
+
+    public function cloudflareLink(): BelongsTo
     {
-        return $this->hasMany(ShortLinkClick::class);
+        return $this->belongsTo(CloudflareLink::class);
     }
 
     public function rules(): array
     {
         return [
-            'slug' => ['required', 'string'],
-            'url' => ['required', 'url'],
+            'cloudflare_link_id' => ['required', 'exists:cloudflare_links,id'],
+            'headers' => ['required', 'array'],
         ];
     }
 }
+

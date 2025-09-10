@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\ShortLink;
 use Illuminate\Database\Migrations\Migration;
 use Tpetry\PostgresqlEnhanced\Schema\Blueprint;
 use Tpetry\PostgresqlEnhanced\Support\Facades\Schema;
@@ -12,9 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('short_link_clicks', function (Blueprint $table) {
+        Schema::create('cloudflare_links', function (Blueprint $table) {
             $table->id();
-            $table->foreignIdFor(ShortLink::class)->constrained();
+            $table->text('key')->unique();
+            $table->text('value');
             $table->timestampsTz();
             $table->softDeletesTz();
         });
@@ -25,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('short_link_clicks');
+        Schema::dropIfExists('cloudflare_links');
     }
 };

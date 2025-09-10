@@ -9,8 +9,8 @@ use App\Models\EmailPatient;
 use App\Models\EmaProduct;
 use App\Models\EmaSubstance;
 use App\Models\ChatwootContext;
-use App\Models\ShortLink;
-use App\Models\ShortLinkClick;
+use App\Models\CloudflareLink;
+use App\Models\CloudflareLinkClick;
 use App\Models\Entity;
 use App\Models\EntityUser;
 use App\Models\Entry;
@@ -59,8 +59,8 @@ class AppServiceProvider extends ServiceProvider
             14 => EmaSubstance::class,
             15 => EmaProduct::class,
             16 => ChatwootContext::class,
-            17 => ShortLink::class,
-            18 => ShortLinkClick::class,
+            17 => CloudflareLink::class,
+            18 => CloudflareLinkClick::class,
         ]);
     }
 }
