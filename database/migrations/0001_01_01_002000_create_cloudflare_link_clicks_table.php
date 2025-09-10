@@ -15,9 +15,8 @@ return new class extends Migration
         Schema::create('cloudflare_link_clicks', function (Blueprint $table) {
             $table->id();
             $table->foreignIdFor(CloudflareLink::class)->constrained();
-            $table->text('ray_id')->index();
-            $table->jsonb('cloudflare');
-            $table->jsonb('headers');
+            $table->jsonb('request');
+            $table->jsonb('response');
             $table->timestampsTz();
             $table->softDeletesTz();
         });

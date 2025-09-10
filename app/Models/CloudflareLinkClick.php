@@ -15,14 +15,13 @@ class CloudflareLinkClick extends Model
 
     protected $fillable = [
         'cloudflare_link_id',
-        'ray_id',
-        'cloudflare',
-        'headers',
+        'request',
+        'response',
     ];
 
     protected $casts = [
-        'cloudflare' => 'array',
-        'headers' => 'array',
+        'request' => 'array',
+        'response' => 'array',
     ];
 
     public function cloudflareLink(): BelongsTo
@@ -34,9 +33,8 @@ class CloudflareLinkClick extends Model
     {
         return [
             'cloudflare_link_id' => ['required', 'exists:cloudflare_links,id'],
-            'ray_id' => ['required', 'string'],
-            'cloudflare' => ['required', 'array'],
-            'headers' => ['required', 'array'],
+            'request' => ['required', 'array'],
+            'response' => ['required', 'array'],
         ];
     }
 }
