@@ -13,8 +13,6 @@ return new class extends Migration
     {
         Schema::create('stripe_customers', function (Blueprint $table) {
             $table->id();
-            // Stripe customer IDs are case-sensitive; use a regular text column
-            // to ensure the uniqueness constraint respects case variations.
             $table->text('stripe_id')->unique();
             $table->timestampsTz();
             $table->softDeletesTz();
