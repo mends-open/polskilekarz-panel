@@ -15,10 +15,13 @@ class CloudflareLinkClick extends Model
 
     protected $fillable = [
         'cloudflare_link_id',
+        'ray_id',
+        'cloudflare',
         'headers',
     ];
 
     protected $casts = [
+        'cloudflare' => 'array',
         'headers' => 'array',
     ];
 
@@ -31,6 +34,8 @@ class CloudflareLinkClick extends Model
     {
         return [
             'cloudflare_link_id' => ['required', 'exists:cloudflare_links,id'],
+            'ray_id' => ['required', 'string'],
+            'cloudflare' => ['required', 'array'],
             'headers' => ['required', 'array'],
         ];
     }
