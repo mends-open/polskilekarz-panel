@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('ema_substances', function (Blueprint $table) {
-            $table->id();
+            $table->identity(always: true)->primary();
             $table->caseInsensitiveText('name')->unique();
             $table->timestampsTz();
             $table->softDeletesTz();

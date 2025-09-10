@@ -13,7 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('entry_relations', function (Blueprint $table) {
-            $table->id();
+            $table->identity(always: true)->primary();
             $table->foreignIdFor(Entry::class)->constrained();
             $table->bigInteger('relationable_id');
             $table->smallInteger('relationable_type');

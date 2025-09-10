@@ -13,7 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('ema_products', function (Blueprint $table) {
-            $table->id();
+            $table->identity(always: true)->primary();
             $table->foreignIdFor(EmaSubstance::class)->constrained();
             $table->caseInsensitiveText('name');
             $table->integerArray('routes_of_administration');

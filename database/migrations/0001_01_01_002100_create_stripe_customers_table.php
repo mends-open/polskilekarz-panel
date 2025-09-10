@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('stripe_customers', function (Blueprint $table) {
-            $table->id();
+            $table->identity(always: true)->primary();
             $table->text('stripe_id')->unique();
             $table->timestampsTz();
             $table->softDeletesTz();

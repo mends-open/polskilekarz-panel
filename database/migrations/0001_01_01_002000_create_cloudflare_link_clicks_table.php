@@ -13,7 +13,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('cloudflare_link_clicks', function (Blueprint $table) {
-            $table->id();
+            $table->identity(always: true)->primary();
             $table->foreignIdFor(CloudflareLink::class)->constrained();
             $table->jsonb('request');
             $table->jsonb('response');

@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('entities', function (Blueprint $table) {
-            $table->id();
+            $table->identity(always: true)->primary();
             $table->caseInsensitiveText('name');
             $table->jsonb('headers')->nullable();
             $table->timestampsTz();

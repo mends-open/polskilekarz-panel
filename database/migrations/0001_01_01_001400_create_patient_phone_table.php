@@ -15,7 +15,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('patient_phone', function (Blueprint $table) {
-            $table->id();
+            $table->identity(always: true)->primary();
             $table->foreignIdFor(Patient::class)->constrained();
             $table->foreignIdFor(Phone::class)->constrained();
             $table->timestampTz('primary_since')->nullable();
