@@ -5,29 +5,28 @@ namespace App\Models;
 use App\Models\Concerns\ValidatesAttributes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 
-class ShortLink extends Model
+class ShortLinkClick extends Model
 {
     use AutomaticDateFormat, HasFactory, SoftDeletes, ValidatesAttributes;
 
     protected $fillable = [
-        'slug',
-        'url',
+        'short_link_id',
     ];
 
-    public function clicks(): HasMany
+    public function shortLink(): BelongsTo
     {
-        return $this->hasMany(ShortLinkClick::class);
+        return $this->belongsTo(ShortLink::class);
     }
 
     public function rules(): array
     {
         return [
-            'slug' => ['required', 'string'],
-            'url' => ['required', 'url'],
+            'short_link_id' => ['required', 'exists:short_links,id'],
         ];
     }
 }
+

@@ -24,9 +24,9 @@ class DownloadEmaProducts implements ShouldQueue
 
     public function handle(): void
     {
-        $storage = config('medications.ema.storage_dir', 'ema');
-        $disk = config('medications.ema.storage_disk');
-        $endpoint = $this->endpoint ?? config('medications.ema.endpoint');
+        $storage = config('services.european_medicines_agency.storage_dir', 'ema');
+        $disk = config('services.european_medicines_agency.storage_disk');
+        $endpoint = $this->endpoint ?? config('services.european_medicines_agency.endpoint');
 
         $store = Storage::disk($disk);
         $store->deleteDirectory($storage);

@@ -16,12 +16,12 @@ class ChunkEmaProductsCsv implements ShouldQueue
 
     public function __construct(public string $path, public int $chunkSize = 0)
     {
-        $this->chunkSize = $chunkSize ?: (int) config('medications.ema.chunk_size', 500);
+        $this->chunkSize = $chunkSize ?: (int) config('services.european_medicines_agency.chunk_size', 500);
     }
 
     public function handle(): void
     {
-        $disk = config('medications.ema.storage_disk');
+        $disk = config('services.european_medicines_agency.storage_disk');
         $store = Storage::disk($disk);
         $csvPath = $store->path($this->path);
         $handle = fopen($csvPath, 'r');
@@ -30,7 +30,7 @@ class ChunkEmaProductsCsv implements ShouldQueue
             return;
         }
 
-        $storage = config('medications.ema.storage_dir', 'ema');
+        $storage = config('services.european_medicines_agency.storage_dir', 'ema');
         $store->makeDirectory("{$storage}/chunks");
 
         $chunkIndex = 1;
