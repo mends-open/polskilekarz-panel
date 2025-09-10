@@ -20,6 +20,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropextensionIfExists(['citext', 'intarray']);
+        Schema::dropExtensionIfExists(['citext', 'intarray']);
     }
 };
