@@ -12,48 +12,72 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use PhpOffice\PhpSpreadsheet\Reader\IReadFilter;
+use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
 
 class ImportEmaProducts implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public function __construct(public string $path)
-    {
+    public function __construct(
+        public string $path,
+        public int $startRow,
+        public int $endRow,
+        public array $map,
+    ) {
     }
 
     public function handle(): void
     {
-        $handle = fopen($this->path, 'r');
-        if (!$handle) {
-            Log::warning('Unable to open EMA chunk for import', ['path' => $this->path]);
-            return;
-        }
+        $disk = config('services.european_medicines_agency.storage_disk');
+        $store = Storage::disk($disk);
+        $xlsxPath = $store->path($this->path);
 
-        Log::info('Importing EMA products from CSV chunk', ['path' => $this->path]);
+        $filter = new class($this->startRow, $this->endRow) implements IReadFilter {
+            public function __construct(private int $start, private int $end) {}
+            public function readCell($column, $row, $worksheetName = ''): bool
+            {
+                return $row >= $this->start && $row <= $this->end;
+            }
+        };
+
+        $reader = new Xlsx();
+        $reader->setReadDataOnly(true);
+        $reader->setReadFilter($filter);
+        $sheet = $reader->load($xlsxPath)->getActiveSheet();
 
         $products = [];
 
-        while (($row = fgetcsv($handle)) !== false) {
-            [$productName, $countryName, $routeNames, $substanceNames] = array_pad($row, 4, null);
-
-            $productName = trim($productName);
+        for ($row = $this->startRow; $row <= $this->endRow; $row++) {
+            $productCoordinate = Coordinate::stringFromColumnIndex($this->map['product_name']) . $row;
+            $productName = trim((string) $sheet->getCell($productCoordinate)->getValue());
             if ($productName === '') {
                 continue;
             }
 
-            $country = Country::tryFromName($countryName ?? '');
+            $countryCoordinate = Coordinate::stringFromColumnIndex($this->map['product_authorisation_country']) . $row;
+            $routesCoordinate = Coordinate::stringFromColumnIndex($this->map['route_of_administration']) . $row;
+            $substancesCoordinate = Coordinate::stringFromColumnIndex($this->map['active_substance']) . $row;
+
+            $countryName = (string) $sheet->getCell($countryCoordinate)->getValue();
+            $routeNames = (string) $sheet->getCell($routesCoordinate)->getValue();
+            $substanceNames = (string) $sheet->getCell($substancesCoordinate)->getValue();
+
+            $country = Country::tryFromName(trim($countryName));
             if (!$country) {
                 continue;
             }
             $countryValue = $country->value;
 
-            $routes = collect(explode('|', $routeNames ?? ''))
+            $routes = collect(explode('|', $routeNames))
                 ->map(fn ($r) => RouteOfAdministration::tryFromName(trim($r)))
                 ->filter()
                 ->map->value
                 ->all();
 
-            $substances = collect(explode('|', $substanceNames ?? ''))
+            $substances = collect(explode('|', $substanceNames))
                 ->map(fn ($s) => trim($s))
                 ->filter();
 
@@ -83,8 +107,6 @@ class ImportEmaProducts implements ShouldQueue
                 $products[$key] = $product;
             }
         }
-
-        fclose($handle);
 
         $substanceIds = array_unique(array_column($products, 'ema_substance_id'));
         $existing = EmaProduct::whereIn('ema_substance_id', $substanceIds)
@@ -122,6 +144,7 @@ class ImportEmaProducts implements ShouldQueue
 
         Log::info('Imported EMA products from chunk.', [
             'count' => count($products),
+            'range' => [$this->startRow, $this->endRow],
             'path' => $this->path,
         ]);
     }
