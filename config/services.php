@@ -35,4 +35,24 @@ return [
         ],
     ],
 
+    'chatwoot' => [
+        'endpoint' => env('CHATWOOT_ENDPOINT'),
+        'api_access_token' => env('CHATWOOT_API_ACCESS_TOKEN'),
+        'account_id' => env('CHATWOOT_ACCOUNT_ID'),
+    ],
+
+    'european_medicines_agency' => [
+        'endpoint' => env('EMA_ENDPOINT', 'https://www.ema.europa.eu/en/documents/other/article-57-product-data_en.xlsx'),
+        'storage_dir' => env('EMA_STORAGE_DIR', 'ema'),
+        'storage_disk' => env('EMA_STORAGE_DISK', env('FILESYSTEM_DISK', 'local')),
+        'chunk_size' => env('EMA_CHUNK_SIZE', 500),
+    ],
+
+    'cloudflare' => [
+        'endpoint' => env('CLOUDFLARE_ENDPOINT', 'https://api.cloudflare.com/client/v4'),
+        'api_token' => env('CLOUDFLARE_API_TOKEN'),
+        'account_id' => env('CLOUDFLARE_ACCOUNT_ID'),
+        'kv_namespace_id' => env('CLOUDFLARE_KV_NAMESPACE_ID'),
+    ],
+
 ];

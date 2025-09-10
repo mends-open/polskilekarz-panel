@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\CloudflareLink;
 use Illuminate\Database\Migrations\Migration;
 use Tpetry\PostgresqlEnhanced\Schema\Blueprint;
 use Tpetry\PostgresqlEnhanced\Support\Facades\Schema;
@@ -11,8 +12,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('short_link_clicks', function (Blueprint $table) {
+        Schema::create('cloudflare_link_clicks', function (Blueprint $table) {
             $table->id();
+            $table->foreignIdFor(CloudflareLink::class)->constrained();
+            $table->jsonb('request');
+            $table->jsonb('response');
             $table->timestampsTz();
             $table->softDeletesTz();
         });
@@ -23,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('short_link_clicks');
+        Schema::dropIfExists('cloudflare_link_clicks');
     }
 };
