@@ -14,6 +14,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use SplFileObject;
 
 class ImportEmaProducts implements ShouldQueue
@@ -31,9 +32,14 @@ class ImportEmaProducts implements ShouldQueue
     {
         $disk = config('services.european_medicines_agency.storage_disk');
         $store = Storage::disk($disk);
-        $csvPath = $store->path($this->path);
+        $csvRelative = Str::replaceLast('.xlsx', '.csv', $this->path);
 
-        $file = new SplFileObject($csvPath);
+        if (!$store->exists($csvRelative)) {
+            Log::warning('EMA CSV chunk missing', ['path' => $store->path($csvRelative)]);
+            return;
+        }
+
+        $file = new SplFileObject($store->path($csvRelative));
         $file->setFlags(SplFileObject::READ_CSV | SplFileObject::SKIP_EMPTY | SplFileObject::DROP_NEW_LINE);
 
         $rowNumber = 0;
@@ -137,7 +143,7 @@ class ImportEmaProducts implements ShouldQueue
         Log::info('Imported EMA products from CSV chunk.', [
             'count' => count($products),
             'range' => [$this->startRow, $this->endRow],
-            'path' => $this->path,
+            'path' => $csvRelative,
         ]);
     }
 }
