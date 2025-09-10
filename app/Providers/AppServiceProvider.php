@@ -2,15 +2,15 @@
 
 namespace App\Providers;
 
+use App\Models\ChatwootContext;
+use App\Models\CloudflareLink;
+use App\Models\CloudflareLinkClick;
 use App\Models\Document;
 use App\Models\DocumentEntry;
 use App\Models\Email;
 use App\Models\EmailPatient;
 use App\Models\EmaProduct;
 use App\Models\EmaSubstance;
-use App\Models\ChatwootContext;
-use App\Models\CloudflareLink;
-use App\Models\CloudflareLinkClick;
 use App\Models\Entity;
 use App\Models\EntityUser;
 use App\Models\Entry;
@@ -20,11 +20,10 @@ use App\Models\Patient;
 use App\Models\PatientPhone;
 use App\Models\Phone;
 use App\Models\Submission;
+use App\Models\StripeCustomer;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\Relation;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Str;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -61,6 +60,7 @@ class AppServiceProvider extends ServiceProvider
             16 => ChatwootContext::class,
             17 => CloudflareLink::class,
             18 => CloudflareLinkClick::class,
+            19 => StripeCustomer::class,
         ]);
     }
 }

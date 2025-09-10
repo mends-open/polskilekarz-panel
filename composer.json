@@ -15,6 +15,7 @@
         "laravel/reverb": "^1.0",
         "laravel/tinker": "^2.10.1",
         "phpoffice/phpspreadsheet": "^5.1",
+        "stripe/stripe-php": "^17.6",
         "tpetry/laravel-postgresql-enhanced": "^3.0"
     },
     "require-dev": {
