@@ -6,6 +6,7 @@ use App\Enums\EmaProduct\Country;
 use App\Enums\EmaProduct\RouteOfAdministration;
 use App\Models\EmaProduct;
 use App\Models\EmaSubstance;
+use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -13,19 +14,16 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
-use PhpOffice\PhpSpreadsheet\Reader\IReadFilter;
-use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
+use SplFileObject;
 
 class ImportEmaProducts implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, Batchable;
 
     public function __construct(
         public string $path,
         public int $startRow,
         public int $endRow,
-        public array $map,
     ) {
     }
 
@@ -33,51 +31,45 @@ class ImportEmaProducts implements ShouldQueue
     {
         $disk = config('services.european_medicines_agency.storage_disk');
         $store = Storage::disk($disk);
-        $xlsxPath = $store->path($this->path);
+        $csvPath = $store->path($this->path);
 
-        $filter = new class($this->startRow, $this->endRow) implements IReadFilter {
-            public function __construct(private int $start, private int $end) {}
-            public function readCell($column, $row, $worksheetName = ''): bool
-            {
-                return $row >= $this->start && $row <= $this->end;
-            }
-        };
+        $file = new SplFileObject($csvPath);
+        $file->setFlags(SplFileObject::READ_CSV | SplFileObject::SKIP_EMPTY | SplFileObject::DROP_NEW_LINE);
 
-        $reader = new Xlsx();
-        $reader->setReadDataOnly(true);
-        $reader->setReadFilter($filter);
-        $sheet = $reader->load($xlsxPath)->getActiveSheet();
-
+        $rowNumber = 0;
         $products = [];
 
-        for ($row = $this->startRow; $row <= $this->endRow; $row++) {
-            $productCoordinate = Coordinate::stringFromColumnIndex($this->map['product_name']) . $row;
-            $productName = trim((string) $sheet->getCell($productCoordinate)->getValue());
+        foreach ($file as $row) {
+            $rowNumber++;
+            if ($rowNumber < $this->startRow) {
+                continue;
+            }
+            if ($rowNumber > $this->endRow) {
+                break;
+            }
+            if (count($row) < 4) {
+                continue;
+            }
+
+            [$productName, $countryName, $routeNames, $substanceNames] = $row;
+            $productName = trim((string) $productName);
             if ($productName === '') {
                 continue;
             }
 
-            $countryCoordinate = Coordinate::stringFromColumnIndex($this->map['product_authorisation_country']) . $row;
-            $routesCoordinate = Coordinate::stringFromColumnIndex($this->map['route_of_administration']) . $row;
-            $substancesCoordinate = Coordinate::stringFromColumnIndex($this->map['active_substance']) . $row;
-
-            $countryName = (string) $sheet->getCell($countryCoordinate)->getValue();
-            $routeNames = (string) $sheet->getCell($routesCoordinate)->getValue();
-            $substanceNames = (string) $sheet->getCell($substancesCoordinate)->getValue();
-
-            $country = Country::tryFromName(trim($countryName));
+            $country = Country::tryFromName(trim((string) $countryName));
             if (!$country) {
                 continue;
             }
             $countryValue = $country->value;
 
-            $routes = collect(explode('|', $routeNames))
+            $routes = collect(explode('|', (string) $routeNames))
                 ->map(fn ($r) => RouteOfAdministration::tryFromName(trim($r)))
                 ->filter()
                 ->map->value
                 ->all();
 
-            $substances = collect(explode('|', $substanceNames))
+            $substances = collect(explode('|', (string) $substanceNames))
                 ->map(fn ($s) => trim($s))
                 ->filter();
 
@@ -142,7 +134,7 @@ class ImportEmaProducts implements ShouldQueue
             );
         }
 
-        Log::info('Imported EMA products from chunk.', [
+        Log::info('Imported EMA products from CSV chunk.', [
             'count' => count($products),
             'range' => [$this->startRow, $this->endRow],
             'path' => $this->path,
