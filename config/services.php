@@ -55,4 +55,9 @@ return [
         'kv_namespace_id' => env('CLOUDFLARE_KV_NAMESPACE_ID'),
     ],
 
+    'stripe' => [
+        'api_key' => env('STRIPE_API_KEY'),
+        'metadata_key' => env('STRIPE_METADATA_KEY', 'pl_panel_visible'),
+    ],
+
 ];
