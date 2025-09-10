@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->bigInteger('contextable_id');
             $table->smallInteger('contextable_type');
-            $table->bigInteger('chatwoot_account_id');;
+            $table->bigInteger('chatwoot_account_id');
             $table->bigInteger('chatwoot_conversation_id');
             $table->bigInteger('chatwoot_contact_id');
             $table->bigInteger('chatwoot_user_id');
