@@ -13,9 +13,11 @@ use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
 
-class ConvertEmaProductsToCsv implements ShouldQueue
+class ConvertProductsToCsv implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    public int $timeout = 120;
 
     public function __construct(public string $source, public string $target)
     {
@@ -34,7 +36,7 @@ class ConvertEmaProductsToCsv implements ShouldQueue
             'path' => $targetPath,
         ]);
 
-        ChunkEmaProductsCsv::dispatch($this->target);
+        ChunkProductsCsv::dispatch($this->target);
     }
 
     private function convertToCsv(string $xlsxPath, string $csvPath): void

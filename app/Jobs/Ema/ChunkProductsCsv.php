@@ -10,13 +10,13 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
-class ChunkEmaProductsCsv implements ShouldQueue
+class ChunkProductsCsv implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public function __construct(public string $path, public int $chunkSize = 0)
     {
-        $this->chunkSize = $chunkSize ?: (int) config('services.european_medicines_agency.chunk_size', 500);
+        $this->chunkSize = $chunkSize ?: (int) config('services.european_medicines_agency.chunk_size');
     }
 
     public function handle(): void
@@ -30,7 +30,7 @@ class ChunkEmaProductsCsv implements ShouldQueue
             return;
         }
 
-        $storage = config('services.european_medicines_agency.storage_dir', 'ema');
+        $storage = config('services.european_medicines_agency.storage_dir');
         $store->makeDirectory("{$storage}/chunks");
 
         $chunkIndex = 1;
@@ -58,6 +58,6 @@ class ChunkEmaProductsCsv implements ShouldQueue
             'rows' => $rowCount,
         ]);
 
-        ProcessEmaCsvChunks::dispatch();
+        ProcessCsvChunks::dispatch();
     }
 }

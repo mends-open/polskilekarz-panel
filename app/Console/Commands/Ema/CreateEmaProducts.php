@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands\Ema;
 
-use App\Jobs\Ema\DownloadEmaProducts;
+use App\Jobs\Ema\DownloadProducts;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -23,7 +23,7 @@ class CreateEmaProducts extends Command
         $endpoint = $this->option('endpoint') ?? config('ema.endpoint');
 
         Storage::disk($disk)->deleteDirectory($storage);
-        DownloadEmaProducts::dispatch($endpoint);
+        DownloadProducts::dispatch($endpoint);
 
         $this->info('EMA product import queued.');
         Log::info('EMA product import queued', [

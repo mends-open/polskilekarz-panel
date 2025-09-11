@@ -10,9 +10,9 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use App\Jobs\Ema\ConvertEmaProductsToCsv;
+use App\Jobs\Ema\ConvertProductsToCsv;
 
-class DownloadEmaProducts implements ShouldQueue
+class DownloadProducts implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -22,7 +22,7 @@ class DownloadEmaProducts implements ShouldQueue
 
     public function handle(): void
     {
-        $storage = config('services.european_medicines_agency.storage_dir', 'ema');
+        $storage = config('services.european_medicines_agency.storage_dir');
         $disk = config('services.european_medicines_agency.storage_disk');
         $endpoint = $this->endpoint ?? config('services.european_medicines_agency.endpoint');
 
@@ -42,6 +42,6 @@ class DownloadEmaProducts implements ShouldQueue
 
         $csvRelative = "{$storage}/products.csv";
 
-        ConvertEmaProductsToCsv::dispatch($xlsxRelative, $csvRelative);
+        ConvertProductsToCsv::dispatch($xlsxRelative, $csvRelative);
     }
 }
