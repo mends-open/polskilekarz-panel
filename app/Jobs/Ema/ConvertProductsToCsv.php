@@ -48,20 +48,6 @@ class ConvertProductsToCsv implements ShouldQueue
         $sheet = $spreadsheet->getActiveSheet();
         $rows = $sheet->toArray(null, true, true, false);
 
-        $headerRow = null;
-        foreach ($rows as $index => $row) {
-            if (in_array('Product name', $row, true)) {
-                $headerRow = $index;
-                break;
-            }
-        }
-
-        if ($headerRow === null) {
-            Log::warning('EMA header row not found', ['file' => $xlsxPath]);
-            return false;
-        }
-
-        $headers = array_map(fn($v) => trim(strtok((string) $v, "\n")), $rows[$headerRow]);
         $map = [
             'product_name' => null,
             'product_authorisation_country' => null,
@@ -69,15 +55,27 @@ class ConvertProductsToCsv implements ShouldQueue
             'active_substance' => null,
         ];
 
-        foreach ($headers as $index => $name) {
-            $key = Str::snake($name);
-            if (array_key_exists($key, $map)) {
-                $map[$key] = $index;
+        $headerRow = null;
+        foreach ($rows as $index => $row) {
+            $headers = array_map(
+                fn($v) => Str::snake(trim(strtok((string) $v, "\n"))),
+                $row
+            );
+
+            $found = array_intersect(array_keys($map), $headers);
+            if (count($found) === count($map)) {
+                foreach ($headers as $col => $header) {
+                    if (array_key_exists($header, $map)) {
+                        $map[$header] = $col;
+                    }
+                }
+                $headerRow = $index;
+                break;
             }
         }
 
-        if (in_array(null, $map, true)) {
-            Log::warning('Required EMA columns missing', ['map' => $map]);
+        if ($headerRow === null || in_array(null, $map, true)) {
+            Log::warning('EMA header row not found', ['file' => $xlsxPath]);
             return false;
         }
 
