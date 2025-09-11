@@ -2,9 +2,10 @@
 
 namespace App\Enums\EmaProduct;
 
+use Filament\Support\Contracts\HasLabel;
 use Illuminate\Support\Str;
 
-enum RouteOfAdministration: int
+enum RouteOfAdministration: int implements HasLabel
 {
     case Unspecified = 0;
     case Auricular = 1;
@@ -145,5 +146,21 @@ enum RouteOfAdministration: int
         }
 
         return null;
+    }
+
+    public function getLabel(): ?string
+    {
+        return __('ema_product.route_of_administration.' . $this->value);
+    }
+
+    public static function labels(): array
+    {
+        $labels = [];
+
+        foreach (self::cases() as $case) {
+            $labels[$case->value] = $case->getLabel();
+        }
+
+        return $labels;
     }
 }
