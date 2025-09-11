@@ -109,7 +109,12 @@ class ConvertProductsToCsv implements ShouldQueue
             $substancesCoordinate = Coordinate::stringFromColumnIndex($map['active_substance']) . $row;
 
             $country = trim((string) $sheet->getCell($countryCoordinate)->getValue());
-            $routes = trim((string) $sheet->getCell($routesCoordinate)->getValue());
+            $routes = Str::of((string) $sheet->getCell($routesCoordinate)->getValue())
+                ->replace(["\r\n", "\r", "\n", "\t", ',', ';', '/'], '|')
+                ->explode('|')
+                ->map(fn ($r) => trim($r))
+                ->filter()
+                ->implode('|');
             $substances = trim((string) $sheet->getCell($substancesCoordinate)->getValue());
 
             fputcsv($handle, [$product, $country, $routes, $substances]);
