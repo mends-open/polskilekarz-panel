@@ -44,9 +44,7 @@ class ConvertProductsToCsv implements ShouldQueue
         $reader->setReadDataOnly(true);
 
         $spreadsheet = $reader->load($xlsxPath);
-
         $sheet = $spreadsheet->getActiveSheet();
-        $rows = $sheet->toArray(null, true, true, false);
 
         $map = [
             'product_name' => null,
@@ -56,10 +54,18 @@ class ConvertProductsToCsv implements ShouldQueue
         ];
 
         $headerRow = null;
-        foreach ($rows as $index => $row) {
+        foreach ($sheet->getRowIterator() as $row) {
+            $rowIndex = $row->getRowIndex();
+            $cellIterator = $row->getCellIterator();
+            $cellIterator->setIterateOnlyExistingCells(false);
+            $values = [];
+            foreach ($cellIterator as $cell) {
+                $values[] = $cell->getValue();
+            }
+
             $headers = array_map(
                 fn($v) => Str::snake(trim(strtok((string) $v, "\n"))),
-                $row
+                $values
             );
 
             $found = array_intersect(array_keys($map), $headers);
@@ -69,37 +75,47 @@ class ConvertProductsToCsv implements ShouldQueue
                         $map[$header] = $col;
                     }
                 }
-                $headerRow = $index;
+                $headerRow = $rowIndex;
                 break;
             }
         }
 
         if ($headerRow === null || in_array(null, $map, true)) {
             Log::warning('EMA header row not found', ['file' => $xlsxPath]);
+            $spreadsheet->disconnectWorksheets();
+            unset($spreadsheet);
             return false;
         }
 
         $handle = fopen($csvPath, 'w');
         if (!$handle) {
             Log::warning('Unable to open CSV for writing', ['path' => $csvPath]);
+            $spreadsheet->disconnectWorksheets();
+            unset($spreadsheet);
             return false;
         }
 
-        for ($i = $headerRow + 1, $rowCount = count($rows); $i < $rowCount; $i++) {
-            $row = $rows[$i];
-            $product = trim((string)($row[$map['product_name']] ?? ''));
+        foreach ($sheet->getRowIterator($headerRow + 1) as $row) {
+            $cellIterator = $row->getCellIterator();
+            $cellIterator->setIterateOnlyExistingCells(false);
+            $values = [];
+            foreach ($cellIterator as $cell) {
+                $values[] = $cell->getValue();
+            }
+
+            $product = trim((string)($values[$map['product_name']] ?? ''));
             if ($product === '') {
                 continue;
             }
 
-            $country = trim((string)($row[$map['product_authorisation_country']] ?? ''));
-            $routes = Str::of((string)($row[$map['route_of_administration']] ?? ''))
+            $country = trim((string)($values[$map['product_authorisation_country']] ?? ''));
+            $routes = Str::of((string)($values[$map['route_of_administration']] ?? ''))
                 ->replace(["\r\n", "\r", "\n", "\t", ',', ';', '/'], '|')
                 ->explode('|')
                 ->map(fn($r) => trim($r))
                 ->filter()
                 ->implode('|');
-            $substances = trim((string)($row[$map['active_substance']] ?? ''));
+            $substances = trim((string)($values[$map['active_substance']] ?? ''));
 
             fputcsv($handle, [$product, $country, $routes, $substances]);
         }
