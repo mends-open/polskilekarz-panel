@@ -10,6 +10,7 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use App\Jobs\Ema\DeleteFile;
 
 class ProcessEmaCsvChunks implements ShouldQueue
 {
@@ -34,7 +35,7 @@ class ProcessEmaCsvChunks implements ShouldQueue
 
         Bus::chain([
             new ImportEmaProducts($path),
-            fn () => Storage::disk($disk)->delete($file),
+            new DeleteFile($disk, $file),
             new self(),
         ])->dispatch();
     }
