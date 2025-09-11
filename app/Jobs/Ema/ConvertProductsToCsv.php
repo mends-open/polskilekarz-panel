@@ -29,21 +29,22 @@ class ConvertProductsToCsv implements ShouldQueue
         $sourcePath = $store->path($this->source);
         $targetPath = $store->path($this->target);
 
-        $this->convertToCsv($sourcePath, $targetPath);
+        if ($this->convertToCsv($sourcePath, $targetPath)) {
+            Log::info('Converted EMA spreadsheet to CSV', [
+                'path' => $targetPath,
+            ]);
 
-        Log::info('Converted EMA spreadsheet to CSV', [
-            'path' => $targetPath,
-        ]);
-
-        ChunkProductsCsv::dispatch($this->target);
+            ChunkProductsCsv::dispatch($this->target);
+        }
     }
 
-    private function convertToCsv(string $xlsxPath, string $csvPath): void
+    private function convertToCsv(string $xlsxPath, string $csvPath): bool
     {
         $reader = IOFactory::createReader('Xlsx');
         $reader->setReadDataOnly(true);
 
         $spreadsheet = $reader->load($xlsxPath);
+
         $sheet = $spreadsheet->getActiveSheet();
         $rows = $sheet->toArray(null, true, true, false);
 
@@ -57,47 +58,50 @@ class ConvertProductsToCsv implements ShouldQueue
 
         if ($headerRow === null) {
             Log::warning('EMA header row not found', ['file' => $xlsxPath]);
-            return;
+            return false;
         }
 
-        $headers = $rows[$headerRow];
+        $headers = array_map(fn($v) => trim(strtok((string) $v, "\n")), $rows[$headerRow]);
         $map = [
-            'Product name' => null,
-            'Product authorisation country' => null,
-            'Route of administration' => null,
-            'Active substance' => null,
+            'product_name' => null,
+            'product_authorisation_country' => null,
+            'route_of_administration' => null,
+            'active_substance' => null,
         ];
 
-        foreach ($map as $name => $value) {
-            $col = array_search($name, $headers, true);
-            if ($col === false) {
-                Log::warning('Required EMA columns missing', ['column' => $name]);
-                return;
+        foreach ($headers as $index => $name) {
+            $key = Str::snake($name);
+            if (array_key_exists($key, $map)) {
+                $map[$key] = $index;
             }
-            $map[$name] = $col;
+        }
+
+        if (in_array(null, $map, true)) {
+            Log::warning('Required EMA columns missing', ['map' => $map]);
+            return false;
         }
 
         $handle = fopen($csvPath, 'w');
         if (!$handle) {
             Log::warning('Unable to open CSV for writing', ['path' => $csvPath]);
-            return;
+            return false;
         }
 
         for ($i = $headerRow + 1, $rowCount = count($rows); $i < $rowCount; $i++) {
             $row = $rows[$i];
-            $product = trim((string)($row[$map['Product name']] ?? ''));
+            $product = trim((string)($row[$map['product_name']] ?? ''));
             if ($product === '') {
                 continue;
             }
 
-            $country = trim((string)($row[$map['Product authorisation country']] ?? ''));
-            $routes = Str::of((string)($row[$map['Route of administration']] ?? ''))
+            $country = trim((string)($row[$map['product_authorisation_country']] ?? ''));
+            $routes = Str::of((string)($row[$map['route_of_administration']] ?? ''))
                 ->replace(["\r\n", "\r", "\n", "\t", ',', ';', '/'], '|')
                 ->explode('|')
                 ->map(fn($r) => trim($r))
                 ->filter()
                 ->implode('|');
-            $substances = trim((string)($row[$map['Active substance']] ?? ''));
+            $substances = trim((string)($row[$map['active_substance']] ?? ''));
 
             fputcsv($handle, [$product, $country, $routes, $substances]);
         }
@@ -106,5 +110,7 @@ class ConvertProductsToCsv implements ShouldQueue
 
         $spreadsheet->disconnectWorksheets();
         unset($spreadsheet);
+
+        return true;
     }
 }
