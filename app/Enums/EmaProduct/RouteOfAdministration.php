@@ -98,6 +98,32 @@ enum RouteOfAdministration: int
     case Transdermal = 93;
     case Urethral = 94;
     case Vaginal = 95;
+    case Intraarticular = 96;
+    case Intravesical = 97;
+    case Intranasal = 98;
+    case Periodontal = 99;
+    case Laryngopharyngeal = 100;
+    case Intestinal = 101;
+    case Iontophoresis = 102;
+    case InBodyCavities = 103;
+    case Intracholangiopancreatic = 104;
+    case Intrafollicular = 105;
+
+    /**
+     * @var array<string,self>
+     */
+    private const SYNONYMS = [
+        'IvInjection' => self::IntravenousInjection,
+        'IvInfusion' => self::IntravenousInfusion,
+        'External' => self::Topical,
+        'ΕνδομυικηΧρηση' => self::Intramuscular,
+        'ΕνδοαρθρικηΧρηση' => self::Intraarticular,
+        'ΕνδοβλαβικηΧρηση' => self::Intralesional,
+        'ΕνδοθυλακικηΧρηση' => self::Intrafollicular,
+        'ΡινικηΧρηση' => self::Nasal,
+        'ΧρησηΑποΤοΑναπνευστικο' => self::Inhalation,
+        'ΠαρεντερικηΧρηση' => self::Parenteral,
+    ];
 
     public static function tryFromName(string $name): ?self
     {
@@ -107,6 +133,10 @@ enum RouteOfAdministration: int
             ->squish()
             ->studly()
             ->toString();
+
+        if (isset(self::SYNONYMS[$caseName])) {
+            return self::SYNONYMS[$caseName];
+        }
 
         foreach (self::cases() as $case) {
             if ($case->name === $caseName) {

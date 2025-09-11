@@ -110,7 +110,7 @@ class ConvertProductsToCsv implements ShouldQueue
 
             $country = trim((string) $sheet->getCell($countryCoordinate)->getValue());
             $routes = Str::of((string) $sheet->getCell($routesCoordinate)->getValue())
-                ->replace(["\r\n", "\r", "\n", "\t", ',', ';'], '|')
+                ->replace(["\r\n", "\r", "\n", "\t", ',', ';', '/'], '|')
                 ->explode('|')
                 ->map(fn ($r) => trim($r))
                 ->filter()
