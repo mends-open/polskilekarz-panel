@@ -47,7 +47,7 @@ class ImportProducts implements ShouldQueue
             }
             $countryValue = $country->value;
 
-            $routes = collect(preg_split('/[|,;\r\n]+/', $routeNames ?? '', -1, PREG_SPLIT_NO_EMPTY))
+            $routes = collect(preg_split('/[|,;\r\n\t]+/', $routeNames ?? '', -1, PREG_SPLIT_NO_EMPTY))
                 ->map(fn ($r) => RouteOfAdministration::tryFromName(trim($r)))
                 ->filter()
                 ->map->value
