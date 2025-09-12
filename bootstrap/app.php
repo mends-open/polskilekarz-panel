@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->validateCsrfTokens(except: [
             'stripe/events',
+            'stripe/events/*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
