@@ -20,7 +20,7 @@ use App\Models\Patient;
 use App\Models\PatientPhone;
 use App\Models\Phone;
 use App\Models\Submission;
-use App\Models\StripeCustomer;
+use App\Models\StripeEvent;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\ServiceProvider;
@@ -60,7 +60,7 @@ class AppServiceProvider extends ServiceProvider
             16 => ChatwootContext::class,
             17 => CloudflareLink::class,
             18 => CloudflareLinkClick::class,
-            19 => StripeCustomer::class,
+            19 => StripeEvent::class,
         ]);
     }
 }
