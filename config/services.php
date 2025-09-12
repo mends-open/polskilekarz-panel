@@ -53,8 +53,8 @@ return [
         'api_token' => env('CLOUDFLARE_API_TOKEN'),
         'account_id' => env('CLOUDFLARE_ACCOUNT_ID'),
         'link_shortener' => [
-            'namespace_id' => env('CLOUDFLARE_LINKS_NAMESPACE_ID'),
-            'domain' => env('CLOUDFLARE_SHORTENER_DOMAIN'),
+            'namespace_id' => env('CLOUDFLARE_LINK_SHORTENER_NAMESPACE_ID'),
+            'domain' => env('CLOUDFLARE_LINK_SHORTENER_DOMAIN'),
         ],
     ],
 

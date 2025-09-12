@@ -21,7 +21,11 @@ class CloudflareLinkClickController extends Controller
         $link = CloudflareLink::where('key', $validated['key'])->first();
 
         if (! $link) {
-            Log::warning('Unknown Cloudflare link key', ['key' => $validated['key']]);
+            Log::warning('Unknown Cloudflare link key', [
+                'key' => $validated['key'],
+                'request' => $validated['request'],
+                'response' => $validated['response'],
+            ]);
 
             return response()->json(['error' => 'Unknown key'], Response::HTTP_BAD_REQUEST);
         }
@@ -34,6 +38,9 @@ class CloudflareLinkClickController extends Controller
         Log::info('Stored Cloudflare link click', [
             'id' => $click->id,
             'cloudflare_link_id' => $link->id,
+            'key' => $validated['key'],
+            'request' => $validated['request'],
+            'response' => $validated['response'],
         ]);
 
         return response()->json(['id' => $click->id]);

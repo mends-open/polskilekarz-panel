@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Exceptions\CloudflareLinkExistsException;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class CloudflareService
 {
@@ -36,15 +38,6 @@ class CloudflareService
 
     public function create(string $key, string $rawUrl): array
     {
-        if ($existing = $this->get($key)) {
-            return [
-                'success' => true,
-                'created' => false,
-                'short_url' => $this->shortUrl($key),
-                'url' => $existing,
-            ];
-        }
-
         $value = base64_encode($rawUrl);
 
         $response = Http::withToken($this->token)
@@ -55,6 +48,8 @@ class CloudflareService
             ->send('PUT', $this->kvUrl($key), ['body' => $value]);
 
         if ($response->successful()) {
+            Log::info('Created Cloudflare short link', ['key' => $key, 'url' => $rawUrl]);
+
             return [
                 'success' => true,
                 'created' => true,
@@ -62,6 +57,19 @@ class CloudflareService
                 'url' => $rawUrl,
             ];
         }
+
+        if ($response->status() === 412) {
+            $existing = $this->get($key);
+            Log::warning('Attempted to overwrite existing Cloudflare short link', ['key' => $key, 'url' => $existing]);
+
+            throw new CloudflareLinkExistsException($key, $existing);
+        }
+
+        Log::error('Failed to create Cloudflare short link', [
+            'key' => $key,
+            'status' => $response->status(),
+            'body' => $response->body(),
+        ]);
 
         return ['success' => false, 'created' => false];
     }
