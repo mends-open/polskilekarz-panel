@@ -14,12 +14,13 @@ class CloudflareService
 
     public function __construct()
     {
-        $cfg = config('services.cloudflare.link_shortener');
+        $cfg = config('services.cloudflare');
         $this->endpoint = rtrim($cfg['endpoint'], '/');
         $this->token = $cfg['api_token'];
         $this->account = $cfg['account_id'];
-        $this->namespace = $cfg['namespace_id'];
-        $this->domain = $cfg['domain'];
+        $linkCfg = $cfg['link_shortener'];
+        $this->namespace = $linkCfg['namespace_id'];
+        $this->domain = $linkCfg['domain'];
     }
 
     protected function kvUrl(string $key): string
