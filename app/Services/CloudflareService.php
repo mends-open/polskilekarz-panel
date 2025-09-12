@@ -42,7 +42,7 @@ class CloudflareService
     /**
      * Create a short link or return an existing mapping.
      */
-    public function shorten(string $rawUrl, array $attributes): array
+    public function shorten(string $rawUrl): array
     {
         if ($existing = CloudflareLink::where('value', $rawUrl)->first()) {
             Log::info('Using existing Cloudflare short link', [
@@ -66,10 +66,10 @@ class CloudflareService
             $stored = $this->storeIfAbsent($key, $rawUrl);
 
             if ($stored === true) {
-                $link = CloudflareLink::create(array_merge($attributes, [
+                $link = CloudflareLink::create([
                     'key' => $key,
                     'value' => $rawUrl,
-                ]));
+                ]);
 
                 Log::info('Created Cloudflare short link', [
                     'key' => $key,
