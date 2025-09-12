@@ -2,9 +2,10 @@
 
 namespace App\Services;
 
-use App\Exceptions\CloudflareLinkExistsException;
+use App\Models\CloudflareLink;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class CloudflareService
 {
@@ -13,6 +14,7 @@ class CloudflareService
     protected string $account;
     protected string $namespace;
     protected string $domain;
+    protected int $keyLength;
 
     public function __construct()
     {
@@ -23,6 +25,7 @@ class CloudflareService
         $linkCfg = $cfg['link_shortener'];
         $this->namespace = $linkCfg['namespace_id'];
         $this->domain = $linkCfg['domain'];
+        $this->keyLength = (int) $linkCfg['key_length'];
     }
 
     protected function kvUrl(string $key): string
@@ -37,41 +40,78 @@ class CloudflareService
     }
 
     /**
-     * Create a short link if it does not already exist.
-     *
-     * @throws CloudflareLinkExistsException
+     * Create a short link or return existing entry.
      */
-    public function create(string $key, string $rawUrl): array
+    public function create(string $rawUrl, array $attributes): array
     {
-        if ($existing = $this->get($key)) {
-            Log::warning('Attempted to overwrite existing Cloudflare short link', ['key' => $key, 'url' => $existing]);
+        if ($existing = CloudflareLink::where('value', $rawUrl)->first()) {
+            Log::info('Using existing Cloudflare short link', [
+                'key' => $existing->key,
+                'url' => $rawUrl,
+                'link_id' => $existing->id,
+            ]);
 
-            throw new CloudflareLinkExistsException($key, $existing);
+            return [
+                'success' => true,
+                'created' => false,
+                'short_url' => $this->shortUrl($existing->key),
+                'url' => $rawUrl,
+                'link' => $existing,
+            ];
         }
 
         $value = base64_encode($rawUrl);
 
-        $response = Http::withToken($this->token)
-            ->withHeaders([
-                'Content-Type' => 'text/plain',
-            ])
-            ->send('PUT', $this->kvUrl($key), ['body' => $value]);
+        $attempts = 0;
 
-        if ($response->successful()) {
-            Log::info('Created Cloudflare short link', ['key' => $key, 'url' => $rawUrl]);
+        do {
+            $key = Str::random($this->keyLength);
 
-            return [
-                'success' => true,
-                'created' => true,
-                'short_url' => $this->shortUrl($key),
-                'url' => $rawUrl,
-            ];
-        }
+            $response = Http::withToken($this->token)
+                ->withHeaders([
+                    'Content-Type' => 'text/plain',
+                    'If-None-Match' => '*',
+                ])
+                ->send('PUT', $this->kvUrl($key), ['body' => $value]);
 
-        Log::error('Failed to create Cloudflare short link', [
-            'key' => $key,
-            'status' => $response->status(),
-            'body' => $response->body(),
+            if ($response->status() === 412) {
+                $attempts++;
+                continue;
+            }
+
+            if ($response->successful()) {
+                $link = CloudflareLink::create(array_merge($attributes, [
+                    'key' => $key,
+                    'value' => $rawUrl,
+                ]));
+
+                Log::info('Created Cloudflare short link', [
+                    'key' => $key,
+                    'url' => $rawUrl,
+                    'link_id' => $link->id,
+                ]);
+
+                return [
+                    'success' => true,
+                    'created' => true,
+                    'short_url' => $this->shortUrl($key),
+                    'url' => $rawUrl,
+                    'link' => $link,
+                ];
+            }
+
+            Log::error('Failed to create Cloudflare short link', [
+                'key' => $key,
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+            return ['success' => false, 'created' => false];
+        } while ($attempts < 3);
+
+        Log::error('Failed to generate unique key for Cloudflare short link', [
+            'url' => $rawUrl,
+            'attempts' => $attempts,
         ]);
 
         return ['success' => false, 'created' => false];

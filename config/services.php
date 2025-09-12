@@ -55,6 +55,7 @@ return [
         'link_shortener' => [
             'namespace_id' => env('CLOUDFLARE_LINK_SHORTENER_NAMESPACE_ID'),
             'domain' => env('CLOUDFLARE_LINK_SHORTENER_DOMAIN'),
+            'key_length' => env('CLOUDFLARE_LINK_SHORTENER_KEY_LENGTH', 8),
         ],
     ],
 
