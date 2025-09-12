@@ -40,62 +40,34 @@ class CloudflareService
     }
 
     /**
-     * Create a short link or return an existing mapping.
+     * Create a short link.
      */
     public function shorten(string $rawUrl): array
     {
-        if ($existing = CloudflareLink::where('value', $rawUrl)->first()) {
-            Log::info('Using existing Cloudflare short link', [
-                'key' => $existing->key,
-                'url' => $rawUrl,
-                'link_id' => $existing->id,
-            ]);
+        $key = $this->generateKey();
 
-            return [
-                'success' => true,
-                'created' => false,
-                'short_url' => $this->buildShortUrl($existing->key),
-                'url' => $rawUrl,
-                'link' => $existing,
-            ];
+        if ($this->storeIfAbsent($key, $rawUrl) !== true) {
+            return ['success' => false, 'created' => false];
         }
 
-        for ($attempts = 0; $attempts < 3; $attempts++) {
-            $key = $this->generateKey();
-
-            $stored = $this->storeIfAbsent($key, $rawUrl);
-
-            if ($stored === true) {
-                $link = CloudflareLink::create([
-                    'key' => $key,
-                    'value' => $rawUrl,
-                ]);
-
-                Log::info('Created Cloudflare short link', [
-                    'key' => $key,
-                    'url' => $rawUrl,
-                    'link_id' => $link->id,
-                ]);
-
-                return [
-                    'success' => true,
-                    'created' => true,
-                    'short_url' => $this->buildShortUrl($key),
-                    'url' => $rawUrl,
-                    'link' => $link,
-                ];
-            }
-
-            if ($stored === null) {
-                return ['success' => false, 'created' => false];
-            }
-        }
-
-        Log::error('Failed to generate unique key for Cloudflare short link', [
-            'url' => $rawUrl,
+        $link = CloudflareLink::create([
+            'key' => $key,
+            'value' => $rawUrl,
         ]);
 
-        return ['success' => false, 'created' => false];
+        Log::info('Created Cloudflare short link', [
+            'key' => $key,
+            'url' => $rawUrl,
+            'link_id' => $link->id,
+        ]);
+
+        return [
+            'success' => true,
+            'created' => true,
+            'short_url' => $this->buildShortUrl($key),
+            'url' => $rawUrl,
+            'link' => $link,
+        ];
     }
 
     protected function generateKey(): string
