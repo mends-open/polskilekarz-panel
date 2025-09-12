@@ -13,46 +13,34 @@ class CloudflareLinkClickController extends Controller
     public function __invoke(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'key' => ['required', 'string'],
-            'request' => ['required'],
-            'response' => ['required'],
+            'slug' => ['required', 'string'],
+            'request' => ['required', 'array'],
+            'response' => ['required', 'array'],
         ]);
 
-        $reqData = $validated['request'];
-        if (is_string($reqData)) {
-            $decoded = json_decode($reqData, true);
-            $reqData = $decoded === null ? [] : $decoded;
-        }
-
-        $resData = $validated['response'];
-        if (is_string($resData)) {
-            $decoded = json_decode($resData, true);
-            $resData = $decoded === null ? [] : $decoded;
-        }
-
-        $link = CloudflareLink::where('key', $validated['key'])->first();
+        $link = CloudflareLink::where('key', $validated['slug'])->first();
 
         if (! $link) {
             Log::warning('Unknown Cloudflare link key', [
-                'key' => $validated['key'],
-                'request' => $reqData,
-                'response' => $resData,
+                'slug' => $validated['slug'],
+                'request' => $validated['request'],
+                'response' => $validated['response'],
             ]);
 
-            return response()->json(['error' => 'Unknown key'], Response::HTTP_BAD_REQUEST);
+            return response()->json(['error' => 'Unknown slug'], Response::HTTP_BAD_REQUEST);
         }
 
         $click = $link->clicks()->create([
-            'request' => $reqData,
-            'response' => $resData,
+            'request' => $validated['request'],
+            'response' => $validated['response'],
         ]);
 
         Log::info('Stored Cloudflare link click', [
             'id' => $click->id,
             'cloudflare_link_id' => $link->id,
-            'key' => $validated['key'],
-            'request' => $reqData,
-            'response' => $resData,
+            'slug' => $validated['slug'],
+            'request' => $validated['request'],
+            'response' => $validated['response'],
         ]);
 
         return response()->json(['id' => $click->id]);
