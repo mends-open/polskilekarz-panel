@@ -49,11 +49,13 @@ return [
     ],
 
     'cloudflare' => [
-        'endpoint' => env('CLOUDFLARE_ENDPOINT', 'https://api.cloudflare.com/client/v4'),
-        'api_token' => env('CLOUDFLARE_API_TOKEN'),
-        'account_id' => env('CLOUDFLARE_ACCOUNT_ID'),
-        'links_namespace_id' => env('CLOUDFLARE_LINKS_NAMESPACE_ID'),
-        'shortener_domain' => env('CLOUDFLARE_SHORTENER_DOMAIN'),
+        'link_shortener' => [
+            'endpoint' => env('CLOUDFLARE_ENDPOINT', 'https://api.cloudflare.com/client/v4'),
+            'api_token' => env('CLOUDFLARE_API_TOKEN'),
+            'account_id' => env('CLOUDFLARE_ACCOUNT_ID'),
+            'namespace_id' => env('CLOUDFLARE_LINKS_NAMESPACE_ID'),
+            'domain' => env('CLOUDFLARE_SHORTENER_DOMAIN'),
+        ],
     ],
 
     'stripe' => [
