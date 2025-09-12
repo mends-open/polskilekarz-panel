@@ -10,24 +10,9 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 
-class StripeCustomer extends Model
+class StripeEvent extends Model
 {
     use AutomaticDateFormat, HasFactory, SoftDeletes, ValidatesAttributes;
 
-    protected $fillable = [
-        'stripe_id',
-    ];
-
-    public function contexts(): MorphMany
-    {
-        return $this->morphMany(ChatwootContext::class, 'contextable');
-    }
-
-    public function rules(): array
-    {
-        return [
-            'stripe_id' => ['required', 'string'],
-        ];
-    }
 }
 

@@ -11,9 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('stripe_customers', function (Blueprint $table) {
+        Schema::create('stripe_events', function (Blueprint $table) {
             $table->identity(always: true)->primary();
-            $table->text('stripe_id')->unique();
+            $table->jsonb('data');
             $table->timestampsTz();
             $table->softDeletesTz();
         });
@@ -24,7 +24,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('stripe_customers');
+        Schema::dropIfExists('stripe_events');
     }
 };
 
