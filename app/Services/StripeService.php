@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Jobs\Stripe\ProcessEvent;
 use App\Models\StripeEvent;
+use Illuminate\Support\Facades\Log;
 
 class StripeService
 {
@@ -12,7 +14,18 @@ class StripeService
             'data' => $payload,
         ]);
 
-        $metadata = data_get($payload, 'data.object.metadata', []);
+        Log::info('Stored Stripe event', ['id' => $event->id]);
+
+        ProcessEvent::dispatch($event);
+
+        Log::info('Dispatched Stripe event for processing', ['id' => $event->id]);
+
+        return $event;
+    }
+
+    public function processEvent(StripeEvent $event): void
+    {
+        $metadata = data_get($event->data, 'data.object.metadata', []);
 
         $context = [
             'chatwoot_account_id' => data_get($metadata, 'chatwoot_account_id'),
@@ -26,8 +39,7 @@ class StripeService
 
         if ($context) {
             $event->chatwootContexts()->create($context);
+            Log::info('Stored Chatwoot context for Stripe event', ['event_id' => $event->id]);
         }
-
-        return $event;
     }
 }
