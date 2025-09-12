@@ -20,9 +20,6 @@ class CloudflareLink extends Model
     protected $fillable = [
         'key',
         'value',
-        'user_id',
-        'entity_id',
-        'patient_id',
     ];
 
     public function clicks(): HasMany
@@ -30,29 +27,11 @@ class CloudflareLink extends Model
         return $this->hasMany(CloudflareLinkClick::class);
     }
 
-    public function user(): BelongsTo
-    {
-        return $this->belongsTo(User::class);
-    }
-
-    public function entity(): BelongsTo
-    {
-        return $this->belongsTo(Entity::class);
-    }
-
-    public function patient(): BelongsTo
-    {
-        return $this->belongsTo(Patient::class);
-    }
-
     public function rules(): array
     {
         return [
             'key' => ['required', 'string'],
             'value' => ['required', 'url'],
-            'user_id' => ['required', 'exists:users,id'],
-            'entity_id' => ['required', 'exists:entities,id'],
-            'patient_id' => ['required', 'exists:patients,id'],
         ];
     }
 }

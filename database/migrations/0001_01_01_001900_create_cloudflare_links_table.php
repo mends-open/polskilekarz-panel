@@ -16,9 +16,6 @@ return new class extends Migration
     {
         Schema::create('cloudflare_links', function (Blueprint $table) {
             $table->identity(always: true)->primary();
-            $table->foreignIdFor(Entity::class)->constrained();
-            $table->foreignIdFor(User::class)->constrained();
-            $table->foreignIdFor(Patient::class)->constrained();
             $table->text('key')->unique();
             $table->text('value');
             $table->timestampsTz();
