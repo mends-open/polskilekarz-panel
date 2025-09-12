@@ -22,7 +22,7 @@ class CloudflareService
         $this->endpoint = rtrim($cfg['endpoint'], '/');
         $this->token = $cfg['api_token'];
         $this->account = $cfg['account_id'];
-        $linkCfg = $cfg['link_shortener'];
+        $linkCfg = $cfg['links'];
         $this->namespace = $linkCfg['namespace_id'];
         $this->domain = $linkCfg['domain'];
         $this->keyLength = (int) $linkCfg['key_length'];
@@ -40,9 +40,9 @@ class CloudflareService
     }
 
     /**
-     * Create a short link or return existing entry.
+     * Create a short link or return an existing mapping.
      */
-    public function create(string $rawUrl, array $attributes): array
+    public function shorten(string $rawUrl, array $attributes): array
     {
         if ($existing = CloudflareLink::where('value', $rawUrl)->first()) {
             Log::info('Using existing Cloudflare short link', [
@@ -54,32 +54,18 @@ class CloudflareService
             return [
                 'success' => true,
                 'created' => false,
-                'short_url' => $this->shortUrl($existing->key),
+                'short_url' => $this->buildShortUrl($existing->key),
                 'url' => $rawUrl,
                 'link' => $existing,
             ];
         }
 
-        $value = base64_encode($rawUrl);
+        for ($attempts = 0; $attempts < 3; $attempts++) {
+            $key = $this->generateKey();
 
-        $attempts = 0;
+            $stored = $this->storeIfAbsent($key, $rawUrl);
 
-        do {
-            $key = Str::random($this->keyLength);
-
-            $response = Http::withToken($this->token)
-                ->withHeaders([
-                    'Content-Type' => 'text/plain',
-                    'If-None-Match' => '*',
-                ])
-                ->send('PUT', $this->kvUrl($key), ['body' => $value]);
-
-            if ($response->status() === 412) {
-                $attempts++;
-                continue;
-            }
-
-            if ($response->successful()) {
+            if ($stored === true) {
                 $link = CloudflareLink::create(array_merge($attributes, [
                     'key' => $key,
                     'value' => $rawUrl,
@@ -94,49 +80,56 @@ class CloudflareService
                 return [
                     'success' => true,
                     'created' => true,
-                    'short_url' => $this->shortUrl($key),
+                    'short_url' => $this->buildShortUrl($key),
                     'url' => $rawUrl,
                     'link' => $link,
                 ];
             }
 
-            Log::error('Failed to create Cloudflare short link', [
-                'key' => $key,
-                'status' => $response->status(),
-                'body' => $response->body(),
-            ]);
-
-            return ['success' => false, 'created' => false];
-        } while ($attempts < 3);
+            if ($stored === null) {
+                return ['success' => false, 'created' => false];
+            }
+        }
 
         Log::error('Failed to generate unique key for Cloudflare short link', [
             'url' => $rawUrl,
-            'attempts' => $attempts,
         ]);
 
         return ['success' => false, 'created' => false];
     }
 
-    public function get(string $key): ?string
+    protected function generateKey(): string
     {
-        $response = Http::withToken($this->token)->get($this->kvUrl($key));
+        return Str::random($this->keyLength);
+    }
+
+    protected function storeIfAbsent(string $key, string $rawUrl): ?bool
+    {
+        $response = Http::withToken($this->token)
+            ->withHeaders([
+                'Content-Type' => 'text/plain',
+                'If-None-Match' => '*',
+            ])
+            ->send('PUT', $this->kvUrl($key), ['body' => base64_encode($rawUrl)]);
+
+        if ($response->status() === 412) {
+            return false;
+        }
 
         if ($response->successful()) {
-            $decoded = base64_decode($response->body(), true);
-            return $decoded === false ? null : $decoded;
+            return true;
         }
+
+        Log::error('Failed to store Cloudflare short link', [
+            'key' => $key,
+            'status' => $response->status(),
+            'body' => $response->body(),
+        ]);
 
         return null;
     }
 
-    public function delete(string $key): bool
-    {
-        $response = Http::withToken($this->token)->delete($this->kvUrl($key));
-
-        return $response->successful();
-    }
-
-    public function shortUrl(string $key): string
+    protected function buildShortUrl(string $key): string
     {
         return rtrim($this->domain, '/') . '/' . $key;
     }
