@@ -36,14 +36,24 @@ class CloudflareService
         );
     }
 
+    /**
+     * Create a short link if it does not already exist.
+     *
+     * @throws CloudflareLinkExistsException
+     */
     public function create(string $key, string $rawUrl): array
     {
+        if ($existing = $this->get($key)) {
+            Log::warning('Attempted to overwrite existing Cloudflare short link', ['key' => $key, 'url' => $existing]);
+
+            throw new CloudflareLinkExistsException($key, $existing);
+        }
+
         $value = base64_encode($rawUrl);
 
         $response = Http::withToken($this->token)
             ->withHeaders([
                 'Content-Type' => 'text/plain',
-                'If-None-Match' => '*',
             ])
             ->send('PUT', $this->kvUrl($key), ['body' => $value]);
 
@@ -56,13 +66,6 @@ class CloudflareService
                 'short_url' => $this->shortUrl($key),
                 'url' => $rawUrl,
             ];
-        }
-
-        if ($response->status() === 412) {
-            $existing = $this->get($key);
-            Log::warning('Attempted to overwrite existing Cloudflare short link', ['key' => $key, 'url' => $existing]);
-
-            throw new CloudflareLinkExistsException($key, $existing);
         }
 
         Log::error('Failed to create Cloudflare short link', [
