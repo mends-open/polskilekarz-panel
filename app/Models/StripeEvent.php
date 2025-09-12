@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\ChatwootContext;
 use App\Models\Concerns\ValidatesAttributes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -14,5 +13,10 @@ class StripeEvent extends Model
 {
     use AutomaticDateFormat, HasFactory, SoftDeletes, ValidatesAttributes;
 
-}
+    protected $fillable = ['data'];
 
+    public function chatwootContexts(): MorphMany
+    {
+        return $this->morphMany(ChatwootContext::class, 'contextable');
+    }
+}

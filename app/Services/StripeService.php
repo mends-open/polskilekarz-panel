@@ -2,39 +2,32 @@
 
 namespace App\Services;
 
-use Stripe\StripeClient;
+use App\Models\StripeEvent;
 
 class StripeService
 {
-    protected StripeClient $client;
-
-    public function __construct()
+    public function storeEvent(array $payload): StripeEvent
     {
-        $this->client = new StripeClient(config('services.stripe.api_key'));
-    }
-
-    public function createCustomer(string $name, string $email, array $metadata = [])
-    {
-        return $this->client->customers->create([
-            'name' => $name,
-            'email' => $email,
-            'metadata' => $metadata,
+        $event = StripeEvent::create([
+            'data' => $payload,
         ]);
-    }
 
-    public function retrieveCustomer(string $customerId)
-    {
-        return $this->client->customers->retrieve($customerId);
-    }
+        $metadata = data_get($payload, 'data.object.metadata', []);
 
-    public function invoices(string $customerId)
-    {
-        return $this->client->invoices->all(['customer' => $customerId]);
-    }
+        $context = [
+            'chatwoot_account_id' => data_get($metadata, 'chatwoot_account_id'),
+            'chatwoot_conversation_id' => data_get($metadata, 'chatwoot_conversation_id'),
+            'chatwoot_contact_id' => data_get($metadata, 'chatwoot_contact_id'),
+            'chatwoot_user_id' => data_get($metadata, 'chatwoot_user_id'),
+            'chatwoot_message_id' => data_get($metadata, 'chatwoot_message_id') ?? data_get($metadata, 'chatwoot_last_message_id'),
+        ];
 
-    public function paymentIntents(string $customerId)
-    {
-        return $this->client->paymentIntents->all(['customer' => $customerId]);
+        $context = array_filter($context, fn ($value) => ! is_null($value));
+
+        if ($context) {
+            $event->chatwootContexts()->create($context);
+        }
+
+        return $event;
     }
 }
-
