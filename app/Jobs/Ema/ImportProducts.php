@@ -13,7 +13,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
-class ImportEmaProducts implements ShouldQueue
+class ImportProducts implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -47,13 +47,13 @@ class ImportEmaProducts implements ShouldQueue
             }
             $countryValue = $country->value;
 
-            $routes = collect(explode('|', $routeNames ?? ''))
+            $routes = collect(preg_split('/[|,;\/\r\n\t]+/', $routeNames ?? '', -1, PREG_SPLIT_NO_EMPTY))
                 ->map(fn ($r) => RouteOfAdministration::tryFromName(trim($r)))
                 ->filter()
                 ->map->value
                 ->all();
 
-            $substances = collect(explode('|', $substanceNames ?? ''))
+            $substances = collect(preg_split('/[|,;\r\n]+/', $substanceNames ?? '', -1, PREG_SPLIT_NO_EMPTY))
                 ->map(fn ($s) => trim($s))
                 ->filter();
 

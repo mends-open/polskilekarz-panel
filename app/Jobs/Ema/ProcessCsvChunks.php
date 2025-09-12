@@ -10,14 +10,15 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use App\Jobs\Ema\DeleteFile;
 
-class ProcessEmaCsvChunks implements ShouldQueue
+class ProcessCsvChunks implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public function handle(): void
     {
-        $storage = config('services.european_medicines_agency.storage_dir', 'ema');
+        $storage = config('services.european_medicines_agency.storage_dir');
         $disk = config('services.european_medicines_agency.storage_disk');
         $store = Storage::disk($disk);
         $files = collect($store->files("{$storage}/chunks"))->sort()->values();
@@ -33,8 +34,8 @@ class ProcessEmaCsvChunks implements ShouldQueue
         Log::info('Dispatching processing jobs for EMA chunk', ['file' => $file]);
 
         Bus::chain([
-            new ImportEmaProducts($path),
-            fn () => Storage::disk($disk)->delete($file),
+            new ImportProducts($path),
+            new DeleteFile($disk, $file),
             new self(),
         ])->dispatch();
     }

@@ -7,49 +7,36 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use PhpOffice\PhpSpreadsheet\Reader\Xlsx;
 
-class DownloadEmaProducts implements ShouldQueue
+class ConvertProductsToCsv implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public function __construct(public ?string $endpoint = null)
+    public int $timeout = 120;
+
+    public function __construct(public string $source, public string $target)
     {
     }
 
     public function handle(): void
     {
-        $storage = config('services.european_medicines_agency.storage_dir', 'ema');
         $disk = config('services.european_medicines_agency.storage_disk');
-        $endpoint = $this->endpoint ?? config('services.european_medicines_agency.endpoint');
-
         $store = Storage::disk($disk);
-        $store->deleteDirectory($storage);
-        $store->makeDirectory($storage);
-        $xlsxPath = $store->path("{$storage}/products.xlsx");
+        $sourcePath = $store->path($this->source);
+        $targetPath = $store->path($this->target);
 
-        Http::sink($xlsxPath)->get($endpoint)->throw();
-
-        Log::info('Downloaded EMA spreadsheet', [
-            'endpoint' => $endpoint,
-            'path' => $xlsxPath,
-        ]);
-
-        $csvRelative = "{$storage}/products.csv";
-        $csvPath = $store->path($csvRelative);
-
-        $this->convertToCsv($xlsxPath, $csvPath);
+        $this->convertToCsv($sourcePath, $targetPath);
 
         Log::info('Converted EMA spreadsheet to CSV', [
-            'path' => $csvPath,
+            'path' => $targetPath,
         ]);
 
-        ChunkEmaProductsCsv::dispatch($csvRelative);
+        ChunkProductsCsv::dispatch($this->target);
     }
 
     private function convertToCsv(string $xlsxPath, string $csvPath): void
@@ -122,7 +109,12 @@ class DownloadEmaProducts implements ShouldQueue
             $substancesCoordinate = Coordinate::stringFromColumnIndex($map['active_substance']) . $row;
 
             $country = trim((string) $sheet->getCell($countryCoordinate)->getValue());
-            $routes = trim((string) $sheet->getCell($routesCoordinate)->getValue());
+            $routes = Str::of((string) $sheet->getCell($routesCoordinate)->getValue())
+                ->replace(["\r\n", "\r", "\n", "\t", ',', ';', '/'], '|')
+                ->explode('|')
+                ->map(fn ($r) => trim($r))
+                ->filter()
+                ->implode('|');
             $substances = trim((string) $sheet->getCell($substancesCoordinate)->getValue());
 
             fputcsv($handle, [$product, $country, $routes, $substances]);
