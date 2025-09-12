@@ -57,6 +57,7 @@ return [
 
     'stripe' => [
         'api_key' => env('STRIPE_API_KEY'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
         'visible_since_key' => env('STRIPE_VISIBLE_SINCE_KEY', 'pl_panel_visible_since'),
     ],
 

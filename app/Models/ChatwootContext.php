@@ -20,7 +20,6 @@ class ChatwootContext extends Model
         'chatwoot_conversation_id',
         'chatwoot_contact_id',
         'chatwoot_user_id',
-        'chatwoot_message_id',
     ];
 
     public function contextable(): MorphTo
@@ -37,7 +36,6 @@ class ChatwootContext extends Model
             'chatwoot_conversation_id' => ['required', 'integer'],
             'chatwoot_contact_id' => ['required', 'integer'],
             'chatwoot_user_id' => ['required', 'integer'],
-            'chatwoot_message_id' => ['nullable', 'integer'],
         ];
     }
 }
