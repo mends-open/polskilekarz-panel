@@ -18,8 +18,8 @@ class CloudflareLink extends Model
     use AutomaticDateFormat, HasFactory, SoftDeletes, ValidatesAttributes;
 
     protected $fillable = [
-        'key',
-        'value',
+        'slug',
+        'url',
     ];
 
     public function clicks(): HasMany
@@ -30,8 +30,8 @@ class CloudflareLink extends Model
     public function rules(): array
     {
         return [
-            'key' => ['required', 'string'],
-            'value' => ['required', 'url'],
+            'slug' => ['required', 'string'],
+            'url' => ['required', 'url'],
         ];
     }
 }
