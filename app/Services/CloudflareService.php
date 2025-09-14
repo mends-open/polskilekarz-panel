@@ -14,7 +14,7 @@ class CloudflareService
     protected string $account;
     protected string $namespace;
     protected string $domain;
-    protected int $keyLength;
+    protected int $slugLength;
 
     public function __construct()
     {
@@ -25,17 +25,17 @@ class CloudflareService
         $linkCfg = $cfg['links'];
         $this->namespace = $linkCfg['namespace_id'];
         $this->domain = $linkCfg['domain'];
-        $this->keyLength = (int) $linkCfg['key_length'];
+        $this->slugLength = (int) $linkCfg['slug_length'];
     }
 
-    protected function kvUrl(string $key): string
+    protected function kvUrl(string $slug): string
     {
         return sprintf(
             '%s/accounts/%s/storage/kv/namespaces/%s/values/%s',
             $this->endpoint,
             $this->account,
             $this->namespace,
-            $key
+            $slug
         );
     }
 
@@ -44,19 +44,19 @@ class CloudflareService
      */
     public function shorten(string $rawUrl): array
     {
-        $key = $this->generateKey();
+        $slug = $this->generateSlug();
 
-        if ($this->storeIfAbsent($key, $rawUrl) !== true) {
+        if ($this->storeIfAbsent($slug, $rawUrl) !== true) {
             return ['success' => false, 'created' => false];
         }
 
         $link = CloudflareLink::create([
-            'key' => $key,
-            'value' => $rawUrl,
+            'slug' => $slug,
+            'url' => $rawUrl,
         ]);
 
         Log::info('Created Cloudflare short link', [
-            'key' => $key,
+            'slug' => $slug,
             'url' => $rawUrl,
             'link_id' => $link->id,
         ]);
@@ -64,25 +64,25 @@ class CloudflareService
         return [
             'success' => true,
             'created' => true,
-            'short_url' => $this->buildShortUrl($key),
+            'short_url' => $this->buildShortUrl($slug),
             'url' => $rawUrl,
             'link' => $link,
         ];
     }
 
-    protected function generateKey(): string
+    protected function generateSlug(): string
     {
-        return Str::random($this->keyLength);
+        return Str::random($this->slugLength);
     }
 
-    protected function storeIfAbsent(string $key, string $rawUrl): ?bool
+    protected function storeIfAbsent(string $slug, string $rawUrl): ?bool
     {
         $response = Http::withToken($this->token)
             ->withHeaders([
                 'Content-Type' => 'text/plain',
                 'If-None-Match' => '*',
             ])
-            ->send('PUT', $this->kvUrl($key), ['body' => base64_encode($rawUrl)]);
+            ->send('PUT', $this->kvUrl($slug), ['body' => base64_encode($rawUrl)]);
 
         if ($response->status() === 412) {
             return false;
@@ -93,7 +93,7 @@ class CloudflareService
         }
 
         Log::error('Failed to store Cloudflare short link', [
-            'key' => $key,
+            'slug' => $slug,
             'status' => $response->status(),
             'body' => $response->body(),
         ]);
@@ -101,8 +101,8 @@ class CloudflareService
         return null;
     }
 
-    protected function buildShortUrl(string $key): string
+    protected function buildShortUrl(string $slug): string
     {
-        return rtrim($this->domain, '/') . '/' . $key;
+        return rtrim($this->domain, '/') . '/' . $slug;
     }
 }

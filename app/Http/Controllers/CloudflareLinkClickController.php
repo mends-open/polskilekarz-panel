@@ -18,10 +18,10 @@ class CloudflareLinkClickController extends Controller
             'response' => ['required', 'array'],
         ]);
 
-        $link = CloudflareLink::where('key', $validated['slug'])->first();
+        $link = CloudflareLink::where('slug', $validated['slug'])->first();
 
         if (! $link) {
-            Log::warning('Unknown Cloudflare link key', [
+            Log::warning('Unknown Cloudflare link slug', [
                 'slug' => $validated['slug'],
                 'request' => $validated['request'],
                 'response' => $validated['response'],
