@@ -204,14 +204,16 @@ class StripeService
             if (is_int($key)) {
                 if (is_array($value)) {
                     $price = $value['price'];
-                    $quantity = $value['quantity'] ?? 1;
+                    $quantity = isset($value['quantity']) ? (int) $value['quantity'] : 1;
                 } else {
                     $price = $value;
                     $quantity = 1;
                 }
             } else {
                 $price = $key;
-                $quantity = is_array($value) ? ($value['quantity'] ?? 1) : (int) $value;
+                $quantity = is_array($value)
+                    ? (int) ($value['quantity'] ?? 1)
+                    : (int) $value;
             }
 
             $this->client->invoiceItems->create([
