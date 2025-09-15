@@ -154,6 +154,37 @@ class StripeService
     }
 
     /**
+     * Create an invoice for the given customer and prices.
+     *
+     * @param array<string, int> $priceQuantities Map of price IDs to quantities.
+     */
+    public function createInvoice(
+        string $customerId,
+        array $priceQuantities,
+        array $expand = [],
+        ?string $stripeAccount = null,
+    ): Invoice {
+        foreach ($priceQuantities as $priceId => $quantity) {
+            $this->client->invoiceItems->create([
+                'customer' => $customerId,
+                'price' => $priceId,
+                'quantity' => $quantity,
+            ], $this->options($stripeAccount));
+        }
+
+        $invoice = $this->client->invoices->create([
+            'customer' => $customerId,
+            'auto_advance' => false,
+        ], $this->options($stripeAccount));
+
+        return $this->client->invoices->finalizeInvoice(
+            $invoice->id,
+            $this->addExpand([], $expand),
+            $this->options($stripeAccount)
+        );
+    }
+
+    /**
      * Retrieve an invoice by id.
      */
     public function getInvoiceById(string $invoiceId, array $expand = [], ?string $stripeAccount = null): Invoice
