@@ -218,7 +218,7 @@ class StripeService
 
             $this->client->invoiceItems->create([
                 'customer' => $customerId,
-                'price' => $price,
+                'pricing' => ['price' => $price],
                 'quantity' => $quantity,
             ], $this->options($stripeAccount));
         }
