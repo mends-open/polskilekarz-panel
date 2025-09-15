@@ -77,7 +77,7 @@ class StripeService
     /**
      * Search customers by metadata.
      *
-     * @param array<array<string, string|int>> $metadataGroups Each group is ANDed, groups are ORed.
+     * @param  array<array<string, string|int>>  $metadataGroups  Each group is ANDed, groups are ORed.
      */
     public function getCustomersByMetadata(
         array $metadataGroups,
@@ -91,7 +91,7 @@ class StripeService
                 $andSegments[] = "metadata['{$key}']:'{$value}'";
             }
             if ($andSegments !== []) {
-                $orSegments[] = '(' . implode(' AND ', $andSegments) . ')';
+                $orSegments[] = '('.implode(' AND ', $andSegments).')';
             }
         }
 
@@ -99,6 +99,44 @@ class StripeService
         $params = $this->addExpand(['query' => $query], $expand);
 
         return $this->client->customers->search($params, $this->options($stripeAccount));
+    }
+
+    /**
+     * Locate customers created from Chatwoot metadata.
+     *
+     * Builds an OR query of (`chatwoot_account_id` + `chatwoot_contact_id`)
+     * and (`chatwoot_account_id` + `chatwoot_conversation_id`) pairs for the
+     * given account. Passing empty arrays for contacts or conversations will
+     * search only by the account id.
+     */
+    public function getCustomersForChatwoot(
+        int $accountId,
+        array $contactIds = [],
+        array $conversationIds = [],
+        array $expand = [],
+        ?string $stripeAccount = null,
+    ) {
+        $groups = [];
+
+        if ($contactIds === [] && $conversationIds === []) {
+            $groups[] = ['chatwoot_account_id' => $accountId];
+        }
+
+        foreach ($contactIds as $contactId) {
+            $groups[] = [
+                'chatwoot_account_id' => $accountId,
+                'chatwoot_contact_id' => $contactId,
+            ];
+        }
+
+        foreach ($conversationIds as $conversationId) {
+            $groups[] = [
+                'chatwoot_account_id' => $accountId,
+                'chatwoot_conversation_id' => $conversationId,
+            ];
+        }
+
+        return $this->getCustomersByMetadata($groups, $expand, $stripeAccount);
     }
 
     /**
@@ -148,26 +186,32 @@ class StripeService
     }
 
     /**
-     * Create an invoice for the given customer with line items.
+     * Create and finalize an invoice for a customer.
      *
-     * Each line item may be a price ID string or an array with keys `price` and
-     * optional `quantity` (default 1).
+     * The `$items` array may be:
      *
-     * @param array<int, string|array{price:string, quantity?:int}> $lineItems
+     * - A simple list of price IDs (quantity defaults to 1)
+     * - An associative array of `priceId => quantity`
+     * - A list of arrays each containing `price` and optional `quantity`
      */
     public function createInvoice(
         string $customerId,
-        array $lineItems,
+        array $items,
         array $expand = [],
         ?string $stripeAccount = null,
     ): Invoice {
-        foreach ($lineItems as $item) {
-            if (is_array($item)) {
-                $price = $item['price'];
-                $quantity = $item['quantity'] ?? 1;
+        foreach ($items as $key => $value) {
+            if (is_int($key)) {
+                if (is_array($value)) {
+                    $price = $value['price'];
+                    $quantity = $value['quantity'] ?? 1;
+                } else {
+                    $price = $value;
+                    $quantity = 1;
+                }
             } else {
-                $price = $item;
-                $quantity = 1;
+                $price = $key;
+                $quantity = is_array($value) ? ($value['quantity'] ?? 1) : (int) $value;
             }
 
             $this->client->invoiceItems->create([
@@ -248,4 +292,3 @@ class StripeService
         ProcessEvent::dispatch($event);
     }
 }
-
