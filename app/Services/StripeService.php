@@ -161,25 +161,25 @@ class StripeService
         array $expand = [],
         ?string $stripeAccount = null,
     ): Invoice {
-        $items = [];
         foreach ($lineItems as $item) {
             if (is_array($item)) {
-                $items[] = [
-                    'price' => $item['price'],
-                    'quantity' => $item['quantity'] ?? 1,
-                ];
+                $price = $item['price'];
+                $quantity = $item['quantity'] ?? 1;
             } else {
-                $items[] = [
-                    'price' => $item,
-                    'quantity' => 1,
-                ];
+                $price = $item;
+                $quantity = 1;
             }
+
+            $this->client->invoiceItems->create([
+                'customer' => $customerId,
+                'price' => $price,
+                'quantity' => $quantity,
+            ], $this->options($stripeAccount));
         }
 
         $invoice = $this->client->invoices->create([
             'customer' => $customerId,
             'auto_advance' => false,
-            'line_items' => $items,
         ], $this->options($stripeAccount));
 
         return $this->client->invoices->finalizeInvoice(
