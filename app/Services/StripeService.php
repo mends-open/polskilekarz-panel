@@ -75,33 +75,27 @@ class StripeService
     }
 
     /**
-     * Search customers by Chatwoot related metadata.
+     * Search customers by metadata.
      *
-     * @param string $accountId Chatwoot account identifier.
-     * @param array $contactIds Optional contact identifiers.
-     * @param array $conversationIds Optional conversation identifiers.
+     * @param array<array<string, string|int>> $metadataGroups Each group is ANDed, groups are ORed.
      */
     public function getCustomersByMetadata(
-        string $accountId,
-        array $contactIds = [],
-        array $conversationIds = [],
+        array $metadataGroups,
         array $expand = [],
         ?string $stripeAccount = null,
     ) {
-        $query = "metadata['chatwoot_account_id']:'{$accountId}'";
-
-        $filters = [];
-        foreach ($contactIds as $id) {
-            $filters[] = "metadata['chatwoot_contact_id']:'{$id}'";
-        }
-        foreach ($conversationIds as $id) {
-            $filters[] = "metadata['chatwoot_conversation_id']:'{$id}'";
-        }
-
-        if ($filters !== []) {
-            $query .= ' AND (' . implode(' OR ', $filters) . ')';
+        $orSegments = [];
+        foreach ($metadataGroups as $group) {
+            $andSegments = [];
+            foreach ($group as $key => $value) {
+                $andSegments[] = "metadata['{$key}']:'{$value}'";
+            }
+            if ($andSegments !== []) {
+                $orSegments[] = '(' . implode(' AND ', $andSegments) . ')';
+            }
         }
 
+        $query = implode(' OR ', $orSegments);
         $params = $this->addExpand(['query' => $query], $expand);
 
         return $this->client->customers->search($params, $this->options($stripeAccount));
