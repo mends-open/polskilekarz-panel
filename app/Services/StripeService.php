@@ -148,27 +148,38 @@ class StripeService
     }
 
     /**
-     * Create an invoice for the given customer and prices.
+     * Create an invoice for the given customer with line items.
      *
-     * @param array<string, int> $priceQuantities Map of price IDs to quantities.
+     * Each line item may be a price ID string or an array with keys `price` and
+     * optional `quantity` (default 1).
+     *
+     * @param array<int, string|array{price:string, quantity?:int}> $lineItems
      */
     public function createInvoice(
         string $customerId,
-        array $priceQuantities,
+        array $lineItems,
         array $expand = [],
         ?string $stripeAccount = null,
     ): Invoice {
-        foreach ($priceQuantities as $priceId => $quantity) {
-            $this->client->invoiceItems->create([
-                'customer' => $customerId,
-                'price' => $priceId,
-                'quantity' => $quantity,
-            ], $this->options($stripeAccount));
+        $items = [];
+        foreach ($lineItems as $item) {
+            if (is_array($item)) {
+                $items[] = [
+                    'price' => $item['price'],
+                    'quantity' => $item['quantity'] ?? 1,
+                ];
+            } else {
+                $items[] = [
+                    'price' => $item,
+                    'quantity' => 1,
+                ];
+            }
         }
 
         $invoice = $this->client->invoices->create([
             'customer' => $customerId,
             'auto_advance' => false,
+            'line_items' => $items,
         ], $this->options($stripeAccount));
 
         return $this->client->invoices->finalizeInvoice(
