@@ -5,54 +5,40 @@ declare(strict_types=1);
 namespace App\Services;
 
 use BadMethodCallException;
-use Closure;
 use DateTimeInterface;
 use InvalidArgumentException;
 
 final class StripeSearchQuery
 {
-    private function __construct(
-        private readonly string $expression,
-    ) {
+    private ?string $expression;
+
+    public function __construct(?string $clause = null)
+    {
+        $this->expression = $clause !== null ? $this->sanitizeClause($clause) : null;
     }
 
     /**
-     * Start a query for the provided field.
+     * Start a clause for the provided field.
      */
-    public static function field(string $field): PendingField
+    public function field(string $field): PendingField
     {
-        $field = trim($field);
-
-        if ($field === '') {
-            throw new InvalidArgumentException('Field cannot be empty.');
-        }
-
-        return new PendingField(
-            $field,
-            static fn (string $clause): self => new self($clause),
-        );
+        return $this->pendingField(null, $field);
     }
 
     /**
-     * Start a query for a metadata key.
+     * Start a clause for the provided metadata key.
      */
-    public static function metadata(string $key): PendingField
+    public function metadata(string $key): PendingField
     {
-        return self::field(self::metadataField($key));
+        return $this->pendingMetadata(null, $key);
     }
 
     /**
-     * Create a query from an already formatted clause.
+     * Append a raw clause to the query.
      */
-    public static function raw(string $clause): self
+    public function raw(string $clause): self
     {
-        $trimmed = trim($clause);
-
-        if ($trimmed === '') {
-            throw new InvalidArgumentException('Clause cannot be empty.');
-        }
-
-        return new self($trimmed);
+        return $this->appendClause($clause);
     }
 
     /**
@@ -105,18 +91,22 @@ final class StripeSearchQuery
 
     /**
      * Combine the current query with a grouped clause using AND.
+     *
+     * @param callable(self): (self|string|void)|string $builder
      */
     public function andGroup(callable|string $builder): self
     {
-        return $this->and(self::group($builder));
+        return $this->and($this->group($builder));
     }
 
     /**
      * Combine the current query with a grouped clause using OR.
+     *
+     * @param callable(self): (self|string|void)|string $builder
      */
     public function orGroup(callable|string $builder): self
     {
-        return $this->or(self::group($builder));
+        return $this->or($this->group($builder));
     }
 
     /**
@@ -124,7 +114,9 @@ final class StripeSearchQuery
      */
     public function not(): self
     {
-        return new self('-' . self::wrapIfNeeded($this->expression));
+        $this->expression = '-' . $this->wrapIfNeeded($this->requireExpression());
+
+        return $this;
     }
 
     /**
@@ -132,83 +124,38 @@ final class StripeSearchQuery
      */
     public function grouped(): self
     {
-        return new self('(' . $this->expression . ')');
+        $this->expression = '(' . $this->requireExpression() . ')';
+
+        return $this;
     }
 
     /**
      * Build a grouped clause using the provided callback or raw clause.
      *
-     * @param callable(): (self|string)|string $builder
+     * @param callable(self): (self|string|void)|string $builder
      */
-    public static function group(callable|string $builder): self
+    public function group(callable|string $builder): string
     {
-        $result = is_string($builder) ? $builder : $builder();
+        if (is_callable($builder)) {
+            $nested = new self();
+            $result = $builder($nested);
 
-        $query = self::ensureQuery($result);
+            if ($result instanceof self) {
+                $nested = $result;
+            } elseif (is_string($result)) {
+                $nested->raw($result);
+            }
 
-        return $query->grouped();
-    }
+            $clause = $nested->expression;
+        } else {
+            $clause = $this->sanitizeClause($builder);
+        }
 
-    /**
-     * Combine clauses with the AND operator.
-     */
-    public static function all(string ...$clauses): string
-    {
-        return self::combineMany('AND', $clauses);
-    }
+        if ($clause === null || $clause === '') {
+            throw new InvalidArgumentException('Group must contain at least one clause.');
+        }
 
-    /**
-     * Combine clauses with the OR operator.
-     */
-    public static function any(string ...$clauses): string
-    {
-        return self::combineMany('OR', $clauses);
-    }
-
-    /**
-     * Negate a clause using the unary minus operator.
-     */
-    public static function negate(string $clause): string
-    {
-        return self::raw($clause)->not()->toString();
-    }
-
-    /**
-     * Convenience method mirroring the previous static helpers.
-     */
-    public static function equals(string $field, mixed $value): string
-    {
-        return self::field($field)->equals($value)->toString();
-    }
-
-    public static function greaterThan(string $field, mixed $value): string
-    {
-        return self::field($field)->greaterThan($value)->toString();
-    }
-
-    public static function greaterThanOrEquals(string $field, mixed $value): string
-    {
-        return self::field($field)->greaterThanOrEquals($value)->toString();
-    }
-
-    public static function lessThan(string $field, mixed $value): string
-    {
-        return self::field($field)->lessThan($value)->toString();
-    }
-
-    public static function lessThanOrEquals(string $field, mixed $value): string
-    {
-        return self::field($field)->lessThanOrEquals($value)->toString();
-    }
-
-    public static function exists(string $field): string
-    {
-        return self::field($field)->exists()->toString();
-    }
-
-    public static function metadataEquals(string $key, mixed $value): string
-    {
-        return self::metadata($key)->equals($value)->toString();
+        return '(' . $this->sanitizeClause($clause) . ')';
     }
 
     /**
@@ -216,79 +163,107 @@ final class StripeSearchQuery
      */
     public function toString(): string
     {
-        return $this->expression;
+        return $this->requireExpression();
     }
 
     public function __toString(): string
     {
-        return $this->toString();
+        return $this->expression ?? '';
     }
 
-    private static function ensureQuery(self|string $query): self
+    /**
+     * @internal
+     */
+    public function appendClause(string $clause, ?string $boolean = null): self
     {
-        if (is_string($query)) {
-            return self::raw($query);
+        return $this->applyClause($clause, $boolean);
+    }
+
+    /**
+     * @internal
+     */
+    public function buildComparison(string $field, string $operator, mixed $value): string
+    {
+        $operator = trim($operator);
+
+        if (! in_array($operator, [':', '>', '>=', '<', '<='], true)) {
+            throw new InvalidArgumentException('Unsupported operator provided.');
         }
 
-        return $query;
+        $field = $this->sanitizeField($field);
+
+        return sprintf('%s%s%s', $field, $operator, $this->formatValue($value, $operator));
     }
 
-    private static function combineMany(string $operator, array $clauses): string
+    /**
+     * @internal
+     */
+    public function buildExistence(string $field): string
     {
-        $filtered = array_values(array_filter(array_map('trim', $clauses), fn (string $clause) => $clause !== ''));
+        $field = $this->sanitizeField($field);
 
-        if ($filtered === []) {
-            throw new InvalidArgumentException('At least one clause must be provided.');
-        }
-
-        if (count($filtered) === 1) {
-            return $filtered[0];
-        }
-
-        $wrapped = array_map(
-            fn (string $clause): string => self::wrapIfNeeded(self::raw($clause)->expression),
-            $filtered,
-        );
-
-        return implode(sprintf(' %s ', $operator), $wrapped);
-    }
-
-    public static function __callStatic(string $name, array $arguments)
-    {
-        if ($name === 'not') {
-            return self::negate(...$arguments);
-        }
-
-        throw new BadMethodCallException(sprintf('Call to undefined method %s::%s()', self::class, $name));
-    }
-
-    private function pendingField(string $operator, string $field): PendingField
-    {
-        return new PendingField(
-            trim($field),
-            fn (string $clause): self => $this->combine($operator, $clause),
-        );
-    }
-
-    private function pendingMetadata(string $operator, string $key): PendingField
-    {
-        return new PendingField(
-            self::metadataField($key),
-            fn (string $clause): self => $this->combine($operator, $clause),
-        );
+        return sprintf("%s:'*'", $field);
     }
 
     private function combine(string $operator, self|string $clause): self
     {
-        $right = $clause instanceof self ? $clause->expression : self::raw($clause)->expression;
+        $clauseString = $clause instanceof self
+            ? $clause->requireExpression()
+            : $this->sanitizeClause($clause);
 
-        $leftWrapped = self::wrapIfNeeded($this->expression);
-        $rightWrapped = self::wrapIfNeeded($right);
-
-        return new self(sprintf('%s %s %s', $leftWrapped, $operator, $rightWrapped));
+        return $this->applyClause($clauseString, $operator);
     }
 
-    private static function wrapIfNeeded(string $clause): string
+    private function applyClause(string $clause, ?string $boolean): self
+    {
+        $clause = $this->sanitizeClause($clause);
+
+        if ($this->expression === null) {
+            $this->expression = $clause;
+
+            return $this;
+        }
+
+        $operator = $boolean ?? 'AND';
+
+        $this->expression = sprintf(
+            '%s %s %s',
+            $this->wrapIfNeeded($this->expression),
+            $operator,
+            $this->wrapIfNeeded($clause),
+        );
+
+        return $this;
+    }
+
+    private function pendingField(?string $operator, string $field): PendingField
+    {
+        return new PendingField(
+            $this,
+            $this->sanitizeField($field),
+            $operator,
+        );
+    }
+
+    private function pendingMetadata(?string $operator, string $key): PendingField
+    {
+        return new PendingField(
+            $this,
+            $this->metadataField($key),
+            $operator,
+        );
+    }
+
+    private function requireExpression(): string
+    {
+        if ($this->expression === null || $this->expression === '') {
+            throw new BadMethodCallException('No clause has been added to the query.');
+        }
+
+        return $this->expression;
+    }
+
+    private function sanitizeClause(string $clause): string
     {
         $trimmed = trim($clause);
 
@@ -296,6 +271,23 @@ final class StripeSearchQuery
             throw new InvalidArgumentException('Clause cannot be empty.');
         }
 
+        return $trimmed;
+    }
+
+    private function sanitizeField(string $field): string
+    {
+        $field = trim($field);
+
+        if ($field === '') {
+            throw new InvalidArgumentException('Field cannot be empty.');
+        }
+
+        return $field;
+    }
+
+    private function wrapIfNeeded(string $clause): string
+    {
+        $trimmed = $this->sanitizeClause($clause);
         $upper = strtoupper($trimmed);
 
         if (
@@ -312,10 +304,7 @@ final class StripeSearchQuery
         return $trimmed;
     }
 
-    /**
-     * @internal
-     */
-    public static function formatValue(mixed $value, string $operator): string
+    private function formatValue(mixed $value, string $operator): string
     {
         if ($value instanceof DateTimeInterface) {
             $value = $value->getTimestamp();
@@ -340,41 +329,7 @@ final class StripeSearchQuery
         throw new InvalidArgumentException('Unsupported value type provided.');
     }
 
-    /**
-     * @internal
-     */
-    public static function buildComparison(string $field, string $operator, mixed $value): string
-    {
-        $operator = trim($operator);
-
-        if (! in_array($operator, [':', '>', '>=', '<', '<='], true)) {
-            throw new InvalidArgumentException('Unsupported operator provided.');
-        }
-
-        $field = trim($field);
-
-        if ($field === '') {
-            throw new InvalidArgumentException('Field cannot be empty.');
-        }
-
-        return sprintf('%s%s%s', $field, $operator, self::formatValue($value, $operator));
-    }
-
-    /**
-     * @internal
-     */
-    public static function buildExistence(string $field): string
-    {
-        $field = trim($field);
-
-        if ($field === '') {
-            throw new InvalidArgumentException('Field cannot be empty.');
-        }
-
-        return sprintf("%s:'*'", $field);
-    }
-
-    private static function metadataField(string $key): string
+    private function metadataField(string $key): string
     {
         $key = trim($key);
 
@@ -390,45 +345,45 @@ final class StripeSearchQuery
 
 final class PendingField
 {
-    /**
-     * @param Closure(string): StripeSearchQuery $completer
-     */
     public function __construct(
+        private readonly StripeSearchQuery $query,
         private readonly string $field,
-        private readonly Closure $completer,
+        private readonly ?string $boolean,
     ) {
-        if ($this->field === '') {
-            throw new InvalidArgumentException('Field cannot be empty.');
-        }
     }
 
     public function equals(mixed $value): StripeSearchQuery
     {
-        return ($this->completer)(StripeSearchQuery::buildComparison($this->field, ':', $value));
+        return $this->complete($this->query->buildComparison($this->field, ':', $value));
     }
 
     public function greaterThan(mixed $value): StripeSearchQuery
     {
-        return ($this->completer)(StripeSearchQuery::buildComparison($this->field, '>', $value));
+        return $this->complete($this->query->buildComparison($this->field, '>', $value));
     }
 
     public function greaterThanOrEquals(mixed $value): StripeSearchQuery
     {
-        return ($this->completer)(StripeSearchQuery::buildComparison($this->field, '>=', $value));
+        return $this->complete($this->query->buildComparison($this->field, '>=', $value));
     }
 
     public function lessThan(mixed $value): StripeSearchQuery
     {
-        return ($this->completer)(StripeSearchQuery::buildComparison($this->field, '<', $value));
+        return $this->complete($this->query->buildComparison($this->field, '<', $value));
     }
 
     public function lessThanOrEquals(mixed $value): StripeSearchQuery
     {
-        return ($this->completer)(StripeSearchQuery::buildComparison($this->field, '<=', $value));
+        return $this->complete($this->query->buildComparison($this->field, '<=', $value));
     }
 
     public function exists(): StripeSearchQuery
     {
-        return ($this->completer)(StripeSearchQuery::buildExistence($this->field));
+        return $this->complete($this->query->buildExistence($this->field));
+    }
+
+    private function complete(string $clause): StripeSearchQuery
+    {
+        return $this->query->appendClause($clause, $this->boolean);
     }
 }
