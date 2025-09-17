@@ -59,9 +59,9 @@ abstract class AbstractSearchBuilder
         return $this->addClause($clause, 'OR');
     }
 
-    public function extend(array|string $fields): static
+    public function expand(array|string $fields): static
     {
-        $fields = $this->normalizeExtendFields($fields);
+        $fields = $this->normalizeExpandFields($fields);
 
         if ($fields === []) {
             return $this;
@@ -71,11 +71,6 @@ abstract class AbstractSearchBuilder
         $this->options['expand'] = array_values(array_unique([...$existing, ...$fields]));
 
         return $this;
-    }
-
-    public function expand(array|string $fields): static
-    {
-        return $this->extend($fields);
     }
 
     public function limit(int $limit): static
@@ -198,7 +193,7 @@ abstract class AbstractSearchBuilder
     /**
      * @return array<int, string>
      */
-    protected function normalizeExtendFields(array|string $fields): array
+    protected function normalizeExpandFields(array|string $fields): array
     {
         if (is_string($fields)) {
             $fields = [$fields];
