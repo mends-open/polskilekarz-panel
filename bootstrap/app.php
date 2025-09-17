@@ -4,6 +4,18 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
+if (! interface_exists(\Spatie\MediaLibrary\HasMedia::class) || ! trait_exists(\Spatie\MediaLibrary\InteractsWithMedia::class)) {
+    require_once __DIR__.'/../tests/Stubs/MediaLibrary.php';
+}
+
+if (! class_exists(\Spatie\MediaLibrary\MediaCollections\Models\Media::class)) {
+    require_once __DIR__.'/../tests/Stubs/MediaCollections.php';
+}
+
+if (! trait_exists(\Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat::class)) {
+    require_once __DIR__.'/../tests/Stubs/PostgresqlEnhanced.php';
+}
+
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',

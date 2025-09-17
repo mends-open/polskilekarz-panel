@@ -61,21 +61,17 @@ class StripeService
     /**
      * @throws ApiErrorException
      */
-    public function searchCustomers(string $query): SearchResult
+    public function searchCustomers(string $query, array $options = []): SearchResult
     {
-        return Customer::search([
-            'query' => $query,
-        ]);
+        return Customer::search($this->compileSearchParameters($query, $options));
     }
 
     /**
      * @throws ApiErrorException
      */
-    public function searchPrices(string $query): SearchResult
+    public function searchPrices(string $query, array $options = []): SearchResult
     {
-        return Price::search([
-            'query' => $query,
-        ]);
+        return Price::search($this->compileSearchParameters($query, $options));
     }
 
     public function buildQueryClause(string $field, string $value, string $operator = ':'): string
@@ -140,5 +136,28 @@ class StripeService
     public function dispatchEvent(StripeEvent $event): void
     {
         ProcessEvent::dispatch($event);
+    }
+
+    /**
+     * @param array<string, mixed> $options
+     * @return array<string, mixed>
+     */
+    protected function compileSearchParameters(string $query, array $options): array
+    {
+        $payload = ['query' => $query];
+
+        if (isset($options['expand']) && $options['expand'] !== []) {
+            $payload['expand'] = array_values(array_map('strval', $options['expand']));
+        }
+
+        if (isset($options['limit'])) {
+            $payload['limit'] = (int) $options['limit'];
+        }
+
+        if (isset($options['page'])) {
+            $payload['page'] = (string) $options['page'];
+        }
+
+        return $payload;
     }
 }

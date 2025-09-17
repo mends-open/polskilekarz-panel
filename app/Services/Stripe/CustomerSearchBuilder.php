@@ -28,8 +28,8 @@ class CustomerSearchBuilder extends AbstractSearchBuilder
         return $this->addFieldClause($metadataField, $this->assertValue($value, $field), $operator, 'OR');
     }
 
-    protected function runSearch(string $query): SearchResult
+    protected function runSearch(string $query, array $options): SearchResult
     {
-        return $this->service->searchCustomers($query);
+        return $this->service->searchCustomers($query, $options);
     }
 }

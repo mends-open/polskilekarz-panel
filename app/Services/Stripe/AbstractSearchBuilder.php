@@ -12,6 +12,11 @@ abstract class AbstractSearchBuilder
      */
     protected array $clauses = [];
 
+    /**
+     * @var array<string, mixed>
+     */
+    protected array $options = [];
+
     public function __construct(protected readonly StripeService $service)
     {
     }
@@ -54,6 +59,49 @@ abstract class AbstractSearchBuilder
         return $this->addClause($clause, 'OR');
     }
 
+    public function extend(array|string $fields): static
+    {
+        $fields = $this->normalizeExtendFields($fields);
+
+        if ($fields === []) {
+            return $this;
+        }
+
+        $existing = $this->options['expand'] ?? [];
+        $this->options['expand'] = array_values(array_unique([...$existing, ...$fields]));
+
+        return $this;
+    }
+
+    public function expand(array|string $fields): static
+    {
+        return $this->extend($fields);
+    }
+
+    public function limit(int $limit): static
+    {
+        if ($limit < 1 || $limit > 100) {
+            throw new InvalidArgumentException('Stripe search limits must be between 1 and 100.');
+        }
+
+        $this->options['limit'] = $limit;
+
+        return $this;
+    }
+
+    public function page(string $cursor): static
+    {
+        $cursor = trim($cursor);
+
+        if ($cursor === '') {
+            throw new InvalidArgumentException('The Stripe search page cursor cannot be empty.');
+        }
+
+        $this->options['page'] = $cursor;
+
+        return $this;
+    }
+
     public function toQueryString(): string
     {
         if ($this->clauses === []) {
@@ -83,10 +131,10 @@ abstract class AbstractSearchBuilder
             throw new InvalidArgumentException('Cannot execute a Stripe search without any conditions.');
         }
 
-        return $this->runSearch($query);
+        return $this->runSearch($query, $this->options);
     }
 
-    abstract protected function runSearch(string $query): SearchResult;
+    abstract protected function runSearch(string $query, array $options): SearchResult;
 
     protected function addFieldClause(string $field, string $value, string $operator, string $boolean): static
     {
@@ -145,5 +193,29 @@ abstract class AbstractSearchBuilder
     protected function newInstance(): static
     {
         return new static($this->service);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function normalizeExtendFields(array|string $fields): array
+    {
+        if (is_string($fields)) {
+            $fields = [$fields];
+        }
+
+        $normalized = [];
+
+        foreach ($fields as $field) {
+            $field = trim((string) $field);
+
+            if ($field === '') {
+                continue;
+            }
+
+            $normalized[] = $field;
+        }
+
+        return $normalized;
     }
 }

@@ -19,8 +19,8 @@ class PriceSearchBuilder extends AbstractSearchBuilder
         return $this->where('currency', strtolower($code));
     }
 
-    protected function runSearch(string $query): SearchResult
+    protected function runSearch(string $query, array $options): SearchResult
     {
-        return $this->service->searchPrices($query);
+        return $this->service->searchPrices($query, $options);
     }
 }
