@@ -20,7 +20,7 @@ class DatabaseSeeder extends Seeder
         $users = User::factory()->count(3)->create();
         $entity->users()->attach($users);
 
-        Patient::factory()->count(10)->create()->each(function (Patient $patient) use ($users, $entity) {
+        Patient::factory()->count(10)->create()->each(function (Patient $patient) {
             $email = Email::factory()->create();
             $patient->emails()->attach($email, [
                 'primary_since' => now(),

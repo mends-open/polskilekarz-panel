@@ -13,9 +13,7 @@ class DeleteFile implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public function __construct(public string $disk, public string $path)
-    {
-    }
+    public function __construct(public string $disk, public string $path) {}
 
     public function handle(): void
     {

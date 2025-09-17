@@ -23,4 +23,3 @@ class PatientPhoneFactory extends Factory
         ];
     }
 }
-

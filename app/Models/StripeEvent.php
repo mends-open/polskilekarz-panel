@@ -13,6 +13,7 @@ class StripeEvent extends Model
     use AutomaticDateFormat, HasFactory, SoftDeletes, ValidatesAttributes;
 
     protected $fillable = ['data'];
+
     protected $casts = [
         'data' => 'array',
     ];

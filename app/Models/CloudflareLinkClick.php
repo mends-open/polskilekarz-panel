@@ -38,4 +38,3 @@ class CloudflareLinkClick extends Model
         ];
     }
 }
-

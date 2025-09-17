@@ -1,8 +1,5 @@
 <?php
 
-use App\Models\Entity;
-use App\Models\Patient;
-use App\Models\User;
 use Illuminate\Database\Migrations\Migration;
 use Tpetry\PostgresqlEnhanced\Schema\Blueprint;
 use Tpetry\PostgresqlEnhanced\Support\Facades\Schema;

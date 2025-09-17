@@ -14,9 +14,7 @@ class ProcessEvent implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public function __construct(public StripeEvent $event)
-    {
-    }
+    public function __construct(public StripeEvent $event) {}
 
     public function handle(): void
     {

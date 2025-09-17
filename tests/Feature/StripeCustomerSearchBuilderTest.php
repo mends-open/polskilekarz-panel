@@ -1,11 +1,9 @@
 <?php
 
-use App\Services\Stripe\CustomerSearchBuilder;
-use App\Services\Stripe\PriceSearchBuilder;
-use App\Services\Stripe\StripeSearchService;
-use App\Services\Stripe\StripeService;
-use InvalidArgumentException;
-use RuntimeException;
+use App\Services\Stripe\Search;
+use App\Services\Stripe\SearchBuilders\Customer;
+use App\Services\Stripe\SearchBuilders\Price;
+use App\Services\StripeService;
 use Stripe\SearchResult;
 
 enum DummyCurrency: string
@@ -22,16 +20,16 @@ afterEach(function () {
 });
 
 it('provides a search gateway for Stripe resources', function () {
-    $service = new StripeService();
+    $service = new StripeService;
     $search = $service->search();
 
-    expect($search)->toBeInstanceOf(StripeSearchService::class);
-    expect($search->customers())->toBeInstanceOf(CustomerSearchBuilder::class);
-    expect($search->prices())->toBeInstanceOf(PriceSearchBuilder::class);
+    expect($search)->toBeInstanceOf(Search::class);
+    expect($search->customers())->toBeInstanceOf(Customer::class);
+    expect($search->prices())->toBeInstanceOf(Price::class);
 });
 
 it('builds metadata clauses with implicit AND logic', function () {
-    $service = new StripeService();
+    $service = new StripeService;
 
     $query = $service->search()->customers()
         ->whereMetadata('region_eide', 'west_xrob')
@@ -42,17 +40,17 @@ it('builds metadata clauses with implicit AND logic', function () {
 });
 
 it('requires a value when filtering by metadata field', function () {
-    $service = new StripeService();
+    $service = new StripeService;
 
     $service->search()->customers()->whereMetadata('region_eide');
 })->throws(InvalidArgumentException::class);
 
 it('supports grouping metadata clauses with OR logic', function () {
-    $service = new StripeService();
+    $service = new StripeService;
 
     $query = $service->search()->customers()
         ->whereMetadata('region_eide', 'west_xrob')
-        ->orWhereMetadata(function (CustomerSearchBuilder $group) {
+        ->orWhereMetadata(function (Customer $group) {
             $group->whereMetadata('plan', 'premium')
                 ->orWhereMetadata('plan', 'vip');
         })
@@ -62,8 +60,10 @@ it('supports grouping metadata clauses with OR logic', function () {
 });
 
 it('passes the compiled customer query to the Stripe API when executed', function () {
-    $service = new class extends StripeService {
+    $service = new class extends StripeService
+    {
         public ?string $capturedCustomerQuery = null;
+
         /** @var array<string, mixed>|null */
         public ?array $capturedCustomerOptions = null;
 
@@ -96,7 +96,8 @@ it('passes the compiled customer query to the Stripe API when executed', functio
 });
 
 it('requires at least one clause before executing a customer search', function () {
-    $service = new class extends StripeService {
+    $service = new class extends StripeService
+    {
         public function __construct()
         {
             // Avoid setting an API key when running tests.
@@ -112,7 +113,7 @@ it('requires at least one clause before executing a customer search', function (
 })->throws(InvalidArgumentException::class);
 
 it('builds price clauses for currency filters', function () {
-    $service = new StripeService();
+    $service = new StripeService;
 
     $query = $service->search()->prices()
         ->whereCurrency(DummyCurrency::EUR)
@@ -122,8 +123,10 @@ it('builds price clauses for currency filters', function () {
 });
 
 it('passes the compiled price query to the Stripe API when executed', function () {
-    $service = new class extends StripeService {
+    $service = new class extends StripeService
+    {
         public ?string $capturedPriceQuery = null;
+
         /** @var array<string, mixed>|null */
         public ?array $capturedPriceOptions = null;
 
@@ -143,7 +146,7 @@ it('passes the compiled price query to the Stripe API when executed', function (
 
     $service->search()->prices()
         ->where('active', 'true')
-        ->orWhere(function (PriceSearchBuilder $group) {
+        ->orWhere(function (Price $group) {
             $group->where('nickname', 'standard')->orWhere('nickname', 'premium');
         })
         ->page('cursor_123')
@@ -158,7 +161,7 @@ it('passes the compiled price query to the Stripe API when executed', function (
 });
 
 it('validates the configured limit and page options', function () {
-    $service = new StripeService();
+    $service = new StripeService;
 
     $builder = $service->search()->customers();
 

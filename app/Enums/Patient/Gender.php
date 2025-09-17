@@ -14,7 +14,7 @@ enum Gender: int implements HasLabel
 
     public function getLabel(): ?string
     {
-        return __('patient.gender.' . $this->value);
+        return __('patient.gender.'.$this->value);
     }
 
     public static function labels(): array
@@ -28,4 +28,3 @@ enum Gender: int implements HasLabel
         return $labels;
     }
 }
-

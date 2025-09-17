@@ -46,4 +46,3 @@ class CloudflareLinkClickController extends Controller
         return response()->json(['id' => $click->id]);
     }
 }
-

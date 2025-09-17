@@ -24,7 +24,6 @@ if (! class_exists(\Laravel\Octane\Octane::class)) {
     class_alias(OctaneConfigStub::class, \Laravel\Octane\Octane::class);
 }
 
-
 use Laravel\Octane\Contracts\OperationTerminated;
 use Laravel\Octane\Events\RequestHandled;
 use Laravel\Octane\Events\RequestReceived;

@@ -16,4 +16,3 @@ class EmailFactory extends Factory
         ];
     }
 }
-

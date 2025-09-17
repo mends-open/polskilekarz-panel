@@ -19,9 +19,7 @@ class ConvertProductsToCsv implements ShouldQueue
 
     public int $timeout = 120;
 
-    public function __construct(public string $source, public string $target)
-    {
-    }
+    public function __construct(public string $source, public string $target) {}
 
     public function handle(): void
     {
@@ -41,7 +39,7 @@ class ConvertProductsToCsv implements ShouldQueue
 
     private function convertToCsv(string $xlsxPath, string $csvPath): void
     {
-        $reader = new Xlsx();
+        $reader = new Xlsx;
         $reader->setReadDataOnly(true);
 
         $info = $reader->listWorksheetInfo($xlsxPath);
@@ -56,7 +54,7 @@ class ConvertProductsToCsv implements ShouldQueue
         for ($row = 1; $row <= 50; $row++) {
             $rowHeaders = [];
             for ($col = 1; $col <= $highestColumn; $col++) {
-                $coordinate = Coordinate::stringFromColumnIndex($col) . $row;
+                $coordinate = Coordinate::stringFromColumnIndex($col).$row;
                 $value = (string) $sheet->getCell($coordinate)->getValue();
                 $rowHeaders[$col] = trim(strtok($value, "\n"));
             }
@@ -69,6 +67,7 @@ class ConvertProductsToCsv implements ShouldQueue
 
         if ($headerRow === null) {
             Log::warning('EMA header row not found', ['file' => $xlsxPath]);
+
             return;
         }
 
@@ -88,25 +87,27 @@ class ConvertProductsToCsv implements ShouldQueue
 
         if (in_array(null, $map, true)) {
             Log::warning('Required EMA columns missing', ['map' => $map]);
+
             return;
         }
 
         $handle = fopen($csvPath, 'w');
-        if (!$handle) {
+        if (! $handle) {
             Log::warning('Unable to open CSV for writing', ['path' => $csvPath]);
+
             return;
         }
 
         for ($row = $headerRow + 1; $row <= $highestRow; $row++) {
-            $productCoordinate = Coordinate::stringFromColumnIndex($map['product_name']) . $row;
+            $productCoordinate = Coordinate::stringFromColumnIndex($map['product_name']).$row;
             $product = trim((string) $sheet->getCell($productCoordinate)->getValue());
             if ($product === '') {
                 continue;
             }
 
-            $countryCoordinate = Coordinate::stringFromColumnIndex($map['product_authorisation_country']) . $row;
-            $routesCoordinate = Coordinate::stringFromColumnIndex($map['route_of_administration']) . $row;
-            $substancesCoordinate = Coordinate::stringFromColumnIndex($map['active_substance']) . $row;
+            $countryCoordinate = Coordinate::stringFromColumnIndex($map['product_authorisation_country']).$row;
+            $routesCoordinate = Coordinate::stringFromColumnIndex($map['route_of_administration']).$row;
+            $substancesCoordinate = Coordinate::stringFromColumnIndex($map['active_substance']).$row;
 
             $country = trim((string) $sheet->getCell($countryCoordinate)->getValue());
             $routes = Str::of((string) $sheet->getCell($routesCoordinate)->getValue())

@@ -10,10 +10,15 @@ use Illuminate\Support\Str;
 class CloudflareService
 {
     protected string $endpoint;
+
     protected string $token;
+
     protected string $account;
+
     protected string $namespace;
+
     protected string $domain;
+
     protected int $slugLength;
 
     public function __construct()
@@ -103,6 +108,6 @@ class CloudflareService
 
     protected function buildShortUrl(string $slug): string
     {
-        return rtrim($this->domain, '/') . '/' . $slug;
+        return rtrim($this->domain, '/').'/'.$slug;
     }
 }

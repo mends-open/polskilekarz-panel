@@ -1,9 +1,10 @@
 <?php
 
-namespace App\Services\Stripe;
+namespace App\Services;
 
 use App\Jobs\Stripe\ProcessEvent;
 use App\Models\StripeEvent;
+use App\Services\Stripe\Search;
 use Illuminate\Support\Str;
 use Stripe\Customer;
 use Stripe\Event;
@@ -21,9 +22,9 @@ class StripeService
         Stripe::setApiKey(config('services.stripe.api_key'));
     }
 
-    public function search(): StripeSearchService
+    public function search(): Search
     {
-        return new StripeSearchService($this);
+        return new Search($this);
     }
 
     /**
@@ -81,7 +82,7 @@ class StripeService
         $op = $op === '' ? ':' : $op;
 
         if ($op === 'has' || $op === 'has:') {
-            return 'has:' . $field;
+            return 'has:'.$field;
         }
 
         $normalized = Str::of($value)->trim();
@@ -101,11 +102,11 @@ class StripeService
                     ->replace('\\', '\\\\')
                     ->replace("'", "\\'")
                     ->toString();
-                $formatted = "'" . $escaped . "'";
+                $formatted = "'".$escaped."'";
             }
         }
 
-        return $field . $op . $formatted;
+        return $field.$op.$formatted;
     }
 
     public function metadataField(string $field): string
@@ -139,7 +140,7 @@ class StripeService
     }
 
     /**
-     * @param array<string, mixed> $options
+     * @param  array<string, mixed>  $options
      * @return array<string, mixed>
      */
     protected function compileSearchParameters(string $query, array $options): array

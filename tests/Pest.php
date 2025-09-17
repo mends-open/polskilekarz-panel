@@ -1,6 +1,6 @@
 <?php
 
-require_once __DIR__ . '/Stubs/MediaLibrary.php';
+require_once __DIR__.'/Stubs/MediaLibrary.php';
 
 use Tests\Stubs\Octane as OctaneStub;
 

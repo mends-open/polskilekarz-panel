@@ -1,11 +1,12 @@
 <?php
 
-namespace App\Services\Stripe;
+namespace App\Services\Stripe\SearchBuilders;
 
+use App\Services\StripeService;
 use InvalidArgumentException;
 use Stripe\SearchResult;
 
-abstract class AbstractSearchBuilder
+abstract class Base
 {
     /**
      * @var array<int, array{boolean: string, clause: string}>
@@ -17,9 +18,7 @@ abstract class AbstractSearchBuilder
      */
     protected array $options = [];
 
-    public function __construct(protected readonly StripeService $service)
-    {
-    }
+    public function __construct(protected readonly StripeService $service) {}
 
     public function where(string|callable $field, ?string $value = null, string $operator = ':'): static
     {
@@ -57,6 +56,28 @@ abstract class AbstractSearchBuilder
     public function orWhereRaw(string $clause): static
     {
         return $this->addClause($clause, 'OR');
+    }
+
+    public function whereMetadata(string|callable $field, ?string $value = null, string $operator = ':'): static
+    {
+        if (is_callable($field)) {
+            return $this->addGroup($field, 'AND');
+        }
+
+        $metadataField = $this->service->metadataField($field);
+
+        return $this->addFieldClause($metadataField, $this->assertValue($value, $field), $operator, 'AND');
+    }
+
+    public function orWhereMetadata(string|callable $field, ?string $value = null, string $operator = ':'): static
+    {
+        if (is_callable($field)) {
+            return $this->addGroup($field, 'OR');
+        }
+
+        $metadataField = $this->service->metadataField($field);
+
+        return $this->addFieldClause($metadataField, $this->assertValue($value, $field), $operator, 'OR');
     }
 
     public function extend(array|string $fields): static
@@ -117,7 +138,7 @@ abstract class AbstractSearchBuilder
                 continue;
             }
 
-            $parts[] = $clause['boolean'] . ' ' . $clause['clause'];
+            $parts[] = $clause['boolean'].' '.$clause['clause'];
         }
 
         return implode(' ', $parts);
@@ -153,7 +174,7 @@ abstract class AbstractSearchBuilder
         if ($groupQuery !== '') {
             $this->clauses[] = [
                 'boolean' => $this->normalizeBoolean($boolean),
-                'clause' => '(' . $groupQuery . ')',
+                'clause' => '('.$groupQuery.')',
             ];
         }
 

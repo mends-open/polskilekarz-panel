@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\Stripe\StripeService;
+use App\Services\StripeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -11,9 +11,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class StripeEventController extends Controller
 {
-    public function __construct(private StripeService $stripeService)
-    {
-    }
+    public function __construct(private StripeService $stripeService) {}
 
     public function __invoke(Request $request): JsonResponse
     {

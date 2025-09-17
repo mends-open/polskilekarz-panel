@@ -3,13 +3,12 @@
 namespace App\Models;
 
 use App\Models\Concerns\ValidatesAttributes;
-use App\Models\EmaSubstance;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 use Tpetry\PostgresqlEnhanced\Eloquent\Casts\IntegerArrayCast;
+use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 
 class EmaProduct extends Model
 {
