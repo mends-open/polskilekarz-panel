@@ -28,9 +28,9 @@ it('combines clauses with AND and OR operators', function () {
     expect($clause)->toBe("(status:'succeeded' AND metadata['order_id']:'42') OR payment_intent:'pi_123'");
 });
 
-it('negates clauses with NOT', function () {
+it('negates clauses with the minus operator', function () {
     expect(StripeSearchQuery::not(StripeSearchQuery::equals('status', 'failed')))
-        ->toBe("NOT status:'failed'");
+        ->toBe("-status:'failed'");
 });
 
 it('builds existence clauses', function () {

@@ -84,11 +84,11 @@ class StripeSearchQuery
     }
 
     /**
-     * Negate a clause using the NOT operator.
+     * Negate a clause using the unary minus operator.
      */
     public static function not(string $clause): string
     {
-        return 'NOT ' . self::wrapIfNeeded($clause);
+        return '-' . self::wrapIfNeeded($clause);
     }
 
     /**
