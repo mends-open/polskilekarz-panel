@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Jobs\Stripe\ProcessEvent;
 use App\Models\StripeEvent;
 use Stripe\Event;
+use Stripe\Exception\SignatureVerificationException;
 use Stripe\Stripe;
 use Stripe\Webhook;
 
@@ -20,8 +21,8 @@ class StripeService
      *
      * @param string $payload
      * @param string $signature
-     * @return \Stripe\Event
-     * @throws \Stripe\Exception\SignatureVerificationException
+     * @return Event
+     * @throws SignatureVerificationException
      */
     public function constructEvent(string $payload, string $signature): Event
     {
