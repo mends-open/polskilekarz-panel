@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Jobs\Stripe\ProcessEvent;
 use App\Models\StripeEvent;
+use InvalidArgumentException;
 use Stripe\Customer;
 use Stripe\Event;
 use Stripe\Exception\ApiErrorException;
@@ -55,65 +56,107 @@ class StripeService
     /**
      * @throws ApiErrorException
      */
-    public function searchCustomersByMetadata(array $filterTree): SearchResult
+    public function searchCustomersByMetadata(array $filters): SearchResult
     {
-        $query = $this->buildStripeSearchQuery($filterTree);
+        $query = $this->buildStripeSearchQuery($filters);
 
         return Customer::search([
             'query' => $query,
         ]);
     }
 
-    private function buildStripeSearchQuery(array $node): string
+    private function buildStripeSearchQuery(array $filters): string
     {
-        // Supported node shapes:
-        // - ['and' => [ ...nodes ]]
-        // - ['or'  => [ ...nodes ]]
-        // - ['meta' => ['key' => 'k', 'op' => 'eq|prefix|neq|exists|not_exists', 'value' => 'v']]
-        // 'eq' -> metadata['k']:'v'
-        // 'neq' -> -metadata['k']:'v'
-        // 'prefix' -> metadata['k']~'v*'
-        // 'exists' -> has:metadata['k']
-        // 'not_exists' -> -has:metadata['k']
-
-        if (isset($node['and'])) {
-            $parts = array_map(fn ($child) => $this->wrapIfNeeded($this->buildStripeSearchQuery($child)), $node['and']);
-            return implode(' AND ', $parts);
+        if ($filters === []) {
+            throw new InvalidArgumentException('Filter array cannot be empty');
         }
 
-        if (isset($node['or'])) {
-            $parts = array_map(fn ($child) => $this->wrapIfNeeded($this->buildStripeSearchQuery($child)), $node['or']);
-            return implode(' OR ', $parts);
+        if ($this->isAssociative($filters)) {
+            return $this->buildAndExpression($filters);
         }
 
-        if (isset($node['meta'])) {
-            $key = $node['meta']['key'] ?? null;
-            $op = $node['meta']['op'] ?? 'eq';
-            $value = $node['meta']['value'] ?? null;
-
-            if ($key === null) {
-                throw new \InvalidArgumentException("meta.key is required");
+        $groups = array_map(function ($group, $index) {
+            if (!is_array($group) || $group === [] || !$this->isAssociative($group)) {
+                throw new InvalidArgumentException(sprintf('Each OR group must be a non-empty associative array (index %d).', $index));
             }
 
-            $field = "metadata['" . str_replace("'", "\\'", $key) . "']";
+            return $this->wrapIfNeeded($this->buildAndExpression($group));
+        }, $filters, array_keys($filters));
 
-            return match ($op) {
-                'eq'        => $field . ":'" . $this->escapeValue($value) . "'",
-                'neq'       => '-' . $field . ":'" . $this->escapeValue($value) . "'",
-                'prefix'    => $field . "~'" . $this->escapeValue($value) . "*'",
-                'exists'    => "has:" . $field,
-                'not_exists'=> "-has:" . $field,
-                default     => throw new \InvalidArgumentException("Unsupported op: {$op}")
-            };
+        return implode(' OR ', $groups);
+    }
+
+    private function buildAndExpression(array $conditions): string
+    {
+        $parts = [];
+
+        foreach ($conditions as $metadataKey => $details) {
+            if (!is_string($metadataKey) || $metadataKey === '') {
+                throw new InvalidArgumentException('Metadata key must be a non-empty string.');
+            }
+
+            $parts[] = $this->buildMetadataCondition($metadataKey, $details);
         }
 
-        throw new \InvalidArgumentException('Invalid filter node');
+        if ($parts === []) {
+            throw new InvalidArgumentException('Each AND group must contain at least one condition.');
+        }
+
+        return implode(' AND ', $parts);
+    }
+
+    private function buildMetadataCondition(string $key, mixed $details): string
+    {
+        $operator = 'eq';
+        $value = $details;
+
+        if (is_array($details) && $this->isAssociative($details)) {
+            $operator = $details['operator'] ?? $details['op'] ?? 'eq';
+            $value = $details['value'] ?? null;
+        }
+
+        $field = "metadata['" . str_replace("'", "\\'", $key) . "']";
+
+        return match ($operator) {
+            'eq' => $field . ":'" . $this->escapeValue($this->formatValue($value)) . "'",
+            'neq' => '-' . $field . ":'" . $this->escapeValue($this->formatValue($value)) . "'",
+            'prefix' => $field . "~'" . $this->escapeValue($this->formatValue($value)) . "*'",
+            'exists' => 'has:' . $field,
+            'not_exists' => '-has:' . $field,
+            default => throw new InvalidArgumentException(sprintf('Unsupported operator "%s".', $operator)),
+        };
     }
 
     private function wrapIfNeeded(string $expr): string
     {
         // Add parentheses if the expression contains a space (i.e., compound)
         return str_contains($expr, ' ') ? "({$expr})" : $expr;
+    }
+
+    private function formatValue(mixed $value): string
+    {
+        if (is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+
+        if (is_numeric($value) || is_string($value)) {
+            return (string) $value;
+        }
+
+        if ($value === null) {
+            return '';
+        }
+
+        throw new InvalidArgumentException('Metadata value must be a scalar or null.');
+    }
+
+    private function isAssociative(array $array): bool
+    {
+        if ($array === []) {
+            return true;
+        }
+
+        return array_keys($array) !== range(0, count($array) - 1);
     }
 
     private function escapeValue(?string $value): string
