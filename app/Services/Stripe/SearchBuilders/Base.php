@@ -1,11 +1,12 @@
 <?php
 
-namespace App\Services\Stripe;
+namespace App\Services\Stripe\SearchBuilders;
 
+use App\Services\StripeService;
 use InvalidArgumentException;
 use Stripe\SearchResult;
 
-abstract class AbstractSearchBuilder
+abstract class Base
 {
     /**
      * @var array<int, array{boolean: string, clause: string}>
