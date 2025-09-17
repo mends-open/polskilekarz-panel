@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\StripeService;
+use App\Services\Stripe\StripeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;

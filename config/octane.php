@@ -1,5 +1,30 @@
 <?php
 
+if (! class_exists(\Laravel\Octane\Octane::class)) {
+    if (! class_exists(OctaneConfigStub::class, false)) {
+        class OctaneConfigStub
+        {
+            public static function prepareApplicationForNextOperation(): array
+            {
+                return [];
+            }
+
+            public static function prepareApplicationForNextRequest(): array
+            {
+                return [];
+            }
+
+            public static function defaultServicesToWarm(): array
+            {
+                return [];
+            }
+        }
+    }
+
+    class_alias(OctaneConfigStub::class, \Laravel\Octane\Octane::class);
+}
+
+
 use Laravel\Octane\Contracts\OperationTerminated;
 use Laravel\Octane\Events\RequestHandled;
 use Laravel\Octane\Events\RequestReceived;

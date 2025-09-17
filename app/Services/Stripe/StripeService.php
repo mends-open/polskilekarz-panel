@@ -1,15 +1,15 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Stripe;
 
 use App\Jobs\Stripe\ProcessEvent;
 use App\Models\StripeEvent;
-use App\Services\Stripe\CustomerSearchBuilder;
 use Illuminate\Support\Str;
 use Stripe\Customer;
 use Stripe\Event;
 use Stripe\Exception\ApiErrorException;
 use Stripe\Exception\SignatureVerificationException;
+use Stripe\Price;
 use Stripe\SearchResult;
 use Stripe\Stripe;
 use Stripe\Webhook;
@@ -21,6 +21,11 @@ class StripeService
         Stripe::setApiKey(config('services.stripe.api_key'));
     }
 
+    public function search(): StripeSearchService
+    {
+        return new StripeSearchService($this);
+    }
+
     /**
      * @throws ApiErrorException
      */
@@ -29,7 +34,7 @@ class StripeService
         return Customer::create([
             'name' => $name,
             'email' => $email,
-            $metadata ?? 'metadata' => $metadata,
+            'metadata' => $metadata,
         ]);
     }
 
@@ -46,29 +51,30 @@ class StripeService
      */
     public function updateCustomer(string $customerId, ?string $name, ?string $email, ?array $metadata): Customer
     {
-        return Customer::update($customerId, [
-            $name ?? 'name' => $name,
-            $email ?? 'email' => $email,
-            $metadata ?? 'metadata' => $metadata,
+        return Customer::update($customerId, array_filter([
+            'name' => $name,
+            'email' => $email,
+            'metadata' => $metadata,
+        ], static fn ($value) => $value !== null));
+    }
+
+    /**
+     * @throws ApiErrorException
+     */
+    public function searchCustomers(string $query): SearchResult
+    {
+        return Customer::search([
+            'query' => $query,
         ]);
     }
 
     /**
-     * Retrieve Stripe customers matching the provided search criteria.
-     *
-     * When no query string is supplied a fluent query builder is returned so the
-     * consumer can incrementally assemble the search clauses before executing it.
-     *
      * @throws ApiErrorException
      */
-    public function searchCustomers(?string $query = null): SearchResult|CustomerSearchBuilder
+    public function searchPrices(string $query): SearchResult
     {
-        if ($query === null) {
-            return new CustomerSearchBuilder($this);
-        }
-
-        return Customer::search([
-            'query' => $query
+        return Price::search([
+            'query' => $query,
         ]);
     }
 
@@ -78,7 +84,6 @@ class StripeService
         $op = Str::of($operator)->trim()->lower()->toString();
         $op = $op === '' ? ':' : $op;
 
-        // Unary "has:" operator (value ignored)
         if ($op === 'has' || $op === 'has:') {
             return 'has:' . $field;
         }
@@ -96,7 +101,6 @@ class StripeService
             } elseif (is_numeric($normalized->toString())) {
                 $formatted = $normalized->toString();
             } else {
-                // Escape backslashes and single quotes; wrap in single quotes
                 $escaped = Str::of($normalized->toString())
                     ->replace('\\', '\\\\')
                     ->replace("'", "\\'")
@@ -117,11 +121,6 @@ class StripeService
     }
 
     /**
-     * Construct a Stripe event from the given payload and signature.
-     *
-     * @param string $payload
-     * @param string $signature
-     * @return Event
      * @throws SignatureVerificationException
      */
     public function constructEvent(string $payload, string $signature): Event
@@ -133,17 +132,11 @@ class StripeService
         );
     }
 
-    /**
-     * Store the given Stripe event in the database.
-     */
     public function storeEvent(Event $stripeEvent): StripeEvent
     {
         return StripeEvent::create(['data' => $stripeEvent->toArray()]);
     }
 
-    /**
-     * Dispatch the given Stripe event for further processing.
-     */
     public function dispatchEvent(StripeEvent $event): void
     {
         ProcessEvent::dispatch($event);
