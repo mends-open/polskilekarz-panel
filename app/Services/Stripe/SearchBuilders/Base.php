@@ -24,20 +24,34 @@ abstract class Base
 
     public function where(string|callable $field, ?string $value = null, string $operator = ':'): static
     {
-        if (is_callable($field)) {
-            return $this->addGroup($field, 'AND');
-        }
-
-        return $this->addFieldClause($field, $this->assertValue($value, $field), $operator, 'AND');
+        return $this->addWhereClause($field, $value, $operator, 'AND');
     }
 
     public function orWhere(string|callable $field, ?string $value = null, string $operator = ':'): static
     {
-        if (is_callable($field)) {
-            return $this->addGroup($field, 'OR');
-        }
+        return $this->addWhereClause($field, $value, $operator, 'OR');
+    }
 
-        return $this->addFieldClause($field, $this->assertValue($value, $field), $operator, 'OR');
+    public function whereMetadata(string|callable $field, ?string $value = null, string $operator = ':'): static
+    {
+        return $this->addWhereClause(
+            $field,
+            $value,
+            $operator,
+            'AND',
+            metadata: true,
+        );
+    }
+
+    public function orWhereMetadata(string|callable $field, ?string $value = null, string $operator = ':'): static
+    {
+        return $this->addWhereClause(
+            $field,
+            $value,
+            $operator,
+            'OR',
+            metadata: true,
+        );
     }
 
     public function whereGroup(callable $callback): static
@@ -191,6 +205,17 @@ abstract class Base
         return new static($this->service);
     }
 
+    protected function normalizeMetadataKey(string $field): string
+    {
+        $field = trim($field);
+
+        if ($field === '') {
+            throw new InvalidArgumentException('The Stripe metadata field name cannot be empty.');
+        }
+
+        return $field;
+    }
+
     /**
      * @return array<int, string>
      */
@@ -213,5 +238,32 @@ abstract class Base
         }
 
         return $normalized;
+    }
+
+    private function addWhereClause(
+        string|callable $field,
+        ?string $value,
+        string $operator,
+        string $boolean,
+        bool $metadata = false,
+    ): static
+    {
+        if (is_callable($field)) {
+            return $this->addGroup($field, $boolean);
+        }
+
+        $fieldForValue = $field;
+
+        if ($metadata) {
+            $fieldForValue = $this->normalizeMetadataKey($field);
+            $field = $this->service->metadataField($fieldForValue);
+        }
+
+        return $this->addFieldClause(
+            $field,
+            $this->assertValue($value, $fieldForValue),
+            $operator,
+            $boolean,
+        );
     }
 }

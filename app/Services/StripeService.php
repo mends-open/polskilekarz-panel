@@ -89,21 +89,14 @@ class StripeService
 
         if ($normalized->isEmpty()) {
             $formatted = "''";
+        } elseif (is_numeric($normalized->toString())) {
+            $formatted = $normalized->toString();
         } else {
-            $lower = $normalized->lower()->toString();
-            if (in_array($lower, ['true', '1', 'yes', 'on'], true)) {
-                $formatted = 'true';
-            } elseif (in_array($lower, ['false', '0', 'no', 'off'], true)) {
-                $formatted = 'false';
-            } elseif (is_numeric($normalized->toString())) {
-                $formatted = $normalized->toString();
-            } else {
-                $escaped = Str::of($normalized->toString())
-                    ->replace('\\', '\\\\')
-                    ->replace("'", "\\'")
-                    ->toString();
-                $formatted = "'".$escaped."'";
-            }
+            $escaped = Str::of($normalized->toString())
+                ->replace('\\', '\\\\')
+                ->replace("'", "\\'")
+                ->toString();
+            $formatted = "'".$escaped."'";
         }
 
         return $field.$op.$formatted;
