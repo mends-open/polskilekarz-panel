@@ -20,41 +20,51 @@ class CustomerSearchBuilder
         $this->service = $service;
     }
 
-    public function where(string $field, string $value, string $operator = ':'): self
+    public function where(string|callable $field, ?string $value = null, string $operator = ':'): self
     {
-        return $this->addFieldClause($field, $value, $operator, 'AND');
+        if (is_callable($field)) {
+            return $this->addGroup($field, 'AND');
+        }
+
+        return $this->addFieldClause($field, $this->assertValue($value, $field), $operator, 'AND');
     }
 
-    public function orWhere(string $field, string $value, string $operator = ':'): self
+    public function orWhere(string|callable $field, ?string $value = null, string $operator = ':'): self
     {
-        return $this->addFieldClause($field, $value, $operator, 'OR');
+        if (is_callable($field)) {
+            return $this->addGroup($field, 'OR');
+        }
+
+        return $this->addFieldClause($field, $this->assertValue($value, $field), $operator, 'OR');
     }
 
-    public function whereMetadata(string $field, string $value, string $operator = ':'): self
+    public function whereMetadata(string|callable $field, ?string $value = null, string $operator = ':'): self
     {
+        if (is_callable($field)) {
+            return $this->addGroup($field, 'AND');
+        }
+
         $metadataField = $this->service->metadataField($field);
 
-        return $this->addFieldClause($metadataField, $value, $operator, 'AND');
+        return $this->addFieldClause($metadataField, $this->assertValue($value, $field), $operator, 'AND');
     }
 
-    public function orWhereMetadata(string $field, string $value, string $operator = ':'): self
+    public function orWhereMetadata(string|callable $field, ?string $value = null, string $operator = ':'): self
     {
+        if (is_callable($field)) {
+            return $this->addGroup($field, 'OR');
+        }
+
         $metadataField = $this->service->metadataField($field);
 
-        return $this->addFieldClause($metadataField, $value, $operator, 'OR');
+        return $this->addFieldClause($metadataField, $this->assertValue($value, $field), $operator, 'OR');
     }
 
-    /**
-     * @param callable(self):void $callback
-     */
     public function whereGroup(callable $callback): self
     {
         return $this->addGroup($callback, 'AND');
     }
 
-    /**
-     * @param callable(self):void $callback
-     */
     public function orWhereGroup(callable $callback): self
     {
         return $this->addGroup($callback, 'OR');
@@ -124,6 +134,15 @@ class CustomerSearchBuilder
         }
 
         return $this;
+    }
+
+    private function assertValue(?string $value, string $field): string
+    {
+        if ($value === null) {
+            throw new InvalidArgumentException("A value must be provided when filtering by '{$field}'.");
+        }
+
+        return $value;
     }
 
     private function addClause(string $clause, string $boolean): self

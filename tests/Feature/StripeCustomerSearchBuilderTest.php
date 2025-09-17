@@ -29,12 +29,18 @@ it('builds metadata clauses with implicit AND logic', function () {
     expect($query)->toBe("metadata['region_eide']:'west_xrob' AND metadata['status']:'active'");
 });
 
+it('requires a value when filtering by metadata field', function () {
+    $service = new StripeService();
+
+    $service->searchCustomers()->whereMetadata('region_eide');
+})->throws(InvalidArgumentException::class);
+
 it('supports grouping metadata clauses with OR logic', function () {
     $service = new StripeService();
 
     $query = $service->searchCustomers()
         ->whereMetadata('region_eide', 'west_xrob')
-        ->orWhereGroup(function (CustomerSearchBuilder $group) {
+        ->orWhereMetadata(function (CustomerSearchBuilder $group) {
             $group->whereMetadata('plan', 'premium')
                 ->orWhereMetadata('plan', 'vip');
         })
