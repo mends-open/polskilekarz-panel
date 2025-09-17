@@ -83,7 +83,7 @@ it('passes the compiled customer query to the Stripe API when executed', functio
 
     $result = $service->search()->customers()
         ->whereMetadata('region', 'east')
-        ->extend('data.invoice')
+        ->expand('data.invoice')
         ->limit(15)
         ->get();
 

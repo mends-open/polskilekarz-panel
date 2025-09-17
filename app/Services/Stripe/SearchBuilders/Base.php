@@ -1,12 +1,11 @@
 <?php
 
-namespace App\Services\Stripe\SearchBuilders;
+namespace App\Services\Stripe;
 
-use App\Services\StripeService;
 use InvalidArgumentException;
 use Stripe\SearchResult;
 
-abstract class Base
+abstract class AbstractSearchBuilder
 {
     /**
      * @var array<int, array{boolean: string, clause: string}>
@@ -18,7 +17,9 @@ abstract class Base
      */
     protected array $options = [];
 
-    public function __construct(protected readonly StripeService $service) {}
+    public function __construct(protected readonly StripeService $service)
+    {
+    }
 
     public function where(string|callable $field, ?string $value = null, string $operator = ':'): static
     {
@@ -58,31 +59,9 @@ abstract class Base
         return $this->addClause($clause, 'OR');
     }
 
-    public function whereMetadata(string|callable $field, ?string $value = null, string $operator = ':'): static
+    public function expand(array|string $fields): static
     {
-        if (is_callable($field)) {
-            return $this->addGroup($field, 'AND');
-        }
-
-        $metadataField = $this->service->metadataField($field);
-
-        return $this->addFieldClause($metadataField, $this->assertValue($value, $field), $operator, 'AND');
-    }
-
-    public function orWhereMetadata(string|callable $field, ?string $value = null, string $operator = ':'): static
-    {
-        if (is_callable($field)) {
-            return $this->addGroup($field, 'OR');
-        }
-
-        $metadataField = $this->service->metadataField($field);
-
-        return $this->addFieldClause($metadataField, $this->assertValue($value, $field), $operator, 'OR');
-    }
-
-    public function extend(array|string $fields): static
-    {
-        $fields = $this->normalizeExtendFields($fields);
+        $fields = $this->normalizeExpandFields($fields);
 
         if ($fields === []) {
             return $this;
@@ -92,11 +71,6 @@ abstract class Base
         $this->options['expand'] = array_values(array_unique([...$existing, ...$fields]));
 
         return $this;
-    }
-
-    public function expand(array|string $fields): static
-    {
-        return $this->extend($fields);
     }
 
     public function limit(int $limit): static
@@ -138,7 +112,7 @@ abstract class Base
                 continue;
             }
 
-            $parts[] = $clause['boolean'].' '.$clause['clause'];
+            $parts[] = $clause['boolean'] . ' ' . $clause['clause'];
         }
 
         return implode(' ', $parts);
@@ -174,7 +148,7 @@ abstract class Base
         if ($groupQuery !== '') {
             $this->clauses[] = [
                 'boolean' => $this->normalizeBoolean($boolean),
-                'clause' => '('.$groupQuery.')',
+                'clause' => '(' . $groupQuery . ')',
             ];
         }
 
@@ -219,7 +193,7 @@ abstract class Base
     /**
      * @return array<int, string>
      */
-    protected function normalizeExtendFields(array|string $fields): array
+    protected function normalizeExpandFields(array|string $fields): array
     {
         if (is_string($fields)) {
             $fields = [$fields];
