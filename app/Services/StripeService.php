@@ -55,14 +55,55 @@ class StripeService
     /**
      * @throws ApiErrorException
      */
-    public function searchCustomers(array $query): SearchResult
+    public function searchCustomers(string $query): SearchResult
     {
-        return Customer::search($query);
+        return Customer::search([
+            'query' => $query
+        ]);
     }
 
-    public function buildQueryClause(string $field, string $operator, string $value): string
+    public function buildQueryClause(string $field, string $value, string $operator = ':'): string
     {
-        return $field . $operator . '"' . Str::of($value)->replace('"', '\\"') . '"';
+        $field = Str::of($field)->trim()->toString();
+        $op = Str::of($operator)->trim()->lower()->toString();
+        $op = $op === '' ? ':' : $op;
+
+        // Unary "has:" operator (value ignored)
+        if ($op === 'has' || $op === 'has:') {
+            return 'has:' . $field;
+        }
+
+        $normalized = Str::of($value)->trim();
+
+        if ($normalized->isEmpty()) {
+            $formatted = "''";
+        } else {
+            $lower = $normalized->lower()->toString();
+            if (in_array($lower, ['true', '1', 'yes', 'on'], true)) {
+                $formatted = 'true';
+            } elseif (in_array($lower, ['false', '0', 'no', 'off'], true)) {
+                $formatted = 'false';
+            } elseif (is_numeric($normalized->toString())) {
+                $formatted = $normalized->toString();
+            } else {
+                // Escape backslashes and single quotes; wrap in single quotes
+                $escaped = Str::of($normalized->toString())
+                    ->replace('\\', '\\\\')
+                    ->replace("'", "\\'")
+                    ->toString();
+                $formatted = "'" . $escaped . "'";
+            }
+        }
+
+        return $field . $op . $formatted;
+    }
+
+    public function metadataField(string $field): string
+    {
+        $key = Str::of($field)->trim();
+        $escaped = $key->replace('\\', '\\\\')->replace("'", "\\'")->toString();
+
+        return "metadata['{$escaped}']";
     }
 
     /**
