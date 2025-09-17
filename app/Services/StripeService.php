@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Jobs\Stripe\ProcessEvent;
 use App\Models\StripeEvent;
+use App\Services\Stripe\CustomerSearchBuilder;
 use Illuminate\Support\Str;
 use Stripe\Customer;
 use Stripe\Event;
@@ -53,10 +54,19 @@ class StripeService
     }
 
     /**
+     * Retrieve Stripe customers matching the provided search criteria.
+     *
+     * When no query string is supplied a fluent query builder is returned so the
+     * consumer can incrementally assemble the search clauses before executing it.
+     *
      * @throws ApiErrorException
      */
-    public function searchCustomers(string $query): SearchResult
+    public function searchCustomers(?string $query = null): SearchResult|CustomerSearchBuilder
     {
+        if ($query === null) {
+            return new CustomerSearchBuilder($this);
+        }
+
         return Customer::search([
             'query' => $query
         ]);

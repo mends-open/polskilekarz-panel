@@ -1,5 +1,7 @@
 <?php
 
+use Tests\Stubs\Octane as OctaneStub;
+
 /*
 |--------------------------------------------------------------------------
 | Test Case
@@ -10,6 +12,10 @@
 | need to change it using the "pest()" function to bind a different classes or traits.
 |
 */
+
+if (! class_exists(\Laravel\Octane\Octane::class)) {
+    class_alias(OctaneStub::class, \Laravel\Octane\Octane::class);
+}
 
 pest()->extend(Tests\TestCase::class)
  // ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
