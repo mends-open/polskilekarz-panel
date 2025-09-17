@@ -4,8 +4,6 @@ namespace App\Services\Stripe\SearchBuilders;
 
 use App\Enums\Stripe\Currency;
 use BackedEnum;
-use Stripe\Exception\ApiErrorException;
-use Stripe\SearchResult;
 
 class Price extends Base
 {
@@ -16,13 +14,5 @@ class Price extends Base
         }
 
         return $this->where('currency', strtolower((string) $currency));
-    }
-
-    /**
-     * @throws ApiErrorException
-     */
-    protected function runSearch(string $query, array $options): SearchResult
-    {
-        return $this->service->searchPrices($query, $options);
     }
 }

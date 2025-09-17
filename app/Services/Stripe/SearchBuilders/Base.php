@@ -2,7 +2,8 @@
 
 namespace App\Services\Stripe\SearchBuilders;
 
-use App\Services\StripeService;
+use App\Services\Stripe\Search\QueryFormatter;
+use Closure;
 use InvalidArgumentException;
 use Stripe\SearchResult;
 
@@ -18,8 +19,13 @@ abstract class Base
      */
     protected array $options = [];
 
-    public function __construct(protected readonly StripeService $service)
-    {
+    /**
+     * @param  Closure(string, array<string, mixed>): SearchResult  $runner
+     */
+    public function __construct(
+        private readonly Closure $runner,
+        private readonly QueryFormatter $formatter,
+    ) {
     }
 
     public function where(string|callable $field, ?string $value = null, string $operator = ':'): static
@@ -141,14 +147,12 @@ abstract class Base
             throw new InvalidArgumentException('Cannot execute a Stripe search without any conditions.');
         }
 
-        return $this->runSearch($query, $this->options);
+        return ($this->runner)($query, $this->options);
     }
-
-    abstract protected function runSearch(string $query, array $options): SearchResult;
 
     protected function addFieldClause(string $field, string $value, string $operator, string $boolean): static
     {
-        $clause = $this->service->buildQueryClause($field, $value, $operator);
+        $clause = $this->formatter->buildQueryClause($field, $value, $operator);
 
         return $this->addClause($clause, $boolean);
     }
@@ -202,7 +206,7 @@ abstract class Base
 
     protected function newInstance(): static
     {
-        return new static($this->service);
+        return new static($this->runner, $this->formatter);
     }
 
     protected function normalizeMetadataKey(string $field): string
@@ -246,8 +250,7 @@ abstract class Base
         string $operator,
         string $boolean,
         bool $metadata = false,
-    ): static
-    {
+    ): static {
         if (is_callable($field)) {
             return $this->addGroup($field, $boolean);
         }
@@ -256,7 +259,7 @@ abstract class Base
 
         if ($metadata) {
             $fieldForValue = $this->normalizeMetadataKey($field);
-            $field = $this->service->metadataField($fieldForValue);
+            $field = $this->formatter->metadataField($fieldForValue);
         }
 
         return $this->addFieldClause(

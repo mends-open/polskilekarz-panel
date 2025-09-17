@@ -1,10 +1,14 @@
 <?php
 
-use App\Services\Stripe\Search;
-use App\Services\Stripe\SearchBuilders\Customer;
-use App\Services\Stripe\SearchBuilders\Price;
+use App\Services\Stripe\Customers;
+use App\Services\Stripe\Prices;
+use App\Services\Stripe\SearchBuilders\Customer as CustomerSearchBuilder;
+use App\Services\Stripe\SearchBuilders\Price as PriceSearchBuilder;
 use App\Services\StripeService;
 use Stripe\SearchResult;
+use Stripe\Service\CustomerService;
+use Stripe\Service\PriceService;
+use Stripe\StripeClientInterface;
 
 enum DummyCurrency: string
 {
@@ -21,17 +25,17 @@ afterEach(function () {
 
 it('provides a search gateway for Stripe resources', function () {
     $service = new StripeService;
-    $search = $service->search();
 
-    expect($search)->toBeInstanceOf(Search::class);
-    expect($search->customers())->toBeInstanceOf(Customer::class);
-    expect($search->prices())->toBeInstanceOf(Price::class);
+    expect($service->customers())->toBeInstanceOf(Customers::class);
+    expect($service->prices())->toBeInstanceOf(Prices::class);
+    expect($service->customers()->search())->toBeInstanceOf(CustomerSearchBuilder::class);
+    expect($service->prices()->search())->toBeInstanceOf(PriceSearchBuilder::class);
 });
 
 it('builds metadata clauses with implicit AND logic', function () {
     $service = new StripeService;
 
-    $query = $service->search()->customers()
+    $query = $service->customers()->search()
         ->whereMetadata('region_eide', 'west_xrob')
         ->whereMetadata('status', 'active')
         ->toQueryString();
@@ -42,15 +46,15 @@ it('builds metadata clauses with implicit AND logic', function () {
 it('requires a value when filtering by metadata field', function () {
     $service = new StripeService;
 
-    $service->search()->customers()->whereMetadata('region_eide');
+    $service->customers()->search()->whereMetadata('region_eide');
 })->throws(InvalidArgumentException::class);
 
 it('supports grouping metadata clauses with OR logic', function () {
     $service = new StripeService;
 
-    $query = $service->search()->customers()
+    $query = $service->customers()->search()
         ->whereMetadata('region_eide', 'west_xrob')
-        ->orWhereMetadata(function (Customer $group) {
+        ->orWhereMetadata(function (CustomerSearchBuilder $group) {
             $group->whereMetadata('plan', 'premium')
                 ->orWhereMetadata('plan', 'vip');
         })
@@ -60,62 +64,56 @@ it('supports grouping metadata clauses with OR logic', function () {
 });
 
 it('passes the compiled customer query to the Stripe API when executed', function () {
-    $service = new class extends StripeService
+    $customerService = new class (\Mockery::mock(StripeClientInterface::class)) extends CustomerService
     {
-        public ?string $capturedCustomerQuery = null;
+        public ?array $capturedParams = null;
 
-        /** @var array<string, mixed>|null */
-        public ?array $capturedCustomerOptions = null;
+        public mixed $capturedOptions = null;
 
-        public function __construct()
+        public function search($params = null, $opts = null)
         {
-            // Avoid setting an API key when running tests.
-        }
-
-        public function searchCustomers(string $query, array $options = []): SearchResult
-        {
-            $this->capturedCustomerQuery = $query;
-            $this->capturedCustomerOptions = $options;
+            $this->capturedParams = $params;
+            $this->capturedOptions = $opts;
 
             return \Mockery::mock(SearchResult::class);
         }
     };
 
-    $result = $service->search()->customers()
+    $service = new StripeService(customerService: $customerService);
+
+    $result = $service->customers()->search()
         ->whereMetadata('region', 'east')
         ->expand('data.invoice')
         ->limit(15)
         ->get();
 
-    expect($service->capturedCustomerQuery)->toBe("metadata['region']:'east'");
-    expect($service->capturedCustomerOptions)->toBe([
+    expect($customerService->capturedParams)->toBe([
+        'query' => "metadata['region']:'east'",
         'expand' => ['data.invoice'],
         'limit' => 15,
     ]);
+    expect($customerService->capturedOptions)->toBeNull();
     expect($result)->toBeInstanceOf(SearchResult::class);
 });
 
 it('requires at least one clause before executing a customer search', function () {
-    $service = new class extends StripeService
+    $customerService = new class (\Mockery::mock(StripeClientInterface::class)) extends CustomerService
     {
-        public function __construct()
-        {
-            // Avoid setting an API key when running tests.
-        }
-
-        public function searchCustomers(string $query, array $options = []): SearchResult
+        public function search($params = null, $opts = null)
         {
             throw new RuntimeException('The builder should prevent executing empty queries.');
         }
     };
 
-    $service->search()->customers()->get();
+    $service = new StripeService(customerService: $customerService);
+
+    $service->customers()->search()->get();
 })->throws(InvalidArgumentException::class);
 
 it('builds price clauses for currency filters', function () {
     $service = new StripeService;
 
-    $query = $service->search()->prices()
+    $query = $service->prices()->search()
         ->whereCurrency(DummyCurrency::EUR)
         ->toQueryString();
 
@@ -123,47 +121,44 @@ it('builds price clauses for currency filters', function () {
 });
 
 it('passes the compiled price query to the Stripe API when executed', function () {
-    $service = new class extends StripeService
+    $priceService = new class (\Mockery::mock(StripeClientInterface::class)) extends PriceService
     {
-        public ?string $capturedPriceQuery = null;
+        public ?array $capturedParams = null;
 
-        /** @var array<string, mixed>|null */
-        public ?array $capturedPriceOptions = null;
+        public mixed $capturedOptions = null;
 
-        public function __construct()
+        public function search($params = null, $opts = null)
         {
-            // Avoid setting an API key when running tests.
-        }
-
-        public function searchPrices(string $query, array $options = []): SearchResult
-        {
-            $this->capturedPriceQuery = $query;
-            $this->capturedPriceOptions = $options;
+            $this->capturedParams = $params;
+            $this->capturedOptions = $opts;
 
             return \Mockery::mock(SearchResult::class);
         }
     };
 
-    $service->search()->prices()
+    $service = new StripeService(priceService: $priceService);
+
+    $service->prices()->search()
         ->where('active', 'true')
-        ->orWhere(function (Price $group) {
+        ->orWhere(function (PriceSearchBuilder $group) {
             $group->where('nickname', 'standard')->orWhere('nickname', 'premium');
         })
         ->page('cursor_123')
         ->expand(['data.product'])
         ->get();
 
-    expect($service->capturedPriceQuery)->toBe("active:'true' OR (nickname:'standard' OR nickname:'premium')");
-    expect($service->capturedPriceOptions)->toBe([
-        'page' => 'cursor_123',
+    expect($priceService->capturedParams)->toBe([
+        'query' => "active:'true' OR (nickname:'standard' OR nickname:'premium')",
         'expand' => ['data.product'],
+        'page' => 'cursor_123',
     ]);
+    expect($priceService->capturedOptions)->toBeNull();
 });
 
 it('validates the configured limit and page options', function () {
     $service = new StripeService;
 
-    $builder = $service->search()->customers();
+    $builder = $service->customers()->search();
 
     expect(fn () => $builder->limit(0))->toThrow(InvalidArgumentException::class);
     expect(fn () => $builder->limit(101))->toThrow(InvalidArgumentException::class);
