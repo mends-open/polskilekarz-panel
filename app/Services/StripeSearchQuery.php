@@ -25,12 +25,172 @@ final class StripeSearchQuery
         return $this->pendingField(null, $field);
     }
 
+    public function amount(): PendingField
+    {
+        return $this->field('amount');
+    }
+
+    public function billingDetailsAddressPostalCode(): PendingField
+    {
+        return $this->field('billing_details.address.postal_code');
+    }
+
+    public function created(): PendingField
+    {
+        return $this->field('created');
+    }
+
+    public function currency(): PendingField
+    {
+        return $this->field('currency');
+    }
+
+    public function customer(): PendingField
+    {
+        return $this->field('customer');
+    }
+
     /**
      * Start a clause for the provided metadata key.
      */
     public function metadata(string $key): PendingField
     {
         return $this->pendingMetadata(null, $key);
+    }
+
+    public function disputed(): PendingField
+    {
+        return $this->field('disputed');
+    }
+
+    public function paymentMethodDetailsLast4(string $source): PendingField
+    {
+        return $this->paymentMethodDetailsField($source, 'last4');
+    }
+
+    public function paymentMethodDetailsExpMonth(string $source): PendingField
+    {
+        return $this->paymentMethodDetailsField($source, 'exp_month');
+    }
+
+    public function paymentMethodDetailsExpYear(string $source): PendingField
+    {
+        return $this->paymentMethodDetailsField($source, 'exp_year');
+    }
+
+    public function paymentMethodDetailsBrand(string $source): PendingField
+    {
+        return $this->paymentMethodDetailsField($source, 'brand');
+    }
+
+    public function paymentMethodDetailsFingerprint(string $source): PendingField
+    {
+        return $this->paymentMethodDetailsField($source, 'fingerprint');
+    }
+
+    public function paymentMethodDetailsReader(string $source): PendingField
+    {
+        return $this->paymentMethodDetailsField($source, 'reader');
+    }
+
+    public function paymentMethodDetailsLocation(string $source): PendingField
+    {
+        return $this->paymentMethodDetailsField($source, 'location');
+    }
+
+    public function refunded(): PendingField
+    {
+        return $this->field('refunded');
+    }
+
+    public function status(): PendingField
+    {
+        return $this->field('status');
+    }
+
+    public function email(): PendingField
+    {
+        return $this->field('email');
+    }
+
+    public function name(): PendingField
+    {
+        return $this->field('name');
+    }
+
+    public function phone(): PendingField
+    {
+        return $this->field('phone');
+    }
+
+    public function lastFinalizationErrorCode(): PendingField
+    {
+        return $this->field('last_finalization_error_code');
+    }
+
+    public function lastFinalizationErrorType(): PendingField
+    {
+        return $this->field('last_finalization_error_type');
+    }
+
+    public function number(): PendingField
+    {
+        return $this->field('number');
+    }
+
+    public function receiptNumber(): PendingField
+    {
+        return $this->field('receipt_number');
+    }
+
+    public function subscription(): PendingField
+    {
+        return $this->field('subscription');
+    }
+
+    public function total(): PendingField
+    {
+        return $this->field('total');
+    }
+
+    public function active(): PendingField
+    {
+        return $this->field('active');
+    }
+
+    public function lookupKey(): PendingField
+    {
+        return $this->field('lookup_key');
+    }
+
+    public function product(): PendingField
+    {
+        return $this->field('product');
+    }
+
+    public function type(): PendingField
+    {
+        return $this->field('type');
+    }
+
+    public function description(): PendingField
+    {
+        return $this->field('description');
+    }
+
+    public function shippable(): PendingField
+    {
+        return $this->field('shippable');
+    }
+
+    public function url(): PendingField
+    {
+        return $this->field('url');
+    }
+
+    public function canceledAt(): PendingField
+    {
+        return $this->field('canceled_at');
     }
 
     /**
@@ -214,6 +374,15 @@ final class StripeSearchQuery
         return $this->applyClause($clauseString, $operator);
     }
 
+    private function paymentMethodDetailsField(string $source, string $attribute): PendingField
+    {
+        return $this->field(sprintf(
+            'payment_method_details.%s.%s',
+            $this->sanitizeFieldSegment($source),
+            $attribute,
+        ));
+    }
+
     private function applyClause(string $clause, ?string $boolean): self
     {
         $clause = $this->sanitizeClause($clause);
@@ -283,6 +452,21 @@ final class StripeSearchQuery
         }
 
         return $field;
+    }
+
+    private function sanitizeFieldSegment(string $segment): string
+    {
+        $segment = trim($segment);
+
+        if ($segment === '') {
+            throw new InvalidArgumentException('Field segment cannot be empty.');
+        }
+
+        if (! preg_match('/^[A-Za-z0-9_]+$/', $segment)) {
+            throw new InvalidArgumentException('Field segment contains invalid characters.');
+        }
+
+        return $segment;
     }
 
     private function wrapIfNeeded(string $clause): string
