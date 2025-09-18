@@ -204,7 +204,7 @@ final class StripeSearchQuery
     /**
      * Combine the current query with another clause using AND.
      */
-    public function and(self|string $clause): self
+    public function and(self|string|PendingField $clause): self
     {
         return $this->combine('AND', $clause);
     }
@@ -212,7 +212,7 @@ final class StripeSearchQuery
     /**
      * Combine the current query with another clause using OR.
      */
-    public function or(self|string $clause): self
+    public function or(self|string|PendingField $clause): self
     {
         return $this->combine('OR', $clause);
     }
@@ -300,7 +300,9 @@ final class StripeSearchQuery
             $nested = new self();
             $result = $builder($nested);
 
-            if ($result instanceof self) {
+            if ($result instanceof PendingField) {
+                $nested = $result->resolveDefault();
+            } elseif ($result instanceof self) {
                 $nested = $result;
             } elseif (is_string($result)) {
                 $nested->raw($result);
@@ -365,8 +367,15 @@ final class StripeSearchQuery
         return sprintf("%s:'*'", $field);
     }
 
-    private function combine(string $operator, self|string $clause): self
+    /**
+     * @param self|string|PendingField $clause
+     */
+    private function combine(string $operator, self|string|PendingField $clause): self
     {
+        if ($clause instanceof PendingField) {
+            $clause = $clause->resolveDefault();
+        }
+
         $clauseString = $clause instanceof self
             ? $clause->requireExpression()
             : $this->sanitizeClause($clause);
@@ -533,6 +542,7 @@ final class PendingField
         private readonly StripeSearchQuery $query,
         private readonly string $field,
         private readonly ?string $boolean,
+        private bool $resolved = false,
     ) {
     }
 
@@ -566,8 +576,34 @@ final class PendingField
         return $this->complete($this->query->buildExistence($this->field));
     }
 
+    public function resolveDefault(): StripeSearchQuery
+    {
+        return $this->exists();
+    }
+
+    public function __call(string $method, array $parameters): mixed
+    {
+        $query = $this->resolveDefault();
+
+        if (! method_exists($query, $method)) {
+            throw new BadMethodCallException(sprintf('Method %s::%s does not exist.', $query::class, $method));
+        }
+
+        return $query->{$method}(...$parameters);
+    }
+
+    public function __toString(): string
+    {
+        return (string) $this->resolveDefault();
+    }
+
     private function complete(string $clause): StripeSearchQuery
     {
-        return $this->query->appendClause($clause, $this->boolean);
+        if (! $this->resolved) {
+            $this->query->appendClause($clause, $this->boolean);
+            $this->resolved = true;
+        }
+
+        return $this->query;
     }
 }

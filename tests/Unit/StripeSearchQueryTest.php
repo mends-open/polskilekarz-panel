@@ -63,7 +63,13 @@ it('supports helpers from other Stripe resources', function () {
     $query = stripeSearchQuery()
         ->active()->equals(true)
         ->and(stripeSearchQuery()->description()->equals('Test Product'))
-        ->or(stripeSearchQuery()->canceledAt()->exists());
+        ->or(stripeSearchQuery()->canceledAt());
 
     expect($query->toString())->toBe("(active:true AND description:'Test Product') OR canceled_at:'*'");
+});
+
+it('defaults field helpers to existence checks when unresolved', function () {
+    $query = stripeSearchQuery()->canceledAt();
+
+    expect($query->toString())->toBe("canceled_at:'*'");
 });
