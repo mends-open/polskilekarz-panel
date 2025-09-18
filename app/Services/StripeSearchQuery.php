@@ -301,7 +301,7 @@ final class StripeSearchQuery
             $result = $builder($nested);
 
             if ($result instanceof PendingField) {
-                $nested = $result->resolveDefault();
+                throw new BadMethodCallException('Pending field must be resolved before being added to a group.');
             } elseif ($result instanceof self) {
                 $nested = $result;
             } elseif (is_string($result)) {
@@ -373,7 +373,7 @@ final class StripeSearchQuery
     private function combine(string $operator, self|string|PendingField $clause): self
     {
         if ($clause instanceof PendingField) {
-            $clause = $clause->resolveDefault();
+            throw new BadMethodCallException('Pending field must be resolved with a condition before being combined.');
         }
 
         $clauseString = $clause instanceof self
@@ -576,25 +576,9 @@ final class PendingField
         return $this->complete($this->query->buildExistence($this->field));
     }
 
-    public function resolveDefault(): StripeSearchQuery
-    {
-        return $this->exists();
-    }
-
-    public function __call(string $method, array $parameters): mixed
-    {
-        $query = $this->resolveDefault();
-
-        if (! method_exists($query, $method)) {
-            throw new BadMethodCallException(sprintf('Method %s::%s does not exist.', $query::class, $method));
-        }
-
-        return $query->{$method}(...$parameters);
-    }
-
     public function __toString(): string
     {
-        return (string) $this->resolveDefault();
+        throw new BadMethodCallException('Pending field must be resolved with a condition before being cast to a string.');
     }
 
     private function complete(string $clause): StripeSearchQuery

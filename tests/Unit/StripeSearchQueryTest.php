@@ -63,13 +63,19 @@ it('supports helpers from other Stripe resources', function () {
     $query = stripeSearchQuery()
         ->active()->equals(true)
         ->and(stripeSearchQuery()->description()->equals('Test Product'))
-        ->or(stripeSearchQuery()->canceledAt());
+        ->or(stripeSearchQuery()->canceledAt()->exists());
 
     expect($query->toString())->toBe("(active:true AND description:'Test Product') OR canceled_at:'*'");
 });
 
-it('defaults field helpers to existence checks when unresolved', function () {
-    $query = stripeSearchQuery()->canceledAt();
+it('requires pending fields to be resolved before combining', function () {
+    $builder = stripeSearchQuery();
 
-    expect($query->toString())->toBe("canceled_at:'*'");
+    expect(fn () => $builder->and(stripeSearchQuery()->canceledAt()))
+        ->toThrow(BadMethodCallException::class);
+});
+
+it('requires pending fields to be resolved before grouping', function () {
+    expect(fn () => stripeSearchQuery()->andGroup(fn ($query) => $query->canceledAt()))
+        ->toThrow(BadMethodCallException::class);
 });
