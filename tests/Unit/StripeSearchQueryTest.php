@@ -34,7 +34,7 @@ it('negates clauses with the minus operator', function () {
 it('builds existence clauses', function () {
     $query = stripeSearchQuery()->metadata('order_id')->exists();
 
-    expect((string) $query)->toBe("metadata['order_id']:'*'");
+    expect((string) $query)->toBe("-metadata['order_id']:null");
 });
 
 it('supports numeric comparisons without quotes', function () {

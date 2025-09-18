@@ -364,6 +364,10 @@ final class StripeSearchQuery
     {
         $field = $this->sanitizeField($field);
 
+        if (str_starts_with($field, "metadata[")) {
+            return sprintf('-%s:null', $field);
+        }
+
         return sprintf("%s:'*'", $field);
     }
 
