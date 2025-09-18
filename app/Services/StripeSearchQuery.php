@@ -7,9 +7,50 @@ namespace App\Services;
 use BadMethodCallException;
 use DateTimeInterface;
 use InvalidArgumentException;
+use Stringable;
+
+enum StripeSearchFieldType: string
+{
+    case String = 'string';
+    case Numeric = 'numeric';
+    case Timestamp = 'timestamp';
+    case Boolean = 'boolean';
+    case Unknown = 'unknown';
+}
 
 final class StripeSearchQuery
 {
+    /**
+     * @var array<string, StripeSearchFieldType>
+     */
+    private const FIELD_TYPES = [
+        'amount' => StripeSearchFieldType::Numeric,
+        'billing_details.address.postal_code' => StripeSearchFieldType::String,
+        'created' => StripeSearchFieldType::Timestamp,
+        'currency' => StripeSearchFieldType::String,
+        'customer' => StripeSearchFieldType::String,
+        'disputed' => StripeSearchFieldType::Boolean,
+        'refunded' => StripeSearchFieldType::Boolean,
+        'status' => StripeSearchFieldType::String,
+        'email' => StripeSearchFieldType::String,
+        'name' => StripeSearchFieldType::String,
+        'phone' => StripeSearchFieldType::String,
+        'last_finalization_error_code' => StripeSearchFieldType::String,
+        'last_finalization_error_type' => StripeSearchFieldType::String,
+        'number' => StripeSearchFieldType::String,
+        'receipt_number' => StripeSearchFieldType::String,
+        'subscription' => StripeSearchFieldType::String,
+        'total' => StripeSearchFieldType::Numeric,
+        'active' => StripeSearchFieldType::Boolean,
+        'lookup_key' => StripeSearchFieldType::String,
+        'product' => StripeSearchFieldType::String,
+        'type' => StripeSearchFieldType::String,
+        'description' => StripeSearchFieldType::String,
+        'shippable' => StripeSearchFieldType::Boolean,
+        'url' => StripeSearchFieldType::String,
+        'canceled_at' => StripeSearchFieldType::Timestamp,
+    ];
+
     private ?string $expression;
 
     public function __construct(?string $clause = null)
@@ -344,17 +385,30 @@ final class StripeSearchQuery
     /**
      * @internal
      */
-    public function buildComparison(string $field, string $operator, mixed $value): string
+    public function buildComparison(
+        string $field,
+        string $operator,
+        mixed $value,
+        StripeSearchFieldType $type = StripeSearchFieldType::Unknown,
+    ): string
     {
         $operator = trim($operator);
 
-        if (! in_array($operator, [':', '>', '>=', '<', '<='], true)) {
-            throw new InvalidArgumentException('Unsupported operator provided.');
+        if (! in_array($operator, $this->allowedOperators($type), true)) {
+            throw new InvalidArgumentException(sprintf(
+                'Operator "%s" is not supported for %s fields.',
+                $operator,
+                strtolower($type->name),
+            ));
         }
 
         $field = $this->sanitizeField($field);
 
-        return sprintf('%s%s%s', $field, $operator, $this->formatValue($value, $operator));
+        if ($type !== StripeSearchFieldType::Unknown) {
+            $value = $this->normalizeValue($value, $type);
+        }
+
+        return sprintf('%s%s%s', $field, $operator, $this->formatValue($value, $operator, $type));
     }
 
     /**
@@ -389,11 +443,13 @@ final class StripeSearchQuery
 
     private function paymentMethodDetailsField(string $source, string $attribute): PendingField
     {
-        return $this->field(sprintf(
+        $field = sprintf(
             'payment_method_details.%s.%s',
             $this->sanitizeFieldSegment($source),
             $attribute,
-        ));
+        );
+
+        return $this->pendingField(null, $field, $this->fieldTypeForPaymentMethodAttribute($attribute));
     }
 
     private function applyClause(string $clause, ?string $boolean): self
@@ -418,22 +474,50 @@ final class StripeSearchQuery
         return $this;
     }
 
-    private function pendingField(?string $operator, string $field): PendingField
+    /**
+     * @return array<int, string>
+     */
+    private function allowedOperators(StripeSearchFieldType $type): array
     {
+        return match ($type) {
+            StripeSearchFieldType::Boolean,
+            StripeSearchFieldType::String => [':'],
+            default => [':', '>', '>=', '<', '<='],
+        };
+    }
+
+    private function resolveFieldType(string $field): StripeSearchFieldType
+    {
+        return self::FIELD_TYPES[$field] ?? StripeSearchFieldType::Unknown;
+    }
+
+    private function fieldTypeForPaymentMethodAttribute(string $attribute): StripeSearchFieldType
+    {
+        return match ($attribute) {
+            'exp_month',
+            'exp_year' => StripeSearchFieldType::Numeric,
+            default => StripeSearchFieldType::String,
+        };
+    }
+
+    private function pendingField(
+        ?string $operator,
+        string $field,
+        ?StripeSearchFieldType $type = null,
+    ): PendingField {
+        $sanitizedField = $this->sanitizeField($field);
+
         return new PendingField(
             $this,
-            $this->sanitizeField($field),
+            $sanitizedField,
             $operator,
+            $type ?? $this->resolveFieldType($sanitizedField),
         );
     }
 
     private function pendingMetadata(?string $operator, string $key): PendingField
     {
-        return new PendingField(
-            $this,
-            $this->metadataField($key),
-            $operator,
-        );
+        return $this->pendingField($operator, $this->metadataField($key), StripeSearchFieldType::String);
     }
 
     private function requireExpression(): string
@@ -501,10 +585,107 @@ final class StripeSearchQuery
         return $trimmed;
     }
 
-    private function formatValue(mixed $value, string $operator): string
+    private function normalizeValue(mixed $value, StripeSearchFieldType $type): mixed
+    {
+        return match ($type) {
+            StripeSearchFieldType::Boolean => $this->castBoolean($value),
+            StripeSearchFieldType::Numeric => $this->castNumeric($value),
+            StripeSearchFieldType::Timestamp => $this->castTimestamp($value),
+            StripeSearchFieldType::String => $this->castString($value),
+            StripeSearchFieldType::Unknown => $value,
+        };
+    }
+
+    private function castBoolean(mixed $value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_string($value)) {
+            $normalized = strtolower(trim($value));
+
+            if (in_array($normalized, ['true', '1'], true)) {
+                return true;
+            }
+
+            if (in_array($normalized, ['false', '0'], true)) {
+                return false;
+            }
+        }
+
+        if (is_int($value)) {
+            return match ($value) {
+                1 => true,
+                0 => false,
+                default => throw new InvalidArgumentException('Boolean fields require 0/1, true/false, or equivalent string values.'),
+            };
+        }
+
+        throw new InvalidArgumentException('Boolean fields require 0/1, true/false, or equivalent string values.');
+    }
+
+    private function castNumeric(mixed $value): int|float
+    {
+        if (is_int($value) || is_float($value)) {
+            return $value;
+        }
+
+        if (is_string($value) && is_numeric($value)) {
+            $numeric = 0 + $value;
+
+            return is_float($numeric) ? (float) $numeric : (int) $numeric;
+        }
+
+        throw new InvalidArgumentException('Numeric fields require numeric values.');
+    }
+
+    private function castTimestamp(mixed $value): int
+    {
+        if ($value instanceof DateTimeInterface) {
+            return $value->getTimestamp();
+        }
+
+        if (is_int($value)) {
+            return $value;
+        }
+
+        if (is_string($value) && ctype_digit($value)) {
+            return (int) $value;
+        }
+
+        throw new InvalidArgumentException('Timestamp fields require Unix timestamps or DateTime instances.');
+    }
+
+    private function castString(mixed $value): string
+    {
+        if (is_string($value)) {
+            return $value;
+        }
+
+        if ($value instanceof Stringable) {
+            return (string) $value;
+        }
+
+        if (is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return (string) $value;
+        }
+
+        throw new InvalidArgumentException('String fields require scalar or stringable values.');
+    }
+
+    private function formatValue(mixed $value, string $operator, StripeSearchFieldType $type): string
     {
         if ($value instanceof DateTimeInterface) {
             $value = $value->getTimestamp();
+        }
+
+        if ($value instanceof Stringable) {
+            $value = (string) $value;
         }
 
         if (is_int($value) || is_float($value)) {
@@ -546,33 +727,34 @@ final class PendingField
         private readonly StripeSearchQuery $query,
         private readonly string $field,
         private readonly ?string $boolean,
+        private readonly StripeSearchFieldType $type,
         private bool $resolved = false,
     ) {
     }
 
     public function equals(mixed $value): StripeSearchQuery
     {
-        return $this->complete($this->query->buildComparison($this->field, ':', $value));
+        return $this->complete($this->query->buildComparison($this->field, ':', $value, $this->type));
     }
 
     public function greaterThan(mixed $value): StripeSearchQuery
     {
-        return $this->complete($this->query->buildComparison($this->field, '>', $value));
+        return $this->complete($this->query->buildComparison($this->field, '>', $value, $this->type));
     }
 
     public function greaterThanOrEquals(mixed $value): StripeSearchQuery
     {
-        return $this->complete($this->query->buildComparison($this->field, '>=', $value));
+        return $this->complete($this->query->buildComparison($this->field, '>=', $value, $this->type));
     }
 
     public function lessThan(mixed $value): StripeSearchQuery
     {
-        return $this->complete($this->query->buildComparison($this->field, '<', $value));
+        return $this->complete($this->query->buildComparison($this->field, '<', $value, $this->type));
     }
 
     public function lessThanOrEquals(mixed $value): StripeSearchQuery
     {
-        return $this->complete($this->query->buildComparison($this->field, '<=', $value));
+        return $this->complete($this->query->buildComparison($this->field, '<=', $value, $this->type));
     }
 
     public function exists(): StripeSearchQuery

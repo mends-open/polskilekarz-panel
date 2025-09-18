@@ -37,10 +37,22 @@ it('builds existence clauses', function () {
     expect((string) $query)->toBe("-metadata['order_id']:null");
 });
 
+it('casts metadata comparisons to strings when necessary', function () {
+    $query = stripeSearchQuery()->metadata('order_id')->equals(123);
+
+    expect($query->toString())->toBe("metadata['order_id']:'123'");
+});
+
 it('supports numeric comparisons without quotes', function () {
     $query = stripeSearchQuery()->amount()->lessThanOrEquals(1000);
 
     expect($query->toString())->toBe('amount<=1000');
+});
+
+it('casts numeric strings to numbers for numeric fields', function () {
+    $query = stripeSearchQuery()->total()->equals('42');
+
+    expect((string) $query)->toBe('total:42');
 });
 
 it('builds documented nested field clauses', function () {
@@ -66,6 +78,17 @@ it('supports helpers from other Stripe resources', function () {
         ->or(stripeSearchQuery()->canceledAt()->exists());
 
     expect($query->toString())->toBe("(active:true AND description:'Test Product') OR canceled_at:'*'");
+});
+
+it('casts boolean fields from string input', function () {
+    $query = stripeSearchQuery()->refunded()->equals('1');
+
+    expect((string) $query)->toBe('refunded:true');
+});
+
+it('rejects unsupported operators for string fields', function () {
+    expect(fn () => stripeSearchQuery()->status()->greaterThan('succeeded'))
+        ->toThrow(InvalidArgumentException::class);
 });
 
 it('requires pending fields to be resolved before combining', function () {
