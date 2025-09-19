@@ -35,4 +35,34 @@ return [
         ],
     ],
 
+    'chatwoot' => [
+        'endpoint' => env('CHATWOOT_ENDPOINT'),
+        'api_access_token' => env('CHATWOOT_API_ACCESS_TOKEN'),
+        'account_id' => env('CHATWOOT_ACCOUNT_ID'),
+    ],
+
+    'european_medicines_agency' => [
+        'endpoint' => env('EMA_ENDPOINT', 'https://www.ema.europa.eu/en/documents/other/article-57-product-data_en.xlsx'),
+        'storage_dir' => env('EMA_STORAGE_DIR', 'ema'),
+        'storage_disk' => env('EMA_STORAGE_DISK', env('FILESYSTEM_DISK', 'local')),
+        'chunk_size' => env('EMA_CHUNK_SIZE', 100),
+    ],
+
+    'cloudflare' => [
+        'endpoint' => env('CLOUDFLARE_ENDPOINT', 'https://api.cloudflare.com/client/v4'),
+        'api_token' => env('CLOUDFLARE_API_TOKEN'),
+        'account_id' => env('CLOUDFLARE_ACCOUNT_ID'),
+        'links' => [
+            'namespace_id' => env('CLOUDFLARE_LINKS_NAMESPACE_ID'),
+            'domain' => env('CLOUDFLARE_LINKS_DOMAIN'),
+            'slug_length' => env('CLOUDFLARE_LINKS_SLUG_LENGTH', 8),
+        ],
+    ],
+
+    'stripe' => [
+        'api_key' => env('STRIPE_API_KEY'),
+        'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
+        'visible_since_key' => env('STRIPE_VISIBLE_SINCE_KEY', 'pl_panel_visible_since'),
+    ],
+
 ];

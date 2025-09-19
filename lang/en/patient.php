@@ -1,0 +1,41 @@
+<?php
+
+return [
+    'label' => 'Patient',
+    'plural' => 'Patients',
+    'gender' => [
+        0 => 'Male',
+        1 => 'Female',
+        2 => 'Other',
+        3 => 'Unknown',
+    ],
+    'identifier' => [
+        0 => 'Unspecified',
+        1 => 'Identity document',
+        2 => 'Passport',
+        3 => "Driver's license",
+        4 => 'European Health Insurance Card',
+        5 => 'PESEL',
+        6 => 'BSN',
+        7 => 'ID Nr',
+        8 => 'BIS number',
+        9 => 'NIR',
+        10 => 'NUSS',
+        11 => 'Codice Fiscale',
+    ],
+    'fields' => [
+        'first_name' => 'First name',
+        'last_name' => 'Last name',
+        'birth_date' => 'Birth date',
+        'gender' => 'Gender',
+        'addresses' => 'Addresses',
+        'line1' => 'Line 1',
+        'city' => 'City',
+        'postal_code' => 'Postal code',
+        'country' => 'Country',
+        'identifiers' => 'Identifiers',
+        'created_at' => 'Created at',
+        'updated_at' => 'Updated at',
+        'deleted_at' => 'Deleted at',
+    ],
+];
