@@ -2,37 +2,39 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\StripeService;
+use App\Jobs\Stripe\ProcessEvent;
+use App\Models\StripeEvent;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Stripe\Exception\SignatureVerificationException;
+use Stripe\Webhook;
 use Symfony\Component\HttpFoundation\Response;
 
 class StripeEventController extends Controller
 {
-    public function __construct(private StripeService $stripeService)
-    {
-    }
-
     public function __invoke(Request $request): JsonResponse
     {
         $payload = $request->getContent();
         $signature = $request->header('Stripe-Signature');
 
         try {
-            $stripeEvent = $this->stripeService->constructEvent($payload, $signature);
+            $stripeEvent = Webhook::constructEvent(
+                $payload,
+                $signature,
+                config('services.stripe.webhook_secret')
+            );
         } catch (SignatureVerificationException $exception) {
             Log::warning('Stripe signature verification failed', ['exception' => $exception->getMessage()]);
 
             return response()->json(['error' => 'Invalid signature'], Response::HTTP_BAD_REQUEST);
         }
 
-        $event = $this->stripeService->storeEvent($stripeEvent);
+        $event = StripeEvent::create(['data' => $stripeEvent->toArray()]);
 
         Log::info('Stored Stripe event', ['id' => $event->id]);
 
-        $this->stripeService->dispatchEvent($event);
+        ProcessEvent::dispatch($event);
 
         Log::info('Dispatched Stripe event for processing', ['id' => $event->id]);
 
