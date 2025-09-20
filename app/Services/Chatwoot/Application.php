@@ -44,6 +44,6 @@ class Application
         return $this->http->baseUrl($this->endpoint)
             ->acceptJson()
             ->asJson()
-            ->withToken($this->authToken);
+            ->withHeaders(['api_access_token' => $this->authToken]);
     }
 }
