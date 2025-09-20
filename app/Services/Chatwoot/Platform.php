@@ -88,8 +88,7 @@ class Platform
         return $this->http->baseUrl($this->endpoint)
             ->acceptJson()
             ->asJson()
-            ->withToken($this->platformAccessToken)
-            ->withHeaders(['api_access_token' => $this->platformAccessToken]);
+            ->withToken($this->platformAccessToken);
     }
 
     protected function impersonationRequest(int $accountId, int $userId)

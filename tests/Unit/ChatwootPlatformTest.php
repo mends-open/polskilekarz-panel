@@ -28,7 +28,6 @@ it('retrieves a user by id from the Chatwoot platform API', function () {
 
     expect($request->method())->toBe('GET');
     expect($request->url())->toBe('https://chatwoot.test/platform/api/v1/users/2');
-    expect($request->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
     expect($request->hasHeader('Authorization', 'Bearer platform-token'))->toBeTrue();
 });
 
@@ -51,7 +50,6 @@ it('impersonates a user and returns an application client', function () {
 
     expect($request->method())->toBe('POST');
     expect($request->url())->toBe('https://chatwoot.test/platform/api/v1/users/20/token');
-    expect($request->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
     expect($request->hasHeader('Authorization', 'Bearer platform-token'))->toBeTrue();
 });
 
@@ -61,7 +59,6 @@ it('sends a message on behalf of an impersonated user', function () {
     $http->fake(function (Request $request) {
         if ($request->url() === 'https://chatwoot.test/platform/api/v1/users/15/token') {
             expect($request->method())->toBe('POST');
-            expect($request->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
             expect($request->hasHeader('Authorization', 'Bearer platform-token'))->toBeTrue();
 
             return Factory::response(['access_token' => 'user-token'], 200);
@@ -101,7 +98,6 @@ it('provisions a user when impersonation fails with non permissible resource', f
             $tokenRequests++;
 
             expect($request->method())->toBe('POST');
-            expect($request->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
             expect($request->hasHeader('Authorization', 'Bearer platform-token'))->toBeTrue();
 
             if ($tokenRequests === 1) {
@@ -180,7 +176,6 @@ it('falls back to the API access token when the platform token is missing', func
 
         $request = $http->recorded()[0][0];
 
-        expect($request->hasHeader('api_access_token', 'api-token'))->toBeTrue();
         expect($request->hasHeader('Authorization', 'Bearer api-token'))->toBeTrue();
     } finally {
         Container::setInstance($originalContainer);
