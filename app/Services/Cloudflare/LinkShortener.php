@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Services;
+namespace App\Services\Cloudflare;
 
 use App\Models\CloudflareLink;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
-class CloudflareService
+class LinkShortener
 {
     protected string $endpoint;
     protected string $token;
