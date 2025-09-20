@@ -40,7 +40,7 @@ class Platform
     public function getUser(int $accountId, int $userId): array
     {
         $response = $this->request()
-            ->get(sprintf('platform/api/v1/accounts/%d/users/%d', $accountId, $userId))
+            ->get(sprintf('platform/api/v1/users/%d', $userId))
             ->throw();
 
         return $response->json();
@@ -49,16 +49,16 @@ class Platform
     public function impersonateUser(int $accountId, int $userId): Application
     {
         $response = $this->request()
-            ->post(sprintf('platform/api/v1/accounts/%d/users/%d/login', $accountId, $userId))
+            ->post(sprintf('platform/api/v1/users/%d/token', $userId))
             ->throw();
 
-        $authToken = $response->json('auth_token');
+        $accessToken = $response->json('access_token');
 
-        if (! is_string($authToken) || $authToken === '') {
-            throw new RuntimeException('Chatwoot impersonation response did not include an auth token.');
+        if (! is_string($accessToken) || $accessToken === '') {
+            throw new RuntimeException('Chatwoot impersonation response did not include an access token.');
         }
 
-        return new Application($authToken, $this->http, $this->endpoint);
+        return new Application($accessToken, $this->http, $this->endpoint);
     }
 
     public function sendMessageAsUser(int $accountId, int $userId, int $conversationId, string $content, array $attributes = []): array
