@@ -74,7 +74,12 @@ class Platform
             throw new RuntimeException('Chatwoot impersonation response did not include an access token.');
         }
 
-        return new Application($accessToken, $this->http, $this->endpoint);
+        return new Application(
+            $accessToken,
+            $this->http,
+            $this->endpoint,
+            $this->applicationAccessToken !== '' ? $this->applicationAccessToken : $this->platformAccessToken,
+        );
     }
 
     public function sendMessageAsUser(int $accountId, int $userId, int $conversationId, string $content, array $attributes = []): array
@@ -151,6 +156,11 @@ class Platform
 
     protected function applicationClient(): Application
     {
-        return new Application($this->applicationAccessToken, $this->http, $this->endpoint);
+        return new Application(
+            $this->applicationAccessToken,
+            $this->http,
+            $this->endpoint,
+            $this->applicationAccessToken !== '' ? $this->applicationAccessToken : $this->platformAccessToken,
+        );
     }
 }

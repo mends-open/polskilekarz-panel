@@ -69,7 +69,7 @@ it('sends a message on behalf of an impersonated user', function () {
 
         expect($request->url())->toBe('https://chatwoot.test/api/v1/accounts/5/conversations/25/messages');
         expect($request->method())->toBe('POST');
-        expect($request->hasHeader('api_access_token', 'user-token'))->toBeTrue();
+        expect($request->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
         expect($request->hasHeader('Authorization', 'Bearer user-token'))->toBeTrue();
         expect($request->data())->toMatchArray([
             'content' => 'Hello from Chatwoot',
@@ -135,7 +135,7 @@ it('provisions a user when impersonation fails with non permissible resource', f
 
         if ($request->url() === 'https://chatwoot.test/api/v1/accounts/5/conversations/25/messages') {
             expect($request->method())->toBe('POST');
-            expect($request->hasHeader('api_access_token', 'user-token'))->toBeTrue();
+            expect($request->hasHeader('api_access_token', 'api-token'))->toBeTrue();
             expect($request->hasHeader('Authorization', 'Bearer user-token'))->toBeTrue();
 
             return Factory::response(['id' => 101], 201);

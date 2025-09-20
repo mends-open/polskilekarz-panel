@@ -14,7 +14,9 @@ class Application
 
     protected string $authToken;
 
-    public function __construct(string $authToken, Factory $http, ?string $endpoint = null)
+    protected string $apiAccessToken;
+
+    public function __construct(string $authToken, Factory $http, ?string $endpoint = null, ?string $apiAccessToken = null)
     {
         $this->http = $http;
 
@@ -26,6 +28,7 @@ class Application
 
         $this->endpoint = rtrim($endpoint, '/');
         $this->authToken = $authToken;
+        $this->apiAccessToken = $apiAccessToken ?? $authToken;
     }
 
     public function sendMessage(int $accountId, int $conversationId, string $content, array $attributes = []): array
@@ -74,6 +77,6 @@ class Application
             ->acceptJson()
             ->asJson()
             ->withToken($this->authToken)
-            ->withHeaders(['api_access_token' => $this->authToken]);
+            ->withHeaders(['api_access_token' => $this->apiAccessToken]);
     }
 }
