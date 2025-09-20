@@ -21,7 +21,16 @@ class Platform
         if ($endpoint === null || $platformAccessToken === null) {
             $config = function_exists('config') ? config('services.chatwoot', []) : [];
             $endpoint ??= (string) ($config['endpoint'] ?? '');
-            $platformAccessToken ??= (string) ($config['platform_access_token'] ?? '');
+
+            if ($platformAccessToken === null) {
+                $token = (string) ($config['platform_access_token'] ?? '');
+
+                if ($token === '' && isset($config['api_access_token'])) {
+                    $token = (string) $config['api_access_token'];
+                }
+
+                $platformAccessToken = $token;
+            }
         }
 
         $this->endpoint = rtrim($endpoint ?? '', '/');

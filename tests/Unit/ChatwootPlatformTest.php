@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Services\Chatwoot\Application;
 use App\Services\Chatwoot\Platform;
+use Illuminate\Config\Repository;
+use Illuminate\Container\Container;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\Request;
 
@@ -83,4 +85,38 @@ it('sends a message on behalf of an impersonated user', function () {
     expect($response)->toBe(['id' => 99]);
 
     expect($http->recorded())->toHaveCount(2);
+});
+
+it('falls back to the API access token when the platform token is missing', function () {
+    $originalContainer = Container::getInstance();
+    $container = new Container();
+    Container::setInstance($container);
+
+    try {
+        $container->instance('config', new Repository([
+            'services' => [
+                'chatwoot' => [
+                    'endpoint' => 'https://chatwoot.test',
+                    'platform_access_token' => '',
+                    'api_access_token' => 'api-token',
+                ],
+            ],
+        ]));
+
+        $http = new Factory();
+
+        $http->fake([
+            'https://chatwoot.test/platform/api/v1/accounts/1/users/2' => Factory::response(['id' => 2], 200),
+        ]);
+
+        $platform = new Platform($http);
+
+        $platform->getUser(1, 2);
+
+        $request = $http->recorded()[0][0];
+
+        expect($request->hasHeader('Authorization', 'Bearer api-token'))->toBeTrue();
+    } finally {
+        Container::setInstance($originalContainer);
+    }
 });
