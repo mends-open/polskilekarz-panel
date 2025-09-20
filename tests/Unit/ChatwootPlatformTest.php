@@ -91,6 +91,67 @@ it('sends a message on behalf of an impersonated user', function () {
     expect($http->recorded())->toHaveCount(2);
 });
 
+it('provisions a user when impersonation fails with non permissible resource', function () {
+    $http = new Factory();
+
+    $tokenRequests = 0;
+
+    $http->fake(function (Request $request) use (&$tokenRequests) {
+        if ($request->url() === 'https://chatwoot.test/platform/api/v1/users/33/token') {
+            $tokenRequests++;
+
+            expect($request->method())->toBe('POST');
+            expect($request->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
+            expect($request->hasHeader('Authorization', 'Bearer platform-token'))->toBeTrue();
+
+            if ($tokenRequests === 1) {
+                return Factory::response(['error' => 'Non permissible resource'], 401);
+            }
+
+            return Factory::response(['access_token' => 'user-token'], 200);
+        }
+
+        if (str_contains($request->url(), 'https://chatwoot.test/api/v1/accounts/5/agents')) {
+            expect($request->method())->toBe('GET');
+            expect($request->hasHeader('api_access_token', 'api-token'))->toBeTrue();
+            expect($request->hasHeader('Authorization', 'Bearer api-token'))->toBeTrue();
+
+            return Factory::response([
+                ['id' => 33, 'email' => 'agent@example.com', 'available_name' => 'Agent Example'],
+            ], 200);
+        }
+
+        if ($request->url() === 'https://chatwoot.test/platform/api/v1/users') {
+            expect($request->method())->toBe('POST');
+            expect($request->data())->toMatchArray([
+                'email' => 'agent@example.com',
+                'name' => 'Agent Example',
+                'display_name' => 'Agent Example',
+            ]);
+
+            return Factory::response(['id' => 33], 200);
+        }
+
+        if ($request->url() === 'https://chatwoot.test/api/v1/accounts/5/conversations/25/messages') {
+            expect($request->method())->toBe('POST');
+            expect($request->hasHeader('api_access_token', 'user-token'))->toBeTrue();
+            expect($request->hasHeader('Authorization', 'Bearer user-token'))->toBeTrue();
+
+            return Factory::response(['id' => 101], 201);
+        }
+
+        throw new RuntimeException('Unexpected request: '.$request->url());
+    });
+
+    $platform = new Platform($http, 'https://chatwoot.test', 'platform-token', 'api-token');
+
+    $response = $platform->sendMessageAsUser(5, 33, 25, 'Follow-up message');
+
+    expect($response)->toBe(['id' => 101]);
+
+    expect($tokenRequests)->toBe(2);
+});
+
 it('falls back to the API access token when the platform token is missing', function () {
     $originalContainer = Container::getInstance();
     $container = new Container();

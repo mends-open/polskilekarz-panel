@@ -4,7 +4,9 @@ namespace App\Services\Chatwoot;
 
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\RequestException;
 use RuntimeException;
+use Throwable;
 
 class Platform
 {
@@ -14,12 +16,23 @@ class Platform
 
     protected string $platformAccessToken;
 
-    public function __construct(Factory $http, ?string $endpoint = null, ?string $platformAccessToken = null)
+    protected string $applicationAccessToken;
+
+    public function __construct(Factory $http, ?string $endpoint = null, ?string $platformAccessToken = null, ?string $applicationAccessToken = null)
     {
         $this->http = $http;
 
-        if ($endpoint === null || $platformAccessToken === null) {
-            $config = function_exists('config') ? config('services.chatwoot', []) : [];
+        $config = [];
+
+        if ($endpoint === null || $platformAccessToken === null || $applicationAccessToken === null) {
+            if (function_exists('config')) {
+                try {
+                    $config = config('services.chatwoot', []);
+                } catch (Throwable) {
+                    $config = [];
+                }
+            }
+
             $endpoint ??= (string) ($config['endpoint'] ?? '');
 
             if ($platformAccessToken === null) {
@@ -31,10 +44,15 @@ class Platform
 
                 $platformAccessToken = $token;
             }
+
+            if ($applicationAccessToken === null) {
+                $applicationAccessToken = (string) ($config['api_access_token'] ?? $platformAccessToken ?? '');
+            }
         }
 
         $this->endpoint = rtrim($endpoint ?? '', '/');
         $this->platformAccessToken = $platformAccessToken ?? '';
+        $this->applicationAccessToken = $applicationAccessToken ?? '';
     }
 
     public function getUser(int $accountId, int $userId): array
@@ -48,9 +66,7 @@ class Platform
 
     public function impersonateUser(int $accountId, int $userId): Application
     {
-        $response = $this->request()
-            ->post(sprintf('platform/api/v1/users/%d/token', $userId))
-            ->throw();
+        $response = $this->impersonationRequest($accountId, $userId);
 
         $accessToken = $response->json('access_token');
 
@@ -74,5 +90,67 @@ class Platform
             ->asJson()
             ->withToken($this->platformAccessToken)
             ->withHeaders(['api_access_token' => $this->platformAccessToken]);
+    }
+
+    protected function impersonationRequest(int $accountId, int $userId)
+    {
+        try {
+            return $this->request()
+                ->post(sprintf('platform/api/v1/users/%d/token', $userId))
+                ->throw();
+        } catch (RequestException $exception) {
+            if (! $this->shouldProvisionUser($exception)) {
+                throw $exception;
+            }
+
+            $this->provisionUser($accountId, $userId);
+
+            return $this->request()
+                ->post(sprintf('platform/api/v1/users/%d/token', $userId))
+                ->throw();
+        }
+    }
+
+    protected function shouldProvisionUser(RequestException $exception): bool
+    {
+        $response = $exception->response;
+
+        if ($response === null || $response->status() !== 401) {
+            return false;
+        }
+
+        return $response->json('error') === 'Non permissible resource';
+    }
+
+    protected function provisionUser(int $accountId, int $userId): void
+    {
+        if ($this->applicationAccessToken === '') {
+            throw new RuntimeException('Chatwoot application access token is required to provision users for impersonation.');
+        }
+
+        $agent = $this->applicationClient()->getAgent($accountId, $userId);
+
+        $email = $agent['email'] ?? null;
+
+        if (! is_string($email) || $email === '') {
+            throw new RuntimeException(sprintf('Chatwoot agent %d did not include an email address.', $userId));
+        }
+
+        $displayName = $agent['available_name'] ?? $agent['name'] ?? null;
+
+        $payload = array_filter([
+            'email' => $email,
+            'name' => is_string($displayName) && $displayName !== '' ? $displayName : null,
+            'display_name' => is_string($displayName) && $displayName !== '' ? $displayName : null,
+        ]);
+
+        $this->request()
+            ->post('platform/api/v1/users', $payload)
+            ->throw();
+    }
+
+    protected function applicationClient(): Application
+    {
+        return new Application($this->applicationAccessToken, $this->http, $this->endpoint);
     }
 }
