@@ -29,6 +29,7 @@ it('retrieves a user by id from the Chatwoot platform API', function () {
     expect($request->method())->toBe('GET');
     expect($request->url())->toBe('https://chatwoot.test/platform/api/v1/accounts/1/users/2');
     expect($request->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
+    expect($request->hasHeader('Authorization', 'Bearer platform-token'))->toBeTrue();
 });
 
 it('impersonates a user and returns an application client', function () {
@@ -51,6 +52,7 @@ it('impersonates a user and returns an application client', function () {
     expect($request->method())->toBe('POST');
     expect($request->url())->toBe('https://chatwoot.test/platform/api/v1/accounts/10/users/20/login');
     expect($request->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
+    expect($request->hasHeader('Authorization', 'Bearer platform-token'))->toBeTrue();
 });
 
 it('sends a message on behalf of an impersonated user', function () {
@@ -60,6 +62,7 @@ it('sends a message on behalf of an impersonated user', function () {
         if ($request->url() === 'https://chatwoot.test/platform/api/v1/accounts/5/users/15/login') {
             expect($request->method())->toBe('POST');
             expect($request->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
+            expect($request->hasHeader('Authorization', 'Bearer platform-token'))->toBeTrue();
 
             return Factory::response(['auth_token' => 'user-token'], 200);
         }
@@ -67,6 +70,7 @@ it('sends a message on behalf of an impersonated user', function () {
         expect($request->url())->toBe('https://chatwoot.test/api/v1/accounts/5/conversations/25/messages');
         expect($request->method())->toBe('POST');
         expect($request->hasHeader('api_access_token', 'user-token'))->toBeTrue();
+        expect($request->hasHeader('Authorization', 'Bearer user-token'))->toBeTrue();
         expect($request->data())->toMatchArray([
             'content' => 'Hello from Chatwoot',
             'message_type' => 'outgoing',
@@ -116,6 +120,7 @@ it('falls back to the API access token when the platform token is missing', func
         $request = $http->recorded()[0][0];
 
         expect($request->hasHeader('api_access_token', 'api-token'))->toBeTrue();
+        expect($request->hasHeader('Authorization', 'Bearer api-token'))->toBeTrue();
     } finally {
         Container::setInstance($originalContainer);
     }
