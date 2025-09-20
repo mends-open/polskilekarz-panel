@@ -4,16 +4,15 @@ declare(strict_types=1);
 
 use App\Services\Chatwoot\Application;
 use App\Services\Chatwoot\Platform;
-use Illuminate\Config\Repository;
-use Illuminate\Container\Container;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\Request;
+use Illuminate\Http\Client\RequestException;
 
 it('retrieves a user by id from the Chatwoot platform API', function () {
     $http = new Factory();
 
     $http->fake([
-        'https://chatwoot.test/platform/api/v1/users/2' => Factory::response(['id' => 2], 200),
+        'https://chatwoot.test/platform/api/v1/accounts/1/users/2' => Factory::response(['id' => 2], 200),
     ]);
 
     $platform = new Platform($http, 'https://chatwoot.test', 'platform-token');
@@ -27,9 +26,8 @@ it('retrieves a user by id from the Chatwoot platform API', function () {
     $request = $http->recorded()[0][0];
 
     expect($request->method())->toBe('GET');
-    expect($request->url())->toBe('https://chatwoot.test/platform/api/v1/users/2');
+    expect($request->url())->toBe('https://chatwoot.test/platform/api/v1/accounts/1/users/2');
     expect($request->hasHeader('Authorization', 'Bearer platform-token'))->toBeTrue();
-    expect($request->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
 });
 
 it('impersonates a user and returns an application client', function () {
@@ -52,7 +50,35 @@ it('impersonates a user and returns an application client', function () {
     expect($request->method())->toBe('POST');
     expect($request->url())->toBe('https://chatwoot.test/platform/api/v1/users/20/token');
     expect($request->hasHeader('Authorization', 'Bearer platform-token'))->toBeTrue();
-    expect($request->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
+});
+
+it('falls back to the account scoped token endpoint when the user endpoint is unavailable', function () {
+    $http = new Factory();
+
+    $http->fake(function (Request $request) {
+        if ($request->url() === 'https://chatwoot.test/platform/api/v1/users/55/token') {
+            return Factory::response(['error' => 'Not Found'], 404);
+        }
+
+        expect($request->url())->toBe('https://chatwoot.test/platform/api/v1/accounts/77/users/55/token');
+        expect($request->method())->toBe('POST');
+        expect($request->hasHeader('Authorization', 'Bearer platform-token'))->toBeTrue();
+
+        return Factory::response(['access_token' => 'user-token'], 200);
+    });
+
+    $platform = new Platform($http, 'https://chatwoot.test', 'platform-token');
+
+    $application = $platform->impersonateUser(77, 55);
+
+    expect($application)->toBeInstanceOf(Application::class);
+
+    expect($http->recorded())->toHaveCount(2);
+
+    $firstRequest = $http->recorded()[0][0];
+
+    expect($firstRequest->url())->toBe('https://chatwoot.test/platform/api/v1/users/55/token');
+    expect($firstRequest->method())->toBe('POST');
 });
 
 it('sends a message on behalf of an impersonated user', function () {
@@ -62,14 +88,12 @@ it('sends a message on behalf of an impersonated user', function () {
         if ($request->url() === 'https://chatwoot.test/platform/api/v1/users/15/token') {
             expect($request->method())->toBe('POST');
             expect($request->hasHeader('Authorization', 'Bearer platform-token'))->toBeTrue();
-            expect($request->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
 
             return Factory::response(['access_token' => 'user-token'], 200);
         }
 
         expect($request->url())->toBe('https://chatwoot.test/api/v1/accounts/5/conversations/25/messages');
         expect($request->method())->toBe('POST');
-        expect($request->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
         expect($request->hasHeader('Authorization', 'Bearer user-token'))->toBeTrue();
         expect($request->data())->toMatchArray([
             'content' => 'Hello from Chatwoot',
@@ -91,99 +115,15 @@ it('sends a message on behalf of an impersonated user', function () {
     expect($http->recorded())->toHaveCount(2);
 });
 
-it('provisions a user when impersonation fails with non permissible resource', function () {
+it('propagates the last impersonation error when all token endpoints fail', function () {
     $http = new Factory();
 
-    $tokenRequests = 0;
+    $http->fake([
+        'https://chatwoot.test/platform/api/v1/users/42/token' => Factory::response(['error' => 'Non permissible resource'], 401),
+        'https://chatwoot.test/platform/api/v1/accounts/4/users/42/token' => Factory::response(null, 403),
+    ]);
 
-    $http->fake(function (Request $request) use (&$tokenRequests) {
-        if ($request->url() === 'https://chatwoot.test/platform/api/v1/users/33/token') {
-            $tokenRequests++;
+    $platform = new Platform($http, 'https://chatwoot.test', 'platform-token');
 
-            expect($request->method())->toBe('POST');
-            expect($request->hasHeader('Authorization', 'Bearer platform-token'))->toBeTrue();
-            expect($request->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
-
-            if ($tokenRequests === 1) {
-                return Factory::response(['error' => 'Non permissible resource'], 401);
-            }
-
-            return Factory::response(['access_token' => 'user-token'], 200);
-        }
-
-        if (str_contains($request->url(), 'https://chatwoot.test/api/v1/accounts/5/agents')) {
-            expect($request->method())->toBe('GET');
-            expect($request->hasHeader('api_access_token', 'api-token'))->toBeTrue();
-            expect($request->hasHeader('Authorization', 'Bearer api-token'))->toBeTrue();
-
-            return Factory::response([
-                ['id' => 33, 'email' => 'agent@example.com', 'available_name' => 'Agent Example'],
-            ], 200);
-        }
-
-        if ($request->url() === 'https://chatwoot.test/platform/api/v1/users') {
-            expect($request->method())->toBe('POST');
-            expect($request->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
-            expect($request->data())->toMatchArray([
-                'email' => 'agent@example.com',
-                'name' => 'Agent Example',
-                'display_name' => 'Agent Example',
-            ]);
-
-            return Factory::response(['id' => 33], 200);
-        }
-
-        if ($request->url() === 'https://chatwoot.test/api/v1/accounts/5/conversations/25/messages') {
-            expect($request->method())->toBe('POST');
-            expect($request->hasHeader('api_access_token', 'api-token'))->toBeTrue();
-            expect($request->hasHeader('Authorization', 'Bearer user-token'))->toBeTrue();
-
-            return Factory::response(['id' => 101], 201);
-        }
-
-        throw new RuntimeException('Unexpected request: '.$request->url());
-    });
-
-    $platform = new Platform($http, 'https://chatwoot.test', 'platform-token', 'api-token');
-
-    $response = $platform->sendMessageAsUser(5, 33, 25, 'Follow-up message');
-
-    expect($response)->toBe(['id' => 101]);
-
-    expect($tokenRequests)->toBe(2);
-});
-
-it('falls back to the API access token when the platform token is missing', function () {
-    $originalContainer = Container::getInstance();
-    $container = new Container();
-    Container::setInstance($container);
-
-    try {
-        $container->instance('config', new Repository([
-            'services' => [
-                'chatwoot' => [
-                    'endpoint' => 'https://chatwoot.test',
-                    'platform_access_token' => '',
-                    'api_access_token' => 'api-token',
-                ],
-            ],
-        ]));
-
-        $http = new Factory();
-
-        $http->fake([
-            'https://chatwoot.test/platform/api/v1/users/2' => Factory::response(['id' => 2], 200),
-        ]);
-
-        $platform = new Platform($http);
-
-        $platform->getUser(1, 2);
-
-        $request = $http->recorded()[0][0];
-
-        expect($request->hasHeader('Authorization', 'Bearer api-token'))->toBeTrue();
-        expect($request->hasHeader('api_access_token', 'api-token'))->toBeTrue();
-    } finally {
-        Container::setInstance($originalContainer);
-    }
+    expect(fn () => $platform->impersonateUser(4, 42))->toThrow(RequestException::class);
 });
