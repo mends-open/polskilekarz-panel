@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->identity(always: true)->primary();
+            $table->bigInteger('chatwoot_user_id')->unique()->nullable();
             $table->caseInsensitiveText('name');
             $table->caseInsensitiveText('email')->unique();
             $table->timestampTz('email_verified_at')->nullable();
