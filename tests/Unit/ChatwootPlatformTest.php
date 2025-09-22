@@ -13,7 +13,7 @@ it('sends a message on behalf of an impersonated user', function () {
     $http->fake(function (Request $request) {
         if ($request->url() === 'https://chatwoot.test/platform/api/v1/users/15') {
             expect($request->method())->toBe('GET');
-            expect($request->hasHeader('Authorization', 'Bearer platform-token'))->toBeTrue();
+            expect($request->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
 
             return Factory::response([
                 'id' => 15,
@@ -26,7 +26,7 @@ it('sends a message on behalf of an impersonated user', function () {
 
         expect($request->url())->toBe('https://chatwoot.test/api/v1/accounts/5/conversations/25/messages');
         expect($request->method())->toBe('POST');
-        expect($request->hasHeader('Authorization', 'Bearer user-token'))->toBeTrue();
+        expect($request->hasHeader('api_access_token', 'user-token'))->toBeTrue();
         expect($request->data())->toMatchArray([
             'content' => 'Hello from Chatwoot',
             'message_type' => 'outgoing',
