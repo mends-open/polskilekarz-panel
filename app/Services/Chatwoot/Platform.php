@@ -74,37 +74,48 @@ class Platform
 
     public function impersonateUser(int $accountId, int $userId): Application
     {
-        $this->getUser($accountId, $userId);
+        $user = $this->getUser($accountId, $userId);
 
-        $authToken = $this->getUserAccessToken($userId);
+        $authToken = $this->extractAuthToken($user);
 
-        return new Application($authToken, $this->http, $this->endpoint);
-    }
-
-    protected function getUserAccessToken(int $userId): string
-    {
-        $response = $this->request()
-            ->get(sprintf('platform/api/v1/users/%d/login', $userId))
-            ->throw();
-
-        $payload = $response->json();
-
-        if (! is_array($payload)) {
-            throw new RuntimeException('Chatwoot impersonation response was not valid JSON.');
+        if ($authToken === null) {
+            $authToken = $this->loginUser($accountId, $userId);
         }
-
-        $authToken = $this->extractAuthToken($payload);
 
         if ($authToken === null) {
             throw new RuntimeException('Chatwoot impersonation response did not include an auth token.');
         }
 
-        return $authToken;
+        return new Application($authToken, $this->http, $this->endpoint);
+    }
+
+    protected function loginUser(int $accountId, int $userId): ?string
+    {
+        $payload = [];
+
+        if ($accountId > 0) {
+            $payload['account_id'] = $accountId;
+        }
+
+        $response = $this->request()
+            ->post(sprintf('platform/api/v1/users/%d/login', $userId), $payload)
+            ->throw();
+
+        $data = $response->json();
+
+        if (! is_array($data)) {
+            throw new RuntimeException('Chatwoot impersonation response was not valid JSON.');
+        }
+
+        return $this->extractAuthToken($data);
     }
 
     protected function extractAuthToken(array $payload): ?string
     {
-        $authToken = $payload['auth_token'] ?? $payload['token'] ?? null;
+        $authToken = $payload['access_token']
+            ?? $payload['auth_token']
+            ?? $payload['token']
+            ?? null;
 
         if (! is_string($authToken) || $authToken === '') {
             $authToken = Arr::get($payload, 'user.auth_token');
