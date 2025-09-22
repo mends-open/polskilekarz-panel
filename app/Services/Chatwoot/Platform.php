@@ -149,9 +149,14 @@ class Platform
 
     protected function request(): PendingRequest
     {
+        if ($this->platformAccessToken === '') {
+            throw new RuntimeException('Chatwoot platform access token is not configured.');
+        }
+
         return $this->http->baseUrl($this->endpoint)
             ->acceptJson()
             ->asJson()
+            ->withToken($this->platformAccessToken)
             ->withHeaders([
                 'api_access_token' => $this->platformAccessToken,
             ]);
