@@ -79,35 +79,10 @@ class Platform
         $authToken = $this->extractAuthToken($user);
 
         if ($authToken === null) {
-            $authToken = $this->loginUser($accountId, $userId);
-        }
-
-        if ($authToken === null) {
-            throw new RuntimeException('Chatwoot impersonation response did not include an auth token.');
+            throw new RuntimeException('Chatwoot user did not include an access token.');
         }
 
         return new Application($authToken, $this->http, $this->endpoint);
-    }
-
-    protected function loginUser(int $accountId, int $userId): ?string
-    {
-        $payload = [];
-
-        if ($accountId > 0) {
-            $payload['account_id'] = $accountId;
-        }
-
-        $response = $this->request()
-            ->post(sprintf('platform/api/v1/users/%d/login', $userId), $payload)
-            ->throw();
-
-        $data = $response->json();
-
-        if (! is_array($data)) {
-            throw new RuntimeException('Chatwoot impersonation response was not valid JSON.');
-        }
-
-        return $this->extractAuthToken($data);
     }
 
     protected function extractAuthToken(array $payload): ?string
@@ -141,14 +116,24 @@ class Platform
         return $authToken;
     }
 
-    public function sendMessageAsUser(int $accountId, int $userId, int $conversationId, string $content, array $attributes = []): array
-    {
-        return $this->impersonateUser($accountId, $userId)
-            ->sendMessage($accountId, $conversationId, $content, $attributes);
+    public function sendMessageAsUser(
+        int $accountId,
+        int $userId,
+        int $conversationId,
+        string $content,
+        array $attributes = []
+    ): array {
+        $application = $this->impersonateUser($accountId, $userId);
+
+        return $application->sendMessage($accountId, $conversationId, $content, $attributes);
     }
 
     protected function request(): PendingRequest
     {
+        if ($this->platformAccessToken === '') {
+            throw new RuntimeException('Chatwoot platform access token is not configured.');
+        }
+
         return $this->http->baseUrl($this->endpoint)
             ->acceptJson()
             ->asJson()

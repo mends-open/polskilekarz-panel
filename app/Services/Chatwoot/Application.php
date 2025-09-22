@@ -33,10 +33,19 @@ class Application
         $payload['content'] = $content;
 
         $response = $this->request()
-            ->post(sprintf('api/v1/accounts/%d/conversations/%d/messages', $accountId, $conversationId), $payload)
+            ->post(
+                sprintf('api/v1/accounts/%d/conversations/%d/messages', $accountId, $conversationId),
+                $payload,
+            )
             ->throw();
 
-        return $response->json();
+        $data = $response->json();
+
+        if (! is_array($data)) {
+            throw new \RuntimeException('Chatwoot message response was not valid JSON.');
+        }
+
+        return $data;
     }
 
     protected function request(): PendingRequest
@@ -44,6 +53,8 @@ class Application
         return $this->http->baseUrl($this->endpoint)
             ->acceptJson()
             ->asJson()
-            ->withToken($this->authToken);
+            ->withHeaders([
+                'api_access_token' => $this->authToken,
+            ]);
     }
 }
