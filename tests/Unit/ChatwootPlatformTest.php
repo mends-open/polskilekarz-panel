@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Services\Chatwoot\Application;
+use App\Services\Chatwoot\Account;
 use App\Services\Chatwoot\Platform;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\Request;
@@ -39,7 +39,7 @@ it('retrieves a user by id from the Chatwoot platform API', function () {
     expect($request->hasHeader('Authorization', 'Bearer platform-token'))->toBeTrue();
 });
 
-it('impersonates a user and returns an application client', function () {
+it('impersonates a user and returns an account client', function () {
     $http = new Factory();
 
     $http->fake([
@@ -54,9 +54,9 @@ it('impersonates a user and returns an application client', function () {
 
     $platform = new Platform($http, 'https://chatwoot.test', 'platform-token');
 
-    $application = $platform->impersonateUser(10, 20);
+    $account = $platform->impersonateUser(10, 20);
 
-    expect($application)->toBeInstanceOf(Application::class);
+    expect($account)->toBeInstanceOf(Account::class);
 
     expect($http->recorded())->toHaveCount(1);
 

@@ -4,9 +4,8 @@ namespace App\Services\Chatwoot;
 
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\PendingRequest;
-use RuntimeException;
 
-class Application
+class Account
 {
     protected Factory $http;
 
@@ -38,34 +37,6 @@ class Application
             ->throw();
 
         return $response->json();
-    }
-
-    public function getAgent(int $accountId, int $userId): array
-    {
-        $response = $this->request()
-            ->get(sprintf('api/v1/accounts/%d/agents', $accountId), [
-                'page' => 1,
-                'per_page' => 100,
-            ])
-            ->throw();
-
-        $agents = $response->json();
-
-        if (! is_array($agents)) {
-            throw new RuntimeException('Chatwoot agents response was not an array.');
-        }
-
-        foreach ($agents as $agent) {
-            if ((int) ($agent['id'] ?? 0) === $userId) {
-                return $agent;
-            }
-        }
-
-        throw new RuntimeException(sprintf(
-            'Agent %d was not found in Chatwoot account %d.',
-            $userId,
-            $accountId,
-        ));
     }
 
     protected function request(): PendingRequest

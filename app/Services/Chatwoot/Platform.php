@@ -51,7 +51,7 @@ class Platform
         return $user;
     }
 
-    public function impersonateUser(int $accountId, int $userId): Application
+    public function impersonateUser(int $accountId, int $userId): Account
     {
         $user = $this->getUser($accountId, $userId);
 
@@ -61,7 +61,7 @@ class Platform
             throw new RuntimeException('Chatwoot user response did not include an access token.');
         }
 
-        return new Application($accessToken, $this->http, $this->endpoint);
+        return new Account($accessToken, $this->http, $this->endpoint);
     }
 
     public function sendMessageAsUser(int $accountId, int $userId, int $conversationId, string $content, array $attributes = []): array
