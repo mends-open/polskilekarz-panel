@@ -4,6 +4,7 @@ namespace App\Services\Chatwoot;
 
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Support\Arr;
 use RuntimeException;
 
 class Platform
@@ -73,15 +74,60 @@ class Platform
 
     public function impersonateUser(int $accountId, int $userId): Application
     {
-        $user = $this->getUser($accountId, $userId);
+        $this->getUser($accountId, $userId);
 
-        $authToken = $user['access_token'] ?? null;
+        $authToken = $this->getUserAccessToken($userId);
 
-        if (! is_string($authToken) || $authToken === '') {
+        return new Application($authToken, $this->http, $this->endpoint);
+    }
+
+    protected function getUserAccessToken(int $userId): string
+    {
+        $response = $this->request()
+            ->get(sprintf('platform/api/v1/users/%d/login', $userId))
+            ->throw();
+
+        $payload = $response->json();
+
+        if (! is_array($payload)) {
+            throw new RuntimeException('Chatwoot impersonation response was not valid JSON.');
+        }
+
+        $authToken = $this->extractAuthToken($payload);
+
+        if ($authToken === null) {
             throw new RuntimeException('Chatwoot impersonation response did not include an auth token.');
         }
 
-        return new Application($authToken, $this->http, $this->endpoint);
+        return $authToken;
+    }
+
+    protected function extractAuthToken(array $payload): ?string
+    {
+        $authToken = $payload['auth_token'] ?? $payload['token'] ?? null;
+
+        if (! is_string($authToken) || $authToken === '') {
+            $authToken = Arr::get($payload, 'user.auth_token');
+        }
+
+        if (! is_string($authToken) || $authToken === '') {
+            $ssoLink = $payload['sso_link'] ?? null;
+
+            if (is_string($ssoLink) && $ssoLink !== '') {
+                $parts = parse_url($ssoLink);
+
+                if (is_array($parts) && isset($parts['query'])) {
+                    parse_str($parts['query'], $query);
+                    $authToken = $query['auth_token'] ?? $query['token'] ?? null;
+                }
+            }
+        }
+
+        if (! is_string($authToken) || $authToken === '') {
+            return null;
+        }
+
+        return $authToken;
     }
 
     public function sendMessageAsUser(int $accountId, int $userId, int $conversationId, string $content, array $attributes = []): array
