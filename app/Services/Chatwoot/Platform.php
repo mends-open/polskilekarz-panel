@@ -31,15 +31,35 @@ class Platform
     public function getUser(int $accountId, int $userId): array
     {
         $response = $this->request()
-            ->get(sprintf('platform/api/v1/accounts/%d/users/%d', $accountId, $userId))
+            ->get(sprintf('platform/api/v1/users/%d', $userId))
             ->throw();
 
-        return $response->json();
+        $user = $response->json();
+
+        if (! is_array($user)) {
+            throw new RuntimeException('Chatwoot user response was not valid JSON.');
+        }
+
+        if (! $this->userBelongsToAccount($user, $accountId)) {
+            throw new RuntimeException(sprintf(
+                'User %d does not belong to Chatwoot account %d.',
+                $userId,
+                $accountId,
+            ));
+        }
+
+        return $user;
     }
 
     public function impersonateUser(int $accountId, int $userId): Application
     {
-        $accessToken = $this->accountClient()->getUserAccessToken($accountId, $userId);
+        $user = $this->getUser($accountId, $userId);
+
+        $accessToken = $user['access_token'] ?? null;
+
+        if (! is_string($accessToken) || $accessToken === '') {
+            throw new RuntimeException('Chatwoot user response did not include an access token.');
+        }
 
         return new Application($accessToken, $this->http, $this->endpoint);
     }
@@ -58,8 +78,23 @@ class Platform
             ->withToken($this->platformAccessToken);
     }
 
-    protected function accountClient(): Account
+    /**
+     * @param  array<string, mixed>  $user
+     */
+    protected function userBelongsToAccount(array $user, int $accountId): bool
     {
-        return new Account($this->platformAccessToken, $this->http, $this->endpoint);
+        $accounts = $user['accounts'] ?? [];
+
+        if (! is_array($accounts)) {
+            return false;
+        }
+
+        foreach ($accounts as $account) {
+            if (is_array($account) && (int) ($account['id'] ?? 0) === $accountId) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
