@@ -72,44 +72,6 @@ class Platform
         return $user;
     }
 
-    public function impersonateUser(int $accountId, int $userId): Application
-    {
-        $user = $this->getUser($accountId, $userId);
-
-        $authToken = $this->extractAuthToken($user);
-
-        if ($authToken === null) {
-            $authToken = $this->loginUser($accountId, $userId);
-        }
-
-        if ($authToken === null) {
-            throw new RuntimeException('Chatwoot impersonation response did not include an auth token.');
-        }
-
-        return new Application($authToken, $this->http, $this->endpoint);
-    }
-
-    protected function loginUser(int $accountId, int $userId): ?string
-    {
-        $payload = [];
-
-        if ($accountId > 0) {
-            $payload['account_id'] = $accountId;
-        }
-
-        $response = $this->request()
-            ->post(sprintf('platform/api/v1/users/%d/login', $userId), $payload)
-            ->throw();
-
-        $data = $response->json();
-
-        if (! is_array($data)) {
-            throw new RuntimeException('Chatwoot impersonation response was not valid JSON.');
-        }
-
-        return $this->extractAuthToken($data);
-    }
-
     protected function extractAuthToken(array $payload): ?string
     {
         $authToken = $payload['access_token']
@@ -141,10 +103,37 @@ class Platform
         return $authToken;
     }
 
-    public function sendMessageAsUser(int $accountId, int $userId, int $conversationId, string $content, array $attributes = []): array
+    public function sendMessageAsUser(int $accountId, int $userId, int $conversationId, string $content, array $attributes = [])
+    : array
     {
-        return $this->impersonateUser($accountId, $userId)
-            ->sendMessage($accountId, $conversationId, $content, $attributes);
+        $user = $this->getUser($accountId, $userId);
+
+        $authToken = $this->extractAuthToken($user);
+
+        if ($authToken === null) {
+            throw new RuntimeException('Chatwoot user did not include an access token.');
+        }
+
+        $payload = array_merge(['message_type' => 'outgoing'], $attributes);
+        $payload['content'] = $content;
+
+        $response = $this->http->baseUrl($this->endpoint)
+            ->acceptJson()
+            ->asJson()
+            ->withToken($authToken)
+            ->post(
+                sprintf('api/v1/accounts/%d/conversations/%d/messages', $accountId, $conversationId),
+                $payload,
+            )
+            ->throw();
+
+        $data = $response->json();
+
+        if (! is_array($data)) {
+            throw new RuntimeException('Chatwoot message response was not valid JSON.');
+        }
+
+        return $data;
     }
 
     protected function request(): PendingRequest
