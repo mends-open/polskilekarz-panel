@@ -4,6 +4,7 @@ namespace App\Services\Chatwoot;
 
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\RequestException;
 use RuntimeException;
 
 class Platform
@@ -38,36 +39,28 @@ class Platform
     {
         $user = $this->getUser($accountId, $userId);
 
-        $accessToken = $user['access_token'] ?? null;
-
-        if (! is_string($accessToken) || $accessToken === '') {
-            throw new RuntimeException('Chatwoot user response did not include an access token.');
-        }
+        $accessToken = $this->resolveAccessToken($user, $accountId, $userId);
 
         return new Application($accessToken, $this->http, $this->endpoint);
     }
 
     private function getUser(int $accountId, int $userId): array
     {
-        $response = $this->request()
-            ->get(sprintf('platform/api/v1/users/%d', $userId))
+        $response = $this->request()->get(sprintf('platform/api/v1/users/%d', $userId));
+
+        if ($response->successful()) {
+            return $this->validateUserPayload($response->json(), $accountId, $userId);
+        }
+
+        if ($response->status() !== 404) {
+            $response->throw();
+        }
+
+        $fallback = $this->request()
+            ->get(sprintf('platform/api/v1/accounts/%d/users/%d', $accountId, $userId))
             ->throw();
 
-        $user = $response->json();
-
-        if (! is_array($user)) {
-            throw new RuntimeException('Chatwoot user response was not valid JSON.');
-        }
-
-        if (! $this->userBelongsToAccount($user, $accountId)) {
-            throw new RuntimeException(sprintf(
-                'User %d does not belong to Chatwoot account %d.',
-                $userId,
-                $accountId,
-            ));
-        }
-
-        return $user;
+        return $this->validateUserPayload($fallback->json(), $accountId, $userId);
     }
 
     private function request(): PendingRequest
@@ -98,5 +91,98 @@ class Platform
         }
 
         return false;
+    }
+
+    /**
+     * @param  array<string, mixed>  $user
+     */
+    private function resolveAccessToken(array $user, int $accountId, int $userId): string
+    {
+        $token = $this->extractToken($user);
+
+        if ($token !== null) {
+            return $token;
+        }
+
+        $loginPayload = $this->loginUser($accountId, $userId);
+
+        $token = $this->extractToken($loginPayload);
+
+        if ($token === null) {
+            throw new RuntimeException('Chatwoot login response did not include an access token.');
+        }
+
+        return $token;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function extractToken(array $payload): ?string
+    {
+        foreach (['access_token', 'auth_token'] as $key) {
+            $token = $payload[$key] ?? null;
+
+            if (is_string($token) && $token !== '') {
+                return $token;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function loginUser(int $accountId, int $userId): array
+    {
+        $endpoints = [
+            ['url' => sprintf('platform/api/v1/users/%d/login', $userId), 'payload' => ['account_id' => $accountId]],
+            ['url' => sprintf('platform/api/v1/accounts/%d/users/%d/login', $accountId, $userId), 'payload' => []],
+        ];
+
+        foreach ($endpoints as $endpoint) {
+            try {
+                $response = $this->request()
+                    ->post($endpoint['url'], $endpoint['payload'])
+                    ->throw();
+
+                $data = $response->json();
+
+                if (is_array($data)) {
+                    return $data;
+                }
+
+                throw new RuntimeException('Chatwoot login response was not valid JSON.');
+            } catch (RequestException $exception) {
+                if ($exception->response?->status() === 404) {
+                    continue;
+                }
+
+                throw $exception;
+            }
+        }
+
+        throw new RuntimeException('Unable to impersonate Chatwoot user; login endpoint was not found.');
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $payload
+     */
+    private function validateUserPayload($payload, int $accountId, int $userId): array
+    {
+        if (! is_array($payload)) {
+            throw new RuntimeException('Chatwoot user response was not valid JSON.');
+        }
+
+        if (! $this->userBelongsToAccount($payload, $accountId)) {
+            throw new RuntimeException(sprintf(
+                'User %d does not belong to Chatwoot account %d.',
+                $userId,
+                $accountId,
+            ));
+        }
+
+        return $payload;
     }
 }
