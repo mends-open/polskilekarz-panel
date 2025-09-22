@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\Chatwoot\MessageType;
 use App\Services\Chatwoot\Application;
 use App\Services\Chatwoot\Platform;
 use Illuminate\Config\Repository;
@@ -90,7 +91,7 @@ it('sends a message using the access token embedded in the user payload', functi
         expect($request->hasHeader('api_access_token', 'user-token'))->toBeTrue();
         expect($request->data())->toMatchArray([
             'content' => 'Hello from Chatwoot',
-            'message_type' => 'outgoing',
+            'message_type' => MessageType::Outgoing->value,
             'private' => true,
         ]);
 
@@ -108,7 +109,7 @@ it('sends a message using the access token embedded in the user payload', functi
     expect($http->recorded())->toHaveCount(2);
 });
 
-it('throws when the user payload does not contain an access token', function () {
+it('throws when the user payload does not contain an access token and no fallback is configured', function () {
     $http = new Factory();
 
     $http->fake([
@@ -122,10 +123,58 @@ it('throws when the user payload does not contain an access token', function () 
 
     $platform = new Platform($http, 'https://chatwoot.test', 'platform-token');
 
-    expect(fn () => $platform->sendMessageAsUser(1, 2, 3, 'No token'))->toThrow(\RuntimeException::class, 'access token');
+    expect(fn () => $platform->sendMessageAsUser(1, 2, 3, 'No token'))
+        ->toThrow(\RuntimeException::class, 'application access token');
 });
 
-it('falls back to the API access token when the platform token is missing', function () {
+it('falls back to the configured access token when the user payload does not include one', function () {
+    $originalContainer = Container::getInstance();
+    $container = new Container();
+    Container::setInstance($container);
+
+    try {
+        $container->instance('config', new Repository([
+            'services' => [
+                'chatwoot' => [
+                    'endpoint' => 'https://chatwoot.test',
+                    'platform_access_token' => 'platform-token',
+                    'fallback_access_token' => 'fallback-token',
+                ],
+            ],
+        ]));
+
+        $http = new Factory();
+
+        $http->fake(function (Request $request) {
+            if ($request->url() === 'https://chatwoot.test/platform/api/v1/users/2') {
+                expect($request->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
+
+                return Factory::response([
+                    'id' => 2,
+                    'accounts' => [
+                        ['id' => 1],
+                    ],
+                ], 200);
+            }
+
+            expect($request->url())->toBe('https://chatwoot.test/api/v1/accounts/1/conversations/3/messages');
+            expect($request->hasHeader('api_access_token', 'fallback-token'))->toBeTrue();
+
+            return Factory::response(['id' => 10], 201);
+        });
+
+        $platform = new Platform($http);
+
+        $response = $platform->sendMessageAsUser(1, 2, 3, 'Hello');
+
+        expect($response)->toBe(['id' => 10]);
+        expect($http->recorded())->toHaveCount(2);
+    } finally {
+        Container::setInstance($originalContainer);
+    }
+});
+
+it('throws when the platform access token is missing', function () {
     $originalContainer = Container::getInstance();
     $container = new Container();
     Container::setInstance($container);
@@ -136,30 +185,13 @@ it('falls back to the API access token when the platform token is missing', func
                 'chatwoot' => [
                     'endpoint' => 'https://chatwoot.test',
                     'platform_access_token' => '',
-                    'api_access_token' => 'api-token',
                 ],
             ],
         ]));
 
         $http = new Factory();
 
-        $http->fake([
-            'https://chatwoot.test/platform/api/v1/users/2' => Factory::response([
-                'id' => 2,
-                'accounts' => [
-                    ['id' => 1],
-                ],
-            ], 200),
-        ]);
-
-        $platform = new Platform($http);
-
-        $platform->getUser(1, 2);
-
-        $request = $http->recorded()[0][0];
-
-        expect($request->url())->toBe('https://chatwoot.test/platform/api/v1/users/2');
-        expect($request->hasHeader('api_access_token', 'api-token'))->toBeTrue();
+        expect(fn () => new Platform($http))->toThrow(\RuntimeException::class, 'platform access token');
     } finally {
         Container::setInstance($originalContainer);
     }

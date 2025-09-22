@@ -6,6 +6,7 @@ use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Arr;
 use RuntimeException;
+use Throwable;
 
 class Platform
 {
@@ -19,23 +20,23 @@ class Platform
     {
         $this->http = $http;
 
-        if ($endpoint === null || $platformAccessToken === null) {
-            $config = function_exists('config') ? config('services.chatwoot', []) : [];
-            $endpoint ??= (string) ($config['endpoint'] ?? '');
+        $config = $this->configuration();
 
-            if ($platformAccessToken === null) {
-                $token = (string) ($config['platform_access_token'] ?? '');
+        if ($endpoint === null) {
+            $endpoint = (string) ($config['endpoint'] ?? $this->environment('CHATWOOT_ENDPOINT'));
+        }
 
-                if ($token === '' && isset($config['api_access_token'])) {
-                    $token = (string) $config['api_access_token'];
-                }
-
-                $platformAccessToken = $token;
-            }
+        if ($platformAccessToken === null) {
+            $platformAccessToken = (string) ($config['platform_access_token']
+                ?? $this->environment('CHATWOOT_PLATFORM_ACCESS_TOKEN'));
         }
 
         $this->endpoint = rtrim($endpoint ?? '', '/');
         $this->platformAccessToken = $platformAccessToken ?? '';
+
+        if ($this->platformAccessToken === '') {
+            throw new RuntimeException('Chatwoot platform access token is not configured.');
+        }
     }
 
     public function getUser(int $accountId, int $userId): array
@@ -78,8 +79,8 @@ class Platform
 
         $authToken = $this->extractAuthToken($user);
 
-        if ($authToken === null) {
-            throw new RuntimeException('Chatwoot user did not include an access token.');
+        if ($authToken === null || $authToken === '') {
+            $authToken = null;
         }
 
         return new Application($authToken, $this->http, $this->endpoint);
@@ -130,15 +131,39 @@ class Platform
 
     protected function request(): PendingRequest
     {
-        if ($this->platformAccessToken === '') {
-            throw new RuntimeException('Chatwoot platform access token is not configured.');
-        }
-
         return $this->http->baseUrl($this->endpoint)
             ->acceptJson()
             ->asJson()
             ->withHeaders([
                 'api_access_token' => $this->platformAccessToken,
             ]);
+    }
+
+    protected function configuration(): array
+    {
+        if (! function_exists('config')) {
+            return [];
+        }
+
+        try {
+            $config = config('services.chatwoot', []);
+        } catch (Throwable) {
+            return [];
+        }
+
+        return is_array($config) ? $config : [];
+    }
+
+    protected function environment(string $key, string $default = ''): string
+    {
+        if (array_key_exists($key, $_ENV)) {
+            return (string) $_ENV[$key];
+        }
+
+        if (array_key_exists($key, $_SERVER)) {
+            return (string) $_SERVER[$key];
+        }
+
+        return $default;
     }
 }
