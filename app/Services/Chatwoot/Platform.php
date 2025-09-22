@@ -40,19 +40,42 @@ class Platform
     public function getUser(int $accountId, int $userId): array
     {
         $response = $this->request()
-            ->get(sprintf('platform/api/v1/accounts/%d/users/%d', $accountId, $userId))
+            ->get(sprintf('platform/api/v1/users/%d', $userId))
             ->throw();
 
-        return $response->json();
+        $user = $response->json();
+
+        if (! is_array($user)) {
+            throw new RuntimeException('Chatwoot user response was not valid JSON.');
+        }
+
+        if ($accountId > 0) {
+            $accounts = $user['accounts'] ?? [];
+
+            $belongsToAccount = false;
+
+            if (is_array($accounts)) {
+                foreach ($accounts as $account) {
+                    if (is_array($account) && (int) ($account['id'] ?? 0) === $accountId) {
+                        $belongsToAccount = true;
+                        break;
+                    }
+                }
+            }
+
+            if (! $belongsToAccount) {
+                throw new RuntimeException('Chatwoot user does not belong to the specified account.');
+            }
+        }
+
+        return $user;
     }
 
     public function impersonateUser(int $accountId, int $userId): Application
     {
-        $response = $this->request()
-            ->post(sprintf('platform/api/v1/accounts/%d/users/%d/login', $accountId, $userId))
-            ->throw();
+        $user = $this->getUser($accountId, $userId);
 
-        $authToken = $response->json('auth_token');
+        $authToken = $user['access_token'] ?? null;
 
         if (! is_string($authToken) || $authToken === '') {
             throw new RuntimeException('Chatwoot impersonation response did not include an auth token.');
