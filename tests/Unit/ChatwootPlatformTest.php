@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Services\Chatwoot\Application;
 use App\Services\Chatwoot\Platform;
 use Illuminate\Config\Repository;
 use Illuminate\Container\Container;
@@ -37,6 +38,34 @@ it('retrieves a user by id from the Chatwoot platform API', function () {
 
     expect($request->method())->toBe('GET');
     expect($request->url())->toBe('https://chatwoot.test/platform/api/v1/users/2?api_access_token=platform-token');
+    expect($request->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
+    expect($request->hasHeader('Authorization', 'Bearer platform-token'))->toBeTrue();
+});
+
+it('impersonates a user using the embedded access token', function () {
+    $http = new Factory();
+
+    $http->fake([
+        'https://chatwoot.test/platform/api/v1/users/42?*' => Factory::response([
+            'id' => 42,
+            'accounts' => [
+                ['id' => 7],
+            ],
+            'access_token' => 'user-token',
+        ], 200),
+    ]);
+
+    $platform = new Platform($http, 'https://chatwoot.test', 'platform-token');
+
+    $application = $platform->impersonateUser(7, 42);
+
+    expect($application)->toBeInstanceOf(Application::class);
+
+    expect($http->recorded())->toHaveCount(1);
+
+    $request = $http->recorded()[0][0];
+
+    expect($request->url())->toBe('https://chatwoot.test/platform/api/v1/users/42?api_access_token=platform-token');
     expect($request->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
     expect($request->hasHeader('Authorization', 'Bearer platform-token'))->toBeTrue();
 });

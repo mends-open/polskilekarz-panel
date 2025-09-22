@@ -72,6 +72,19 @@ class Platform
         return $user;
     }
 
+    public function impersonateUser(int $accountId, int $userId): Application
+    {
+        $user = $this->getUser($accountId, $userId);
+
+        $authToken = $this->extractAuthToken($user);
+
+        if ($authToken === null) {
+            throw new RuntimeException('Chatwoot user did not include an access token.');
+        }
+
+        return new Application($authToken, $this->http, $this->endpoint);
+    }
+
     protected function extractAuthToken(array $payload): ?string
     {
         $authToken = $payload['access_token']
@@ -103,37 +116,16 @@ class Platform
         return $authToken;
     }
 
-    public function sendMessageAsUser(int $accountId, int $userId, int $conversationId, string $content, array $attributes = [])
-    : array
-    {
-        $user = $this->getUser($accountId, $userId);
+    public function sendMessageAsUser(
+        int $accountId,
+        int $userId,
+        int $conversationId,
+        string $content,
+        array $attributes = []
+    ): array {
+        $application = $this->impersonateUser($accountId, $userId);
 
-        $authToken = $this->extractAuthToken($user);
-
-        if ($authToken === null) {
-            throw new RuntimeException('Chatwoot user did not include an access token.');
-        }
-
-        $payload = array_merge(['message_type' => 'outgoing'], $attributes);
-        $payload['content'] = $content;
-
-        $response = $this->http->baseUrl($this->endpoint)
-            ->acceptJson()
-            ->asJson()
-            ->withToken($authToken)
-            ->post(
-                sprintf('api/v1/accounts/%d/conversations/%d/messages', $accountId, $conversationId),
-                $payload,
-            )
-            ->throw();
-
-        $data = $response->json();
-
-        if (! is_array($data)) {
-            throw new RuntimeException('Chatwoot message response was not valid JSON.');
-        }
-
-        return $data;
+        return $application->sendMessage($accountId, $conversationId, $content, $attributes);
     }
 
     protected function request(): PendingRequest
