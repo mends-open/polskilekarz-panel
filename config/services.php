@@ -37,7 +37,8 @@ return [
 
     'chatwoot' => [
         'endpoint' => env('CHATWOOT_ENDPOINT'),
-        'platform_access_token' => env('CHATWOOT_PLATFORM_ACCESS_TOKEN'),
+        'platform_access_token' => env('CHATWOOT_PLATFORM_ACCESS_TOKEN', env('CHATWOOT_API_ACCESS_TOKEN')),
+        'api_access_token' => env('CHATWOOT_API_ACCESS_TOKEN'),
     ],
 
     'european_medicines_agency' => [
