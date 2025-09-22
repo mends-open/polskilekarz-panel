@@ -28,7 +28,26 @@ class Platform
         $this->platformAccessToken = $platformAccessToken ?? '';
     }
 
-    public function getUser(int $accountId, int $userId): array
+    public function sendMessageAsUser(int $accountId, int $userId, int $conversationId, string $content, array $attributes = []): array
+    {
+        return $this->impersonateUser($accountId, $userId)
+            ->sendMessage($accountId, $conversationId, $content, $attributes);
+    }
+
+    protected function impersonateUser(int $accountId, int $userId): Application
+    {
+        $user = $this->getUser($accountId, $userId);
+
+        $accessToken = $user['access_token'] ?? null;
+
+        if (! is_string($accessToken) || $accessToken === '') {
+            throw new RuntimeException('Chatwoot user response did not include an access token.');
+        }
+
+        return new Application($accessToken, $this->http, $this->endpoint);
+    }
+
+    private function getUser(int $accountId, int $userId): array
     {
         $response = $this->request()
             ->get(sprintf('platform/api/v1/users/%d', $userId))
@@ -51,26 +70,7 @@ class Platform
         return $user;
     }
 
-    public function impersonateUser(int $accountId, int $userId): Account
-    {
-        $user = $this->getUser($accountId, $userId);
-
-        $accessToken = $user['access_token'] ?? null;
-
-        if (! is_string($accessToken) || $accessToken === '') {
-            throw new RuntimeException('Chatwoot user response did not include an access token.');
-        }
-
-        return new Account($accessToken, $this->http, $this->endpoint);
-    }
-
-    public function sendMessageAsUser(int $accountId, int $userId, int $conversationId, string $content, array $attributes = []): array
-    {
-        return $this->impersonateUser($accountId, $userId)
-            ->sendMessage($accountId, $conversationId, $content, $attributes);
-    }
-
-    protected function request(): PendingRequest
+    private function request(): PendingRequest
     {
         return $this->http->baseUrl($this->endpoint)
             ->acceptJson()
@@ -81,7 +81,7 @@ class Platform
     /**
      * @param  array<string, mixed>  $user
      */
-    protected function userBelongsToAccount(array $user, int $accountId): bool
+    private function userBelongsToAccount(array $user, int $accountId): bool
     {
         $accounts = $user['accounts'] ?? [];
 

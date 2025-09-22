@@ -5,7 +5,7 @@ namespace App\Services\Chatwoot;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\PendingRequest;
 
-class Account
+class Application
 {
     protected Factory $http;
 
