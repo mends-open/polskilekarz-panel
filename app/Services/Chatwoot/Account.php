@@ -5,6 +5,7 @@ namespace App\Services\Chatwoot;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
+use Illuminate\Http\Client\Response;
 use RuntimeException;
 
 class Account
@@ -32,16 +33,35 @@ class Account
     public function getUserAccessToken(int $accountId, int $userId): string
     {
         $tokenEndpoints = [
-            sprintf('platform/api/v1/users/%d/token', $userId),
-            sprintf('platform/api/v1/accounts/%d/users/%d/token', $accountId, $userId),
+            [
+                'method' => 'post',
+                'path' => sprintf('platform/api/v1/users/%d/token', $userId),
+            ],
+            [
+                'method' => 'post',
+                'path' => sprintf('platform/api/v1/accounts/%d/users/%d/token', $accountId, $userId),
+            ],
+            [
+                'method' => 'post',
+                'path' => sprintf('platform/api/v1/accounts/%d/users/%d/login', $accountId, $userId),
+                'keys' => ['auth_token'],
+            ],
+            [
+                'method' => 'get',
+                'path' => sprintf('platform/api/v1/accounts/%d/users/%d/login', $accountId, $userId),
+                'keys' => ['auth_token'],
+            ],
         ];
 
         $lastException = null;
 
         foreach ($tokenEndpoints as $endpoint) {
+            $method = $endpoint['method'];
+            $path = $endpoint['path'];
+
             try {
                 $response = $this->request()
-                    ->post($endpoint)
+                    ->{$method}($path)
                     ->throw();
             } catch (RequestException $exception) {
                 $lastException = $exception;
@@ -49,7 +69,7 @@ class Account
                 continue;
             }
 
-            $accessToken = $response->json('access_token') ?? $response->json('auth_token');
+            $accessToken = $this->extractAccessToken($response, $endpoint['keys'] ?? ['access_token', 'auth_token']);
 
             if (! is_string($accessToken) || $accessToken === '') {
                 throw new RuntimeException('Chatwoot impersonation response did not include an access token.');
@@ -63,6 +83,22 @@ class Account
         }
 
         throw new RuntimeException('Unable to retrieve Chatwoot user token.');
+    }
+
+    /**
+     * @param  array<int, string>  $keys
+     */
+    protected function extractAccessToken(Response $response, array $keys): ?string
+    {
+        foreach ($keys as $key) {
+            $value = $response->json($key);
+
+            if (is_string($value) && $value !== '') {
+                return $value;
+            }
+        }
+
+        return null;
     }
 
     protected function request(): PendingRequest

@@ -81,6 +81,39 @@ it('falls back to the account scoped token endpoint when the user endpoint is un
     expect($firstRequest->method())->toBe('POST');
 });
 
+it('falls back to the legacy login endpoint when token endpoints are unavailable', function () {
+    $http = new Factory();
+
+    $http->fake(function (Request $request) {
+        if ($request->url() === 'https://chatwoot.test/platform/api/v1/users/101/token') {
+            return Factory::response(['error' => 'Not Found'], 404);
+        }
+
+        if ($request->url() === 'https://chatwoot.test/platform/api/v1/accounts/303/users/101/token') {
+            return Factory::response(['error' => 'Not Found'], 404);
+        }
+
+        expect($request->url())->toBe('https://chatwoot.test/platform/api/v1/accounts/303/users/101/login');
+        expect($request->method())->toBe('POST');
+        expect($request->hasHeader('Authorization', 'Bearer platform-token'))->toBeTrue();
+
+        return Factory::response(['auth_token' => 'legacy-token'], 200);
+    });
+
+    $platform = new Platform($http, 'https://chatwoot.test', 'platform-token');
+
+    $application = $platform->impersonateUser(303, 101);
+
+    expect($application)->toBeInstanceOf(Application::class);
+
+    expect($http->recorded())->toHaveCount(3);
+
+    $firstRequest = $http->recorded()[0][0];
+
+    expect($firstRequest->url())->toBe('https://chatwoot.test/platform/api/v1/users/101/token');
+    expect($firstRequest->method())->toBe('POST');
+});
+
 it('sends a message on behalf of an impersonated user', function () {
     $http = new Factory();
 
