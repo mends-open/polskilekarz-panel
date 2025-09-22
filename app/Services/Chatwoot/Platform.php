@@ -159,6 +159,9 @@ class Platform
             ->withToken($this->platformAccessToken)
             ->withHeaders([
                 'api_access_token' => $this->platformAccessToken,
+            ])
+            ->withQueryParameters([
+                'api_access_token' => $this->platformAccessToken,
             ]);
     }
 }

@@ -13,7 +13,7 @@ it('retrieves a user by id from the Chatwoot platform API', function () {
     $http = new Factory();
 
     $http->fake([
-        'https://chatwoot.test/platform/api/v1/users/2' => Factory::response([
+        'https://chatwoot.test/platform/api/v1/users/2?*' => Factory::response([
             'id' => 2,
             'accounts' => [
                 ['id' => 1],
@@ -37,7 +37,7 @@ it('retrieves a user by id from the Chatwoot platform API', function () {
     $request = $http->recorded()[0][0];
 
     expect($request->method())->toBe('GET');
-    expect($request->url())->toBe('https://chatwoot.test/platform/api/v1/users/2');
+    expect($request->url())->toBe('https://chatwoot.test/platform/api/v1/users/2?api_access_token=platform-token');
     expect($request->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
     expect($request->hasHeader('Authorization', 'Bearer platform-token'))->toBeTrue();
 });
@@ -46,7 +46,7 @@ it('impersonates a user using the access token from the user payload', function 
     $http = new Factory();
 
     $http->fake([
-        'https://chatwoot.test/platform/api/v1/users/20' => Factory::response([
+        'https://chatwoot.test/platform/api/v1/users/20?*' => Factory::response([
             'id' => 20,
             'accounts' => [
                 ['id' => 10],
@@ -66,7 +66,7 @@ it('impersonates a user using the access token from the user payload', function 
     $userRequest = $http->recorded()[0][0];
 
     expect($userRequest->method())->toBe('GET');
-    expect($userRequest->url())->toBe('https://chatwoot.test/platform/api/v1/users/20');
+    expect($userRequest->url())->toBe('https://chatwoot.test/platform/api/v1/users/20?api_access_token=platform-token');
     expect($userRequest->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
     expect($userRequest->hasHeader('Authorization', 'Bearer platform-token'))->toBeTrue();
 });
@@ -75,13 +75,13 @@ it('impersonates a user via the login endpoint when the access token is missing'
     $http = new Factory();
 
     $http->fake([
-        'https://chatwoot.test/platform/api/v1/users/20' => Factory::response([
+        'https://chatwoot.test/platform/api/v1/users/20?*' => Factory::response([
             'id' => 20,
             'accounts' => [
                 ['id' => 10],
             ],
         ], 200),
-        'https://chatwoot.test/platform/api/v1/users/20/login' => Factory::response([
+        'https://chatwoot.test/platform/api/v1/users/20/login*' => Factory::response([
             'auth_token' => 'user-token',
         ], 200),
     ]);
@@ -98,12 +98,12 @@ it('impersonates a user via the login endpoint when the access token is missing'
     $loginRequest = $http->recorded()[1][0];
 
     expect($userRequest->method())->toBe('GET');
-    expect($userRequest->url())->toBe('https://chatwoot.test/platform/api/v1/users/20');
+    expect($userRequest->url())->toBe('https://chatwoot.test/platform/api/v1/users/20?api_access_token=platform-token');
     expect($userRequest->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
     expect($userRequest->hasHeader('Authorization', 'Bearer platform-token'))->toBeTrue();
 
     expect($loginRequest->method())->toBe('POST');
-    expect($loginRequest->url())->toBe('https://chatwoot.test/platform/api/v1/users/20/login');
+    expect($loginRequest->url())->toBe('https://chatwoot.test/platform/api/v1/users/20/login?api_access_token=platform-token');
     expect($loginRequest->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
     expect($loginRequest->hasHeader('Authorization', 'Bearer platform-token'))->toBeTrue();
     expect($loginRequest->data())->toMatchArray([
@@ -115,7 +115,7 @@ it('sends a message on behalf of an impersonated user', function () {
     $http = new Factory();
 
     $http->fake(function (Request $request) {
-        if ($request->url() === 'https://chatwoot.test/platform/api/v1/users/15') {
+        if ($request->url() === 'https://chatwoot.test/platform/api/v1/users/15?api_access_token=platform-token') {
             expect($request->method())->toBe('GET');
             expect($request->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
             expect($request->hasHeader('Authorization', 'Bearer platform-token'))->toBeTrue();
@@ -128,7 +128,7 @@ it('sends a message on behalf of an impersonated user', function () {
             ], 200);
         }
 
-        if ($request->url() === 'https://chatwoot.test/platform/api/v1/users/15/login') {
+        if ($request->url() === 'https://chatwoot.test/platform/api/v1/users/15/login?api_access_token=platform-token') {
             expect($request->method())->toBe('POST');
             expect($request->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
             expect($request->hasHeader('Authorization', 'Bearer platform-token'))->toBeTrue();
@@ -183,13 +183,13 @@ it('falls back to the API access token when the platform token is missing', func
         $http = new Factory();
 
         $http->fake([
-            'https://chatwoot.test/platform/api/v1/users/2' => Factory::response([
+            'https://chatwoot.test/platform/api/v1/users/2?*' => Factory::response([
                 'id' => 2,
                 'accounts' => [
                     ['id' => 1],
                 ],
             ], 200),
-            'https://chatwoot.test/platform/api/v1/users/2/login' => Factory::response([
+            'https://chatwoot.test/platform/api/v1/users/2/login*' => Factory::response([
                 'sso_link' => 'https://chatwoot.test/app/login?auth_token=user-token',
             ], 200),
         ]);
@@ -200,6 +200,7 @@ it('falls back to the API access token when the platform token is missing', func
 
         $request = $http->recorded()[0][0];
 
+        expect($request->url())->toBe('https://chatwoot.test/platform/api/v1/users/2?api_access_token=api-token');
         expect($request->hasHeader('api_access_token', 'api-token'))->toBeTrue();
         expect($request->hasHeader('Authorization', 'Bearer api-token'))->toBeTrue();
     } finally {
