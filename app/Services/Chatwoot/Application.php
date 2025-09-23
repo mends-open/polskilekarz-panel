@@ -24,7 +24,7 @@ class Application
         $config = $this->configuration();
 
         if ($endpoint === null) {
-            $endpoint = (string) ($config['endpoint'] ?? $this->environment('CHATWOOT_ENDPOINT'));
+            $endpoint = (string) $config['endpoint'];
         }
 
         $this->endpoint = rtrim($endpoint, '/');
@@ -69,8 +69,7 @@ class Application
             return $authToken;
         }
 
-        $fallback = (string) ($config['fallback_access_token']
-            ?? $this->environment('CHATWOOT_FALLBACK_ACCESS_TOKEN'));
+        $fallback = (string) ($config['fallback_access_token']);
 
         if ($fallback === '') {
             throw new RuntimeException('Chatwoot application access token is not configured.');
@@ -83,7 +82,7 @@ class Application
     {
         if (isset($payload['message_type']) && $payload['message_type'] instanceof MessageType) {
             $payload['message_type'] = $payload['message_type']->value;
-        } elseif (! isset($payload['message_type']) || $payload['message_type'] === null || $payload['message_type'] === '') {
+        } elseif (! isset($payload['message_type']) || $payload['message_type'] === '') {
             $payload['message_type'] = MessageType::Outgoing->value;
         }
 
@@ -109,16 +108,4 @@ class Application
         return is_array($config) ? $config : [];
     }
 
-    protected function environment(string $key, string $default = ''): string
-    {
-        if (array_key_exists($key, $_ENV)) {
-            return (string) $_ENV[$key];
-        }
-
-        if (array_key_exists($key, $_SERVER)) {
-            return (string) $_SERVER[$key];
-        }
-
-        return $default;
-    }
 }

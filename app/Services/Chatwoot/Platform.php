@@ -2,8 +2,10 @@
 
 namespace App\Services\Chatwoot;
 
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Arr;
 use RuntimeException;
 use Throwable;
@@ -23,12 +25,11 @@ class Platform
         $config = $this->configuration();
 
         if ($endpoint === null) {
-            $endpoint = (string) ($config['endpoint'] ?? $this->environment('CHATWOOT_ENDPOINT'));
+            $endpoint = (string) $config['endpoint'];
         }
 
         if ($platformAccessToken === null) {
-            $platformAccessToken = (string) ($config['platform_access_token']
-                ?? $this->environment('CHATWOOT_PLATFORM_ACCESS_TOKEN'));
+            $platformAccessToken = (string) $config['platform_access_token'];
         }
 
         $this->endpoint = rtrim($endpoint ?? '', '/');
@@ -39,6 +40,10 @@ class Platform
         }
     }
 
+    /**
+     * @throws RequestException
+     * @throws ConnectionException
+     */
     public function getUser(int $accountId, int $userId): array
     {
         $response = $this->request()
@@ -73,6 +78,10 @@ class Platform
         return $user;
     }
 
+    /**
+     * @throws RequestException
+     * @throws ConnectionException
+     */
     public function impersonateUser(int $accountId, int $userId): Application
     {
         $user = $this->getUser($accountId, $userId);
@@ -117,6 +126,10 @@ class Platform
         return $authToken;
     }
 
+    /**
+     * @throws RequestException
+     * @throws ConnectionException
+     */
     public function sendMessageAsUser(
         int $accountId,
         int $userId,
@@ -154,16 +167,4 @@ class Platform
         return is_array($config) ? $config : [];
     }
 
-    protected function environment(string $key, string $default = ''): string
-    {
-        if (array_key_exists($key, $_ENV)) {
-            return (string) $_ENV[$key];
-        }
-
-        if (array_key_exists($key, $_SERVER)) {
-            return (string) $_SERVER[$key];
-        }
-
-        return $default;
-    }
 }
