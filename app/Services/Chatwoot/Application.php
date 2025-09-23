@@ -3,38 +3,29 @@
 namespace App\Services\Chatwoot;
 
 use App\Enums\Chatwoot\ContentType;
+use App\Enums\Chatwoot\MessagePrivacy;
 use App\Enums\Chatwoot\MessageType;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\PendingRequest;
 use RuntimeException;
-use Throwable;
 
-class Application
+class Application extends Service
 {
-    protected Factory $http;
-
-    protected string $endpoint;
-
     protected string $authToken;
 
     public function __construct(?string $authToken, Factory $http, ?string $endpoint = null)
     {
-        $this->http = $http;
+        parent::__construct($http, $endpoint);
 
-        $config = $this->configuration();
-
-        if ($endpoint === null) {
-            $endpoint = (string) $config['endpoint'];
-        }
-
-        $this->endpoint = rtrim($endpoint, '/');
-        $this->authToken = $this->resolveAuthToken($authToken, $config);
+        $this->authToken = $this->resolveAuthToken($authToken);
     }
 
     public function sendMessage(int $accountId, int $conversationId, string $content, array $attributes = []): array
     {
-        $payload = array_merge(['message_type' => MessageType::Outgoing], $attributes);
-        $payload = $this->normalisePayload($payload);
+        $payload = $this->normalisePayload(array_merge([
+            'message_type' => MessageType::Outgoing,
+        ], $attributes));
+
         $payload['content'] = $content;
 
         $response = $this->request()
@@ -55,21 +46,16 @@ class Application
 
     protected function request(): PendingRequest
     {
-        return $this->http->baseUrl($this->endpoint)
-            ->acceptJson()
-            ->asJson()
-            ->withHeaders([
-                'api_access_token' => $this->authToken,
-            ]);
+        return $this->authorizedRequest($this->authToken);
     }
 
-    protected function resolveAuthToken(?string $authToken, array $config): string
+    protected function resolveAuthToken(?string $authToken): string
     {
         if (is_string($authToken) && $authToken !== '') {
             return $authToken;
         }
 
-        $fallback = (string) ($config['fallback_access_token']);
+        $fallback = (string) ($this->config['fallback_access_token'] ?? '');
 
         if ($fallback === '') {
             throw new RuntimeException('Chatwoot application access token is not configured.');
@@ -80,12 +66,30 @@ class Application
 
     protected function normalisePayload(array $payload): array
     {
-        if (isset($payload['message_type']) && $payload['message_type'] instanceof MessageType) {
-            $payload['message_type'] = $payload['message_type']->value;
-        } elseif (! isset($payload['message_type']) || $payload['message_type'] === '') {
-            $payload['message_type'] = MessageType::Outgoing->value;
+        $payload['message_type'] = $this->normaliseMessageType($payload);
+        $payload = $this->normaliseContentType($payload);
+        $payload['private'] = $this->normalisePrivacyFlag($payload);
+
+        return $payload;
+    }
+
+    protected function normaliseMessageType(array $payload): string
+    {
+        $type = $payload['message_type'] ?? MessageType::Outgoing;
+
+        if ($type instanceof MessageType) {
+            return $type->value;
         }
 
+        if (is_string($type) && $type !== '') {
+            return $type;
+        }
+
+        return MessageType::Outgoing->value;
+    }
+
+    protected function normaliseContentType(array $payload): array
+    {
         if (isset($payload['content_type']) && $payload['content_type'] instanceof ContentType) {
             $payload['content_type'] = $payload['content_type']->value;
         }
@@ -93,19 +97,19 @@ class Application
         return $payload;
     }
 
-    protected function configuration(): array
+    protected function normalisePrivacyFlag(array $payload): bool
     {
-        if (! function_exists('config')) {
-            return [];
+        $privacy = $payload['private'] ?? MessagePrivacy::Public;
+
+        if ($privacy instanceof MessagePrivacy) {
+            return $privacy->toPayload();
         }
 
-        try {
-            $config = config('services.chatwoot', []);
-        } catch (Throwable) {
-            return [];
+        if (is_bool($privacy)) {
+            return $privacy;
         }
 
-        return is_array($config) ? $config : [];
+        return (bool) $privacy;
     }
 
 }
