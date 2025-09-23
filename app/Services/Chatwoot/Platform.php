@@ -8,36 +8,16 @@ use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Arr;
 use RuntimeException;
-use Throwable;
 
-class Platform
+class Platform extends Service
 {
-    protected Factory $http;
-
-    protected string $endpoint;
-
     protected string $platformAccessToken;
 
     public function __construct(Factory $http, ?string $endpoint = null, ?string $platformAccessToken = null)
     {
-        $this->http = $http;
+        parent::__construct($http, $endpoint);
 
-        $config = $this->configuration();
-
-        if ($endpoint === null) {
-            $endpoint = (string) $config['endpoint'];
-        }
-
-        if ($platformAccessToken === null) {
-            $platformAccessToken = (string) $config['platform_access_token'];
-        }
-
-        $this->endpoint = rtrim($endpoint ?? '', '/');
-        $this->platformAccessToken = $platformAccessToken ?? '';
-
-        if ($this->platformAccessToken === '') {
-            throw new RuntimeException('Chatwoot platform access token is not configured.');
-        }
+        $this->platformAccessToken = $this->resolvePlatformAccessToken($platformAccessToken);
     }
 
     /**
@@ -56,23 +36,8 @@ class Platform
             throw new RuntimeException('Chatwoot user response was not valid JSON.');
         }
 
-        if ($accountId > 0) {
-            $accounts = $user['accounts'] ?? [];
-
-            $belongsToAccount = false;
-
-            if (is_array($accounts)) {
-                foreach ($accounts as $account) {
-                    if (is_array($account) && (int) ($account['id'] ?? 0) === $accountId) {
-                        $belongsToAccount = true;
-                        break;
-                    }
-                }
-            }
-
-            if (! $belongsToAccount) {
-                throw new RuntimeException('Chatwoot user does not belong to the specified account.');
-            }
+        if ($accountId > 0 && ! $this->userBelongsToAccount($user, $accountId)) {
+            throw new RuntimeException('Chatwoot user does not belong to the specified account.');
         }
 
         return $user;
@@ -88,42 +53,26 @@ class Platform
 
         $authToken = $this->extractAuthToken($user);
 
-        if ($authToken === null || $authToken === '') {
-            $authToken = null;
-        }
-
         return new Application($authToken, $this->http, $this->endpoint);
     }
 
     protected function extractAuthToken(array $payload): ?string
     {
-        $authToken = $payload['access_token']
-            ?? $payload['auth_token']
-            ?? $payload['token']
-            ?? null;
+        $candidates = [
+            Arr::get($payload, 'access_token'),
+            Arr::get($payload, 'auth_token'),
+            Arr::get($payload, 'token'),
+            Arr::get($payload, 'user.auth_token'),
+            $this->extractAuthTokenFromSsoLink($payload),
+        ];
 
-        if (! is_string($authToken) || $authToken === '') {
-            $authToken = Arr::get($payload, 'user.auth_token');
-        }
-
-        if (! is_string($authToken) || $authToken === '') {
-            $ssoLink = $payload['sso_link'] ?? null;
-
-            if (is_string($ssoLink) && $ssoLink !== '') {
-                $parts = parse_url($ssoLink);
-
-                if (is_array($parts) && isset($parts['query'])) {
-                    parse_str($parts['query'], $query);
-                    $authToken = $query['auth_token'] ?? $query['token'] ?? null;
-                }
+        foreach ($candidates as $candidate) {
+            if (is_string($candidate) && $candidate !== '') {
+                return $candidate;
             }
         }
 
-        if (! is_string($authToken) || $authToken === '') {
-            return null;
-        }
-
-        return $authToken;
+        return null;
     }
 
     /**
@@ -137,34 +86,66 @@ class Platform
         string $content,
         array $attributes = []
     ): array {
-        $application = $this->impersonateUser($accountId, $userId);
-
-        return $application->sendMessage($accountId, $conversationId, $content, $attributes);
+        return $this->impersonateUser($accountId, $userId)
+            ->sendMessage($accountId, $conversationId, $content, $attributes);
     }
 
     protected function request(): PendingRequest
     {
-        return $this->http->baseUrl($this->endpoint)
-            ->acceptJson()
-            ->asJson()
-            ->withHeaders([
-                'api_access_token' => $this->platformAccessToken,
-            ]);
+        return $this->authorizedRequest($this->platformAccessToken);
     }
 
-    protected function configuration(): array
+    protected function userBelongsToAccount(array $user, int $accountId): bool
     {
-        if (! function_exists('config')) {
-            return [];
+        $accounts = $user['accounts'] ?? [];
+
+        if (! is_array($accounts)) {
+            return false;
         }
 
-        try {
-            $config = config('services.chatwoot', []);
-        } catch (Throwable) {
-            return [];
+        foreach ($accounts as $account) {
+            if (! is_array($account)) {
+                continue;
+            }
+
+            if ((int) ($account['id'] ?? 0) === $accountId) {
+                return true;
+            }
         }
 
-        return is_array($config) ? $config : [];
+        return false;
+    }
+
+    protected function extractAuthTokenFromSsoLink(array $payload): ?string
+    {
+        $ssoLink = Arr::get($payload, 'sso_link');
+
+        if (! is_string($ssoLink) || $ssoLink === '') {
+            return null;
+        }
+
+        $parts = parse_url($ssoLink);
+
+        if (! is_array($parts) || ! isset($parts['query'])) {
+            return null;
+        }
+
+        parse_str($parts['query'], $query);
+
+        $token = $query['auth_token'] ?? $query['token'] ?? null;
+
+        return is_string($token) && $token !== '' ? $token : null;
+    }
+
+    protected function resolvePlatformAccessToken(?string $platformAccessToken): string
+    {
+        $platformAccessToken ??= (string) ($this->config['platform_access_token'] ?? '');
+
+        if ($platformAccessToken === '') {
+            throw new RuntimeException('Chatwoot platform access token is not configured.');
+        }
+
+        return $platformAccessToken;
     }
 
 }

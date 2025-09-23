@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\Chatwoot\MessagePrivacy;
 use App\Enums\Chatwoot\MessageType;
 use App\Services\Chatwoot\Application;
 use App\Services\Chatwoot\Platform;
@@ -101,7 +102,7 @@ it('sends a message using the access token embedded in the user payload', functi
     $platform = new Platform($http, 'https://chatwoot.test', 'platform-token');
 
     $response = $platform->sendMessageAsUser(5, 15, 25, 'Hello from Chatwoot', [
-        'private' => true,
+        'private' => MessagePrivacy::Private,
     ]);
 
     expect($response)->toBe(['id' => 99]);
