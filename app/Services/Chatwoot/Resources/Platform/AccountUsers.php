@@ -27,6 +27,19 @@ class AccountUsers extends Resource
         return $this->decodeResponse($response, 'Chatwoot account users response was not valid JSON.');
     }
 
+    /**
+     * @throws RequestException
+     * @throws ConnectionException
+     */
+    public function create(int $accountId, array $attributes = []): array
+    {
+        $response = $this->request()
+            ->post(sprintf('platform/api/v1/accounts/%d/account_users', $accountId), $attributes)
+            ->throw();
+
+        return $this->decodeResponse($response, 'Chatwoot account user response was not valid JSON.');
+    }
+
     protected function request(): PendingRequest
     {
         return $this->platform->request();

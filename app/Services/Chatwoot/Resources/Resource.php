@@ -8,7 +8,9 @@ use RuntimeException;
 abstract class Resource
 {
     /**
-     * @return array<mixed>
+     * @param Response $response
+     * @param string $errorMessage
+     * @return array
      */
     protected function decodeResponse(Response $response, string $errorMessage): array
     {

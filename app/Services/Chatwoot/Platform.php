@@ -111,13 +111,8 @@ class Platform extends Service
             $this->extractAuthTokenFromSsoLink($payload),
         ];
 
-        foreach ($candidates as $candidate) {
-            if (is_string($candidate) && $candidate !== '') {
-                return $candidate;
-            }
-        }
+        return array_find($candidates, fn($candidate) => is_string($candidate) && $candidate !== '');
 
-        return null;
     }
 
     protected function extractAuthTokenFromSsoLink(array $payload): ?string

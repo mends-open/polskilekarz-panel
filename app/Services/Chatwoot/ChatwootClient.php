@@ -2,10 +2,12 @@
 
 namespace App\Services\Chatwoot;
 
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory;
+use Illuminate\Http\Client\RequestException;
 use RuntimeException;
 
-class ChatwootManager extends Service
+class ChatwootClient extends Service
 {
     public function __construct(Factory $http, ?string $endpoint = null)
     {
@@ -22,6 +24,10 @@ class ChatwootManager extends Service
         return new Application($accessToken, $this->http, $this->endpoint);
     }
 
+    /**
+     * @throws RequestException
+     * @throws ConnectionException
+     */
     public function impersonate(int $userId, ?int $accountId = null): Application
     {
         return $this->platform()->impersonate($userId, $accountId);

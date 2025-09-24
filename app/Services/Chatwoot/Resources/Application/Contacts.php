@@ -66,6 +66,19 @@ class Contacts extends Resource
         return $this->decodeResponse($response, 'Chatwoot contact update response was not valid JSON.');
     }
 
+    /**
+     * @throws RequestException
+     * @throws ConnectionException
+     */
+    public function conversations(int $accountId, int $contactId): array
+    {
+        $response = $this->request()
+            ->get(sprintf('api/v1/accounts/%d/contacts/%d/conversations', $accountId, $contactId))
+            ->throw();
+
+        return $this->decodeResponse($response, 'Chatwoot contact conversations response was not valid JSON.');
+    }
+
     protected function request(): PendingRequest
     {
         return $this->application->request();

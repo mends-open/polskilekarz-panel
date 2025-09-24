@@ -1,6 +1,6 @@
 <?php
 
-use App\Services\Chatwoot\ChatwootManager;
+use App\Services\Chatwoot\ChatwootClient;
 use App\Services\StripeSearchQuery;
 use Stripe\StripeClient;
 
@@ -28,8 +28,8 @@ if (! function_exists('stripeSearchQuery')) {
 }
 
 if (! function_exists('chatwoot')) {
-    function chatwoot(): ChatwootManager
+    function chatwoot(): ChatwootClient
     {
-        return app(ChatwootManager::class);
+        return app(ChatwootClient::class);
     }
 }

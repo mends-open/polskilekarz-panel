@@ -14,6 +14,10 @@ class Application extends Service
 {
     use HandlesResources;
 
+    /**
+     * @var mixed|object
+     */
+    public mixed $messages;
     protected string $authToken;
 
     public function __construct(?string $authToken, Factory $http, ?string $endpoint = null)
@@ -21,11 +25,6 @@ class Application extends Service
         parent::__construct($http, $endpoint);
 
         $this->authToken = $this->resolveAuthToken($authToken);
-    }
-
-    public function sendMessage(int $accountId, int $conversationId, string $content, array $attributes = []): array
-    {
-        return $this->messages()->create($accountId, $conversationId, $content, $attributes);
     }
 
     public function request(): PendingRequest

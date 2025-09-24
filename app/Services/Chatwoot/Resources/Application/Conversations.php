@@ -44,19 +44,6 @@ class Conversations extends Resource
      * @throws RequestException
      * @throws ConnectionException
      */
-    public function create(int $accountId, array $attributes): array
-    {
-        $response = $this->request()
-            ->post(sprintf('api/v1/accounts/%d/conversations', $accountId), $attributes)
-            ->throw();
-
-        return $this->decodeResponse($response, 'Chatwoot conversation creation response was not valid JSON.');
-    }
-
-    /**
-     * @throws RequestException
-     * @throws ConnectionException
-     */
     public function update(int $accountId, int $conversationId, array $attributes): array
     {
         $response = $this->request()

@@ -22,7 +22,7 @@ use App\Models\Phone;
 use App\Models\Submission;
 use App\Models\StripeEvent;
 use App\Models\User;
-use App\Services\Chatwoot\ChatwootManager;
+use App\Services\Chatwoot\ChatwootClient;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\ServiceProvider;
@@ -34,8 +34,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton(ChatwootManager::class, function ($app) {
-            return new ChatwootManager($app->make(HttpFactory::class));
+        $this->app->singleton(ChatwootClient::class, function ($app) {
+            return new ChatwootClient($app->make(HttpFactory::class));
         });
     }
 

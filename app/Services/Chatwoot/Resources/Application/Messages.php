@@ -18,32 +18,25 @@ class Messages extends Resource
      * @throws RequestException
      * @throws ConnectionException
      */
-    public function create(int $accountId, int $conversationId, string $content, array $attributes = []): array
+    public function list(int $accountId, int $conversationId): array
     {
-        $payload = array_merge(['message_type' => 'outgoing'], $attributes);
+        $response = $this->request()
+            ->get(sprintf('api/v1/accounts/%d/conversations/%d/messages', $accountId, $conversationId))
+            ->throw();
 
-        $payload['content'] = $content;
+        return $this->decodeResponse($response, 'Chatwoot messages response was not valid JSON.');
+    }
 
-        if (isset($payload['private'])) {
-            $payload['private'] = (bool) $payload['private'];
-        }
-
-        if (isset($payload['content_type']) && $payload['content_type'] instanceof \BackedEnum) {
-            $payload['content_type'] = $payload['content_type']->value;
-        }
-
-        if (isset($payload['message_type']) && $payload['message_type'] instanceof \BackedEnum) {
-            $payload['message_type'] = $payload['message_type']->value;
-        }
-
-        if (! isset($payload['message_type']) || ! is_string($payload['message_type']) || $payload['message_type'] === '') {
-            $payload['message_type'] = 'outgoing';
-        }
-
+    /**
+     * @throws RequestException
+     * @throws ConnectionException
+     */
+    public function create(int $accountId, int $conversationId, array $attributes = []): array
+    {
         $response = $this->request()
             ->post(
                 sprintf('api/v1/accounts/%d/conversations/%d/messages', $accountId, $conversationId),
-                $payload,
+                $attributes,
             )
             ->throw();
 
