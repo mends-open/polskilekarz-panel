@@ -2,6 +2,9 @@
 
 namespace App\Services\Chatwoot;
 
+use App\Services\Chatwoot\Resources\Platform\AccountUsers;
+use App\Services\Chatwoot\Resources\Platform\Accounts;
+use App\Services\Chatwoot\Resources\Platform\Users;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\PendingRequest;
@@ -20,27 +23,41 @@ class Platform extends Service
         $this->platformAccessToken = $this->resolvePlatformAccessToken($platformAccessToken);
     }
 
+    public function accounts(): Accounts
+    {
+        return new Accounts($this);
+    }
+
+    public function accountUsers(): AccountUsers
+    {
+        return new AccountUsers($this);
+    }
+
+    public function users(): Users
+    {
+        return new Users($this);
+    }
+
     /**
      * @throws RequestException
      * @throws ConnectionException
      */
     public function getUser(int $accountId, int $userId): array
     {
-        $response = $this->request()
-            ->get(sprintf('platform/api/v1/users/%d', $userId))
-            ->throw();
+        return $this->users()->get($userId, $accountId);
+    }
 
-        $user = $response->json();
+    /**
+     * @throws RequestException
+     * @throws ConnectionException
+     */
+    public function impersonate(int $accountId, int $userId): Application
+    {
+        $user = $this->getUser($accountId, $userId);
 
-        if (! is_array($user)) {
-            throw new RuntimeException('Chatwoot user response was not valid JSON.');
-        }
+        $authToken = $this->extractAuthToken($user);
 
-        if ($accountId > 0 && ! $this->userBelongsToAccount($user, $accountId)) {
-            throw new RuntimeException('Chatwoot user does not belong to the specified account.');
-        }
-
-        return $user;
+        return new Application($authToken, $this->http, $this->endpoint);
     }
 
     /**
@@ -49,11 +66,49 @@ class Platform extends Service
      */
     public function impersonateUser(int $accountId, int $userId): Application
     {
-        $user = $this->getUser($accountId, $userId);
+        return $this->impersonate($accountId, $userId);
+    }
 
-        $authToken = $this->extractAuthToken($user);
+    /**
+     * @throws RequestException
+     * @throws ConnectionException
+     */
+    public function sendMessageAsUser(
+        int $accountId,
+        int $userId,
+        int $conversationId,
+        string $content,
+        array $attributes = []
+    ): array {
+        return $this->impersonate($accountId, $userId)
+            ->messages()
+            ->create($accountId, $conversationId, $content, $attributes);
+    }
 
-        return new Application($authToken, $this->http, $this->endpoint);
+    public function request(): PendingRequest
+    {
+        return $this->authorizedRequest($this->platformAccessToken);
+    }
+
+    public function userBelongsToAccount(array $user, int $accountId): bool
+    {
+        $accounts = $user['accounts'] ?? [];
+
+        if (! is_array($accounts)) {
+            return false;
+        }
+
+        foreach ($accounts as $account) {
+            if (! is_array($account)) {
+                continue;
+            }
+
+            if ((int) ($account['id'] ?? 0) === $accountId) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     protected function extractAuthToken(array $payload): ?string
@@ -73,47 +128,6 @@ class Platform extends Service
         }
 
         return null;
-    }
-
-    /**
-     * @throws RequestException
-     * @throws ConnectionException
-     */
-    public function sendMessageAsUser(
-        int $accountId,
-        int $userId,
-        int $conversationId,
-        string $content,
-        array $attributes = []
-    ): array {
-        return $this->impersonateUser($accountId, $userId)
-            ->sendMessage($accountId, $conversationId, $content, $attributes);
-    }
-
-    protected function request(): PendingRequest
-    {
-        return $this->authorizedRequest($this->platformAccessToken);
-    }
-
-    protected function userBelongsToAccount(array $user, int $accountId): bool
-    {
-        $accounts = $user['accounts'] ?? [];
-
-        if (! is_array($accounts)) {
-            return false;
-        }
-
-        foreach ($accounts as $account) {
-            if (! is_array($account)) {
-                continue;
-            }
-
-            if ((int) ($account['id'] ?? 0) === $accountId) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     protected function extractAuthTokenFromSsoLink(array $payload): ?string
@@ -147,5 +161,4 @@ class Platform extends Service
 
         return $platformAccessToken;
     }
-
 }

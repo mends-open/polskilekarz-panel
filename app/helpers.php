@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\Chatwoot\ChatwootManager;
 use App\Services\StripeSearchQuery;
 use Stripe\StripeClient;
 
@@ -23,5 +24,12 @@ if (! function_exists('stripeSearchQuery')) {
     function stripeSearchQuery(?string $clause = null): StripeSearchQuery
     {
         return new StripeSearchQuery($clause);
+    }
+}
+
+if (! function_exists('chatwoot')) {
+    function chatwoot(): ChatwootManager
+    {
+        return app(ChatwootManager::class);
     }
 }
