@@ -2,6 +2,7 @@
 
 namespace App\Services\Chatwoot;
 
+use App\Services\Chatwoot\Concerns\HandlesResources;
 use App\Services\Chatwoot\Resources\Platform\AccountUsers;
 use App\Services\Chatwoot\Resources\Platform\Accounts;
 use App\Services\Chatwoot\Resources\Platform\Users;
@@ -14,6 +15,8 @@ use RuntimeException;
 
 class Platform extends Service
 {
+    use HandlesResources;
+
     protected string $platformAccessToken;
 
     public function __construct(Factory $http, ?string $endpoint = null, ?string $platformAccessToken = null)
@@ -21,21 +24,6 @@ class Platform extends Service
         parent::__construct($http, $endpoint);
 
         $this->platformAccessToken = $this->resolvePlatformAccessToken($platformAccessToken);
-    }
-
-    public function accounts(): Accounts
-    {
-        return new Accounts($this);
-    }
-
-    public function accountUsers(): AccountUsers
-    {
-        return new AccountUsers($this);
-    }
-
-    public function users(): Users
-    {
-        return new Users($this);
     }
 
     /**
@@ -51,9 +39,11 @@ class Platform extends Service
      * @throws RequestException
      * @throws ConnectionException
      */
-    public function impersonate(int $accountId, int $userId): Application
+    public function impersonate(int $userId, ?int $accountId = null): Application
     {
-        $user = $this->getUser($accountId, $userId);
+        $user = $accountId === null
+            ? $this->users()->get($userId)
+            : $this->getUser($accountId, $userId);
 
         $authToken = $this->extractAuthToken($user);
 
@@ -66,7 +56,7 @@ class Platform extends Service
      */
     public function impersonateUser(int $accountId, int $userId): Application
     {
-        return $this->impersonate($accountId, $userId);
+        return $this->impersonate($userId, $accountId);
     }
 
     /**
@@ -80,8 +70,8 @@ class Platform extends Service
         string $content,
         array $attributes = []
     ): array {
-        return $this->impersonate($accountId, $userId)
-            ->messages()
+        return $this->impersonate($userId, $accountId)
+            ->messages
             ->create($accountId, $conversationId, $content, $attributes);
     }
 
@@ -160,5 +150,14 @@ class Platform extends Service
         }
 
         return $platformAccessToken;
+    }
+
+    protected function resources(): array
+    {
+        return [
+            'accounts' => Accounts::class,
+            'accountUsers' => AccountUsers::class,
+            'users' => Users::class,
+        ];
     }
 }

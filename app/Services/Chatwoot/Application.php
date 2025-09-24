@@ -2,6 +2,7 @@
 
 namespace App\Services\Chatwoot;
 
+use App\Services\Chatwoot\Concerns\HandlesResources;
 use App\Services\Chatwoot\Resources\Application\Contacts;
 use App\Services\Chatwoot\Resources\Application\Conversations;
 use App\Services\Chatwoot\Resources\Application\Messages;
@@ -11,6 +12,8 @@ use RuntimeException;
 
 class Application extends Service
 {
+    use HandlesResources;
+
     protected string $authToken;
 
     public function __construct(?string $authToken, Factory $http, ?string $endpoint = null)
@@ -18,21 +21,6 @@ class Application extends Service
         parent::__construct($http, $endpoint);
 
         $this->authToken = $this->resolveAuthToken($authToken);
-    }
-
-    public function messages(): Messages
-    {
-        return new Messages($this);
-    }
-
-    public function contacts(): Contacts
-    {
-        return new Contacts($this);
-    }
-
-    public function conversations(): Conversations
-    {
-        return new Conversations($this);
     }
 
     public function sendMessage(int $accountId, int $conversationId, string $content, array $attributes = []): array
@@ -43,6 +31,15 @@ class Application extends Service
     public function request(): PendingRequest
     {
         return $this->authorizedRequest($this->authToken);
+    }
+
+    protected function resources(): array
+    {
+        return [
+            'messages' => Messages::class,
+            'contacts' => Contacts::class,
+            'conversations' => Conversations::class,
+        ];
     }
 
     protected function resolveAuthToken(?string $authToken): string

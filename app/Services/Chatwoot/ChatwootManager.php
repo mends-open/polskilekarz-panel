@@ -3,6 +3,7 @@
 namespace App\Services\Chatwoot;
 
 use Illuminate\Http\Client\Factory;
+use RuntimeException;
 
 class ChatwootManager extends Service
 {
@@ -21,8 +22,26 @@ class ChatwootManager extends Service
         return new Application($accessToken, $this->http, $this->endpoint);
     }
 
-    public function impersonate(int $accountId, int $userId): Application
+    public function impersonate(int $userId, ?int $accountId = null): Application
     {
-        return $this->platform()->impersonate($accountId, $userId);
+        return $this->platform()->impersonate($userId, $accountId);
+    }
+
+    public function __get(string $name): Service
+    {
+        if (! in_array($name, ['platform', 'application'], true)) {
+            throw new RuntimeException(sprintf('Chatwoot entrypoint [%s] is not defined.', $name));
+        }
+
+        return $this->{$name}();
+    }
+
+    public function __call(string $name, array $arguments): Service
+    {
+        if ($arguments === [] && in_array($name, ['platform', 'application'], true)) {
+            return $this->{$name}();
+        }
+
+        throw new RuntimeException(sprintf('Chatwoot entrypoint [%s] is not defined.', $name));
     }
 }
