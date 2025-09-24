@@ -2,9 +2,7 @@
 
 namespace App\Services\Chatwoot;
 
-use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory;
-use Illuminate\Http\Client\RequestException;
 use RuntimeException;
 
 class ChatwootClient extends Service
@@ -26,19 +24,10 @@ class ChatwootClient extends Service
 
     public function __get(string $name): Service
     {
-        if (! in_array($name, ['platform', 'application'], true)) {
+        if (! method_exists($this, $name)) {
             throw new RuntimeException(sprintf('Chatwoot entrypoint [%s] is not defined.', $name));
         }
 
         return $this->{$name}();
-    }
-
-    public function __call(string $name, array $arguments): Service
-    {
-        if ($arguments === [] && in_array($name, ['platform', 'application'], true)) {
-            return $this->{$name}();
-        }
-
-        throw new RuntimeException(sprintf('Chatwoot entrypoint [%s] is not defined.', $name));
     }
 }
