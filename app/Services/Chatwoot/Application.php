@@ -14,10 +14,6 @@ class Application extends Service
 {
     use HandlesResources;
 
-    /**
-     * @var mixed|object
-     */
-    public mixed $messages;
     protected string $authToken;
 
     public function __construct(?string $authToken, Factory $http, ?string $endpoint = null)

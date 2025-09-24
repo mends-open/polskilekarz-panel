@@ -24,15 +24,6 @@ class ChatwootClient extends Service
         return new Application($accessToken, $this->http, $this->endpoint);
     }
 
-    /**
-     * @throws RequestException
-     * @throws ConnectionException
-     */
-    public function impersonate(int $userId, ?int $accountId = null): Application
-    {
-        return $this->platform()->impersonate($userId, $accountId);
-    }
-
     public function __get(string $name): Service
     {
         if (! in_array($name, ['platform', 'application'], true)) {

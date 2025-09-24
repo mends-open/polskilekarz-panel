@@ -32,7 +32,7 @@ class Platform extends Service
      */
     public function getUser(int $accountId, int $userId): array
     {
-        return $this->users()->get($userId, $accountId);
+        return $this->users->get($userId, $accountId);
     }
 
     /**
@@ -42,37 +42,12 @@ class Platform extends Service
     public function impersonate(int $userId, ?int $accountId = null): Application
     {
         $user = $accountId === null
-            ? $this->users()->get($userId)
+            ? $this->users->get($userId)
             : $this->getUser($accountId, $userId);
 
         $authToken = $this->extractAuthToken($user);
 
         return new Application($authToken, $this->http, $this->endpoint);
-    }
-
-    /**
-     * @throws RequestException
-     * @throws ConnectionException
-     */
-    public function impersonateUser(int $accountId, int $userId): Application
-    {
-        return $this->impersonate($userId, $accountId);
-    }
-
-    /**
-     * @throws RequestException
-     * @throws ConnectionException
-     */
-    public function sendMessageAsUser(
-        int $accountId,
-        int $userId,
-        int $conversationId,
-        string $content,
-        array $attributes = []
-    ): array {
-        return $this->impersonate($userId, $accountId)
-            ->messages
-            ->create($accountId, $conversationId, $content, $attributes);
     }
 
     public function request(): PendingRequest
