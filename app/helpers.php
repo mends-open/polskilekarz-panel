@@ -2,7 +2,6 @@
 
 use App\Services\Chatwoot\ChatwootClient;
 use App\Services\Cloudflare\CloudflareClient;
-use App\Services\Cloudflare\LinkShortener;
 use App\Services\StripeSearchQuery;
 use Stripe\StripeClient;
 
@@ -43,9 +42,3 @@ if (! function_exists('cloudflare')) {
     }
 }
 
-if (! function_exists('link')) {
-    function link(): LinkShortener
-    {
-        return app(LinkShortener::class);
-    }
-}
