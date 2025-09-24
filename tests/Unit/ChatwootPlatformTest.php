@@ -2,8 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Enums\Chatwoot\MessagePrivacy;
-use App\Enums\Chatwoot\MessageType;
 use App\Services\Chatwoot\Application;
 use App\Services\Chatwoot\Platform;
 use Illuminate\Config\Repository;
@@ -25,7 +23,7 @@ it('retrieves a user by id from the Chatwoot platform API', function () {
 
     $platform = new Platform($http, 'https://chatwoot.test', 'platform-token');
 
-    $user = $platform->getUser(1, 2);
+    $user = $platform->users->get(2, 1);
 
     expect($user)->toMatchArray([
         'id' => 2,
@@ -58,7 +56,7 @@ it('impersonates a user using the embedded access token', function () {
 
     $platform = new Platform($http, 'https://chatwoot.test', 'platform-token');
 
-    $application = $platform->impersonateUser(7, 42);
+    $application = $platform->impersonate(42);
 
     expect($application)->toBeInstanceOf(Application::class);
 
@@ -78,13 +76,13 @@ it('sends a message using the access token embedded in the user payload', functi
             expect($request->method())->toBe('GET');
             expect($request->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
 
-            return Factory::response([
-                'id' => 15,
-                'accounts' => [
-                    ['id' => 5],
-                ],
-                'access_token' => 'user-token',
-            ], 200);
+        return Factory::response([
+            'id' => 15,
+            'accounts' => [
+                ['id' => 5],
+            ],
+            'access_token' => 'user-token',
+        ], 200);
         }
 
         expect($request->url())->toBe('https://chatwoot.test/api/v1/accounts/5/conversations/25/messages');
@@ -92,7 +90,7 @@ it('sends a message using the access token embedded in the user payload', functi
         expect($request->hasHeader('api_access_token', 'user-token'))->toBeTrue();
         expect($request->data())->toMatchArray([
             'content' => 'Hello from Chatwoot',
-            'message_type' => MessageType::Outgoing->value,
+            'message_type' => 'outgoing',
             'private' => true,
         ]);
 
@@ -102,7 +100,7 @@ it('sends a message using the access token embedded in the user payload', functi
     $platform = new Platform($http, 'https://chatwoot.test', 'platform-token');
 
     $response = $platform->sendMessageAsUser(5, 15, 25, 'Hello from Chatwoot', [
-        'private' => MessagePrivacy::Private,
+        'private' => true,
     ]);
 
     expect($response)->toBe(['id' => 99]);
@@ -150,12 +148,12 @@ it('falls back to the configured access token when the user payload does not inc
             if ($request->url() === 'https://chatwoot.test/platform/api/v1/users/2') {
                 expect($request->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
 
-                return Factory::response([
-                    'id' => 2,
-                    'accounts' => [
-                        ['id' => 1],
-                    ],
-                ], 200);
+        return Factory::response([
+            'id' => 2,
+            'accounts' => [
+                ['id' => 1],
+            ],
+        ], 200);
             }
 
             expect($request->url())->toBe('https://chatwoot.test/api/v1/accounts/1/conversations/3/messages');
@@ -196,4 +194,53 @@ it('throws when the platform access token is missing', function () {
     } finally {
         Container::setInstance($originalContainer);
     }
+});
+
+it('lists account users through the platform resource', function () {
+    $http = new Factory();
+
+    $http->fake([
+        'https://chatwoot.test/platform/api/v1/accounts/3/account_users' => Factory::response([
+            ['id' => 10],
+        ], 200),
+    ]);
+
+    $platform = new Platform($http, 'https://chatwoot.test', 'platform-token');
+
+    $users = $platform->accountUsers->list(3);
+
+    expect($users)->toBe([
+        ['id' => 10],
+    ]);
+
+    $request = $http->recorded()[0][0];
+
+    expect($request->url())->toBe('https://chatwoot.test/platform/api/v1/accounts/3/account_users');
+    expect($request->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
+});
+
+it('creates a contact through the application resource', function () {
+    $http = new Factory();
+
+    $http->fake([
+        'https://chatwoot.test/api/v1/accounts/4/contacts' => Factory::response([
+            'id' => 55,
+            'name' => 'Jane Doe',
+        ], 201),
+    ]);
+
+    $application = new Application('app-token', $http, 'https://chatwoot.test');
+
+    $contact = $application->contacts->create(4, ['name' => 'Jane Doe']);
+
+    expect($contact)->toMatchArray([
+        'id' => 55,
+        'name' => 'Jane Doe',
+    ]);
+
+    $request = $http->recorded()[0][0];
+
+    expect($request->method())->toBe('POST');
+    expect($request->url())->toBe('https://chatwoot.test/api/v1/accounts/4/contacts');
+    expect($request->hasHeader('api_access_token', 'app-token'))->toBeTrue();
 });
