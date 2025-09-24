@@ -23,6 +23,8 @@ use App\Models\Submission;
 use App\Models\StripeEvent;
 use App\Models\User;
 use App\Services\Chatwoot\ChatwootClient;
+use App\Services\Cloudflare\CloudflareClient;
+use App\Services\Cloudflare\LinkShortener;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\ServiceProvider;
@@ -36,6 +38,14 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->singleton(ChatwootClient::class, function ($app) {
             return new ChatwootClient($app->make(HttpFactory::class));
+        });
+
+        $this->app->singleton(CloudflareClient::class, function ($app) {
+            return new CloudflareClient($app->make(HttpFactory::class));
+        });
+
+        $this->app->singleton(LinkShortener::class, function ($app) {
+            return new LinkShortener($app->make(CloudflareClient::class));
         });
     }
 

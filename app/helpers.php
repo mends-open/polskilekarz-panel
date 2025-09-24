@@ -1,6 +1,7 @@
 <?php
 
 use App\Services\Chatwoot\ChatwootClient;
+use App\Services\Cloudflare\CloudflareClient;
 use App\Services\StripeSearchQuery;
 use Stripe\StripeClient;
 
@@ -31,5 +32,12 @@ if (! function_exists('chatwoot')) {
     function chatwoot(): ChatwootClient
     {
         return app(ChatwootClient::class);
+    }
+}
+
+if (! function_exists('cloudflare')) {
+    function cloudflare(): CloudflareClient
+    {
+        return app(CloudflareClient::class);
     }
 }
