@@ -43,10 +43,17 @@ if (! function_exists('cloudflare')) {
     }
 }
 
+if (! function_exists('cloudflareShortener')) {
+    function cloudflareShortener(): LinkShortener
+    {
+        return cloudflare()->shortener();
+    }
+}
+
 if (! function_exists('cloudflareLinks')) {
     function cloudflareLinks(): LinkShortener
     {
-        return app(LinkShortener::class);
+        return cloudflareShortener();
     }
 }
 

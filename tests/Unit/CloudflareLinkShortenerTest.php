@@ -37,7 +37,7 @@ it('merges Cloudflare link entry logs into a single payload structure', function
     $client = new FakeCloudflareClient($entries);
     $shortener = new LinkShortener($client);
 
-    $result = $shortener->entry('alpha', 'https://destination.test');
+    $result = $shortener->entries('alpha', 'https://destination.test');
 
     expect($result['slug'])->toBe('alpha');
     expect($result['url'])->toBe('https://destination.test');
@@ -72,7 +72,7 @@ it('handles plain JSON payloads without compression', function () {
     $client = new FakeCloudflareClient($entries);
     $shortener = new LinkShortener($client);
 
-    $result = $shortener->entry('beta');
+    $result = $shortener->entries('beta');
 
     expect($result['entries'])->toHaveCount(1);
     expect($result['entries'][0]['timestamp'])->toBe('2024-10-02T11:00:00Z');
@@ -89,7 +89,7 @@ it('returns an empty structure when the logs namespace is not configured', funct
 
     $shortener = new LinkShortener($client);
 
-    $result = $shortener->entry('beta', 'https://destination.test/beta');
+    $result = $shortener->entries('beta', 'https://destination.test/beta');
 
     expect($result['slug'])->toBe('beta');
     expect($result['entries'])->toBe([]);

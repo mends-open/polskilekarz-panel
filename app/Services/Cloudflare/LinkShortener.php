@@ -80,14 +80,14 @@ class LinkShortener
         return rtrim($this->domain, '/') . '/' . $slug;
     }
 
-    public function entry(string $slug, ?string $url = null): array
+    public function entries(string $slug, ?string $url = null): array
     {
         $slug = trim($slug);
 
         $result = [
             'slug' => $slug,
             'url' => $url,
-            'short_url' => $this->buildShortLinkIfConfigured($slug),
+            'short_url' => $this->resolveShortLink($slug),
             'total' => 0,
             'entries' => [],
         ];
@@ -97,7 +97,7 @@ class LinkShortener
         }
 
         $kv = $this->cloudflare->kv($this->logsNamespace);
-        [$entries, $counter] = $this->readEntryLogs($kv, $slug);
+        [$entries, $counter] = $this->collectEntryRecords($kv, $slug);
 
         $result['entries'] = $entries;
         $result['total'] = $counter;
@@ -105,9 +105,14 @@ class LinkShortener
         return $result;
     }
 
+    public function entriesFor(CloudflareLink $link): array
+    {
+        return $this->entries($link->slug, $link->url);
+    }
+
     public function logs(CloudflareLink $link): array
     {
-        return $this->entry($link->slug, $link->url);
+        return $this->entriesFor($link);
     }
 
     protected function generateSlug(): string
@@ -118,7 +123,7 @@ class LinkShortener
     /**
      * @return array{0: array<int, array<string, mixed>>, 1: int}
      */
-    protected function readEntryLogs(KVNamespace $kv, string $slug): array
+    protected function collectEntryRecords(KVNamespace $kv, string $slug): array
     {
         $keys = $kv->listKeys(['prefix' => $slug . ':']);
 
@@ -128,7 +133,7 @@ class LinkShortener
 
         $entries = [];
         $counter = 0;
-        $counterKey = $this->counterKey($slug);
+        $counterKey = $this->entryCounterKey($slug);
 
         foreach ($keys as $key) {
             $name = (string) ($key['name'] ?? '');
@@ -138,12 +143,12 @@ class LinkShortener
             }
 
             if ($name === $counterKey) {
-                $counter = $this->extractCounter($kv->retrieve($name));
+                $counter = $this->parseCounter($kv->retrieve($name));
 
                 continue;
             }
 
-            if (! $this->isEntryKey($slug, $name)) {
+            if (! $this->isEntryRecordKey($slug, $name)) {
                 continue;
             }
 
@@ -153,7 +158,7 @@ class LinkShortener
                 continue;
             }
 
-            $decoded = $this->decodeEntryPayload($payload, $slug, $name);
+            $decoded = $this->decodeEntryRecord($payload, $slug, $name);
 
             if ($decoded === null) {
                 continue;
@@ -165,14 +170,14 @@ class LinkShortener
             ] + $decoded;
         }
 
-        $this->sortEntries($entries);
+        $this->sortEntryRecords($entries);
 
         return [array_values($entries), $counter];
     }
 
-    protected function decodeEntryPayload(string $payload, string $slug, string $key): ?array
+    protected function decodeEntryRecord(string $payload, string $slug, string $key): ?array
     {
-        foreach ($this->candidatePayloads($payload) as $candidate) {
+        foreach ($this->payloadCandidates($payload) as $candidate) {
             $decoded = $this->decodeJson($candidate);
 
             if ($decoded !== null) {
@@ -201,7 +206,7 @@ class LinkShortener
         return is_numeric($value) ? (int) $value : null;
     }
 
-    protected function extractCounter(?string $value): int
+    protected function parseCounter(?string $value): int
     {
         if ($value === null || $value === '') {
             return 0;
@@ -210,17 +215,17 @@ class LinkShortener
         return (int) $value;
     }
 
-    protected function counterKey(string $slug): string
+    protected function entryCounterKey(string $slug): string
     {
         return $slug . ':counter';
     }
 
-    protected function isEntryKey(string $slug, string $name): bool
+    protected function isEntryRecordKey(string $slug, string $name): bool
     {
         return str_starts_with($name, $slug . ':');
     }
 
-    protected function sortEntries(array &$entries): void
+    protected function sortEntryRecords(array &$entries): void
     {
         usort($entries, function (array $left, array $right): int {
             $leftIndex = $left['index'] ?? PHP_INT_MAX;
@@ -237,7 +242,7 @@ class LinkShortener
     /**
      * @return iterable<string>
      */
-    protected function candidatePayloads(string $payload): iterable
+    protected function payloadCandidates(string $payload): iterable
     {
         yield $payload;
 
@@ -266,7 +271,7 @@ class LinkShortener
         return is_array($data) ? $data : null;
     }
 
-    protected function buildShortLinkIfConfigured(string $slug): ?string
+    protected function resolveShortLink(string $slug): ?string
     {
         if ($slug === '' || $this->domain === '') {
             return null;
