@@ -52,11 +52,11 @@ return [
         'endpoint' => env('CLOUDFLARE_ENDPOINT', 'https://api.cloudflare.com/client/v4'),
         'api_token' => env('CLOUDFLARE_API_TOKEN'),
         'account_id' => env('CLOUDFLARE_ACCOUNT_ID'),
-        'links' => [
-            'namespace_id' => env('CLOUDFLARE_LINKS_NAMESPACE_ID'),
-            'domain' => env('CLOUDFLARE_LINKS_DOMAIN'),
-            'slug_length' => env('CLOUDFLARE_LINKS_SLUG_LENGTH', 8),
-            'logs_namespace_id' => env('CLOUDFLARE_LINKS_LOGS_NAMESPACE_ID'),
+        'shortener' => [
+            'links_namespace_id' => env('CLOUDFLARE_SHORTENER_LINKS_NAMESPACE_ID'),
+            'domain' => env('CLOUDFLARE_SHORTENER_DOMAIN'),
+            'slug_length' => env('CLOUDFLARE_SHORTENER_SLUG_LENGTH', 8),
+            'entries_namespace_id' => env('CLOUDFLARE_SHORTENER_ENTRIES_NAMESPACE_ID'),
         ],
     ],
 

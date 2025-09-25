@@ -12,25 +12,27 @@ it('merges Cloudflare link entry logs into a single payload structure', function
         'alpha:0' => base64_encode(gzencode(json_encode([
             'slug' => 'alpha',
             'timestamp' => '2024-10-01T10:00:00Z',
-            'request' => [
-                'method' => 'GET',
-                'url' => 'https://worker.test/alpha',
-            ],
-            'response' => [
-                'status' => 302,
-            ],
+            'request_id' => 'req-1',
         ], JSON_THROW_ON_ERROR))),
+        'alpha:0:request' => json_encode([
+            'method' => 'GET',
+            'url' => 'https://worker.test/alpha',
+        ], JSON_THROW_ON_ERROR),
+        'alpha:0:response' => json_encode([
+            'status' => 302,
+        ], JSON_THROW_ON_ERROR),
         'alpha:1' => base64_encode(gzencode(json_encode([
             'slug' => 'alpha',
             'timestamp' => '2024-10-01T10:05:00Z',
-            'request' => [
-                'method' => 'GET',
-                'url' => 'https://worker.test/alpha',
-            ],
-            'response' => [
-                'status' => 302,
-            ],
+            'request_id' => 'req-2',
         ], JSON_THROW_ON_ERROR))),
+        'alpha:1:request' => json_encode([
+            'method' => 'GET',
+            'url' => 'https://worker.test/alpha',
+        ], JSON_THROW_ON_ERROR),
+        'alpha:1:response' => json_encode([
+            'status' => 302,
+        ], JSON_THROW_ON_ERROR),
         'alpha:counter' => '2',
     ];
 
@@ -46,11 +48,25 @@ it('merges Cloudflare link entry logs into a single payload structure', function
     expect($result['entries'])->toHaveCount(2);
 
     expect($result['entries'][0]['index'])->toBe(0);
+    expect($result['entries'][0]['key'])->toBe('alpha:0');
+    expect($result['entries'][0]['keys'])->toBe([
+        'alpha:0',
+        'alpha:0:request',
+        'alpha:0:response',
+    ]);
     expect($result['entries'][0]['timestamp'])->toBe('2024-10-01T10:00:00Z');
+    expect($result['entries'][0]['request_id'])->toBe('req-1');
     expect($result['entries'][0]['request']['method'])->toBe('GET');
+    expect($result['entries'][0]['response']['status'])->toBe(302);
 
     expect($result['entries'][1]['index'])->toBe(1);
+    expect($result['entries'][1]['keys'])->toBe([
+        'alpha:1',
+        'alpha:1:request',
+        'alpha:1:response',
+    ]);
     expect($result['entries'][1]['timestamp'])->toBe('2024-10-01T10:05:00Z');
+    expect($result['entries'][1]['request_id'])->toBe('req-2');
 });
 
 it('handles plain JSON payloads without compression', function () {
@@ -81,8 +97,8 @@ it('handles plain JSON payloads without compression', function () {
 
 it('returns an empty structure when the logs namespace is not configured', function () {
     $client = new FakeCloudflareClient([], [
-        'links' => [
-            'logs_namespace_id' => '',
+        'shortener' => [
+            'entries_namespace_id' => '',
             'domain' => '',
         ],
     ]);
@@ -110,11 +126,11 @@ class FakeCloudflareClient extends CloudflareClient
             'endpoint' => 'https://api.cloudflare.test',
             'api_token' => 'token',
             'account_id' => 'account',
-            'links' => [
-                'namespace_id' => 'links',
+            'shortener' => [
+                'links_namespace_id' => 'links',
                 'domain' => 'https://short.test',
                 'slug_length' => 6,
-                'logs_namespace_id' => 'logs',
+                'entries_namespace_id' => 'entries',
             ],
         ];
 
@@ -123,7 +139,7 @@ class FakeCloudflareClient extends CloudflareClient
 
     public function kv(string $namespaceId, array $options = []): KVNamespace
     {
-        if ($namespaceId === 'logs') {
+        if ($namespaceId === 'entries') {
             return new FakeKVNamespace($this->store);
         }
 
@@ -135,7 +151,7 @@ class FakeKVNamespace extends KVNamespace
 {
     public function __construct(private array $store)
     {
-        parent::__construct(new Factory(), 'https://api.cloudflare.test', 'token', 'account', 'logs', null);
+        parent::__construct(new Factory(), 'https://api.cloudflare.test', 'token', 'account', 'entries', null);
     }
 
     public function listKeys(array $query = []): array

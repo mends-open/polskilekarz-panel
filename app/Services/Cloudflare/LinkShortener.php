@@ -4,9 +4,9 @@ namespace App\Services\Cloudflare;
 
 use App\Models\CloudflareLink;
 use App\Services\Cloudflare\Storage\KVNamespace;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use JsonException;
 
 class LinkShortener
 {
@@ -16,17 +16,17 @@ class LinkShortener
 
     protected int $slugLength;
 
-    protected string $logsNamespace;
+    protected string $entriesNamespace;
 
     public function __construct(protected CloudflareClient $cloudflare)
     {
-        $links = $this->cloudflare->config('links', []);
-        $links = is_array($links) ? $links : [];
+        $config = $this->cloudflare->config('shortener', []);
+        $config = is_array($config) ? $config : [];
 
-        $this->namespace = (string) ($links['namespace_id'] ?? '');
-        $this->domain = (string) ($links['domain'] ?? '');
-        $this->slugLength = (int) ($links['slug_length'] ?? 8);
-        $this->logsNamespace = (string) ($links['logs_namespace_id'] ?? '');
+        $this->namespace = (string) ($config['links_namespace_id'] ?? '');
+        $this->domain = (string) ($config['domain'] ?? '');
+        $this->slugLength = (int) ($config['slug_length'] ?? 8);
+        $this->entriesNamespace = (string) ($config['entries_namespace_id'] ?? '');
     }
 
     /**
@@ -92,11 +92,11 @@ class LinkShortener
             'entries' => [],
         ];
 
-        if ($slug === '' || $this->logsNamespace === '') {
+        if ($slug === '' || $this->entriesNamespace === '') {
             return $result;
         }
 
-        $kv = $this->cloudflare->kv($this->logsNamespace);
+        $kv = $this->cloudflare->kv($this->entriesNamespace);
         [$entries, $counter] = $this->collectEntryRecords($kv, $slug);
 
         $result['entries'] = $entries;
@@ -148,9 +148,13 @@ class LinkShortener
                 continue;
             }
 
-            if (! $this->isEntryRecordKey($slug, $name)) {
+            $segments = $this->extractEntrySegments($slug, $name);
+
+            if ($segments === null) {
                 continue;
             }
+
+            [$index, $path] = $segments;
 
             $payload = $kv->retrieve($name);
 
@@ -158,16 +162,46 @@ class LinkShortener
                 continue;
             }
 
-            $decoded = $this->decodeEntryRecord($payload, $slug, $name);
+            $value = $this->decodeEntryValue($payload, $slug, $name, $path !== []);
 
-            if ($decoded === null) {
+            if ($value === null && $path === []) {
                 continue;
             }
 
-            $entries[] = [
-                'key' => $name,
-                'index' => $this->extractIndex($slug, $name),
-            ] + $decoded;
+            $entry =& $entries[$index];
+
+            if (! isset($entry)) {
+                $entry = [
+                    'index' => $index,
+                    'keys' => [],
+                ];
+            }
+
+            if (! in_array($name, $entry['keys'], true)) {
+                $entry['keys'][] = $name;
+            }
+
+            $entry['key'] ??= $name;
+
+            if ($path === []) {
+                if (is_array($value)) {
+                    $this->mergeEntryPayload($entry, $value);
+                } elseif ($value !== null) {
+                    $entry['payload'] = $value;
+                }
+
+                continue;
+            }
+
+            $this->assignEntryValue($entry, $path, $value);
+        }
+
+        if ($entries !== []) {
+            foreach ($entries as &$entry) {
+                $entry['keys'] = array_values(array_unique($entry['keys']));
+            }
+
+            unset($entry);
         }
 
         $this->sortEntryRecords($entries);
@@ -175,35 +209,33 @@ class LinkShortener
         return [array_values($entries), $counter];
     }
 
-    protected function decodeEntryRecord(string $payload, string $slug, string $key): ?array
+    /**
+     * @param array<int, string> $path
+     */
+    protected function assignEntryValue(array &$entry, array $path, mixed $value): void
     {
-        foreach ($this->payloadCandidates($payload) as $candidate) {
-            $decoded = $this->decodeJson($candidate);
-
-            if ($decoded !== null) {
-                return $decoded;
-            }
+        if ($path === []) {
+            return;
         }
 
-        Log::warning('Failed to decode Cloudflare link log payload', [
-            'slug' => $slug,
-            'key' => $key,
-        ]);
-
-        return null;
+        Arr::set($entry, implode('.', $path), $value);
     }
 
-    protected function extractIndex(string $slug, string $name): ?int
+    protected function mergeEntryPayload(array &$entry, array $payload): void
     {
-        $prefix = $slug . ':';
+        foreach ($payload as $key => $value) {
+            if ($key === 'index' || $key === 'keys') {
+                continue;
+            }
 
-        if (! str_starts_with($name, $prefix)) {
-            return null;
+            if ($key === 'key') {
+                $entry['key'] = $entry['key'] ?? (is_string($value) ? $value : null);
+
+                continue;
+            }
+
+            $entry[$key] = $value;
         }
-
-        $value = substr($name, strlen($prefix));
-
-        return is_numeric($value) ? (int) $value : null;
     }
 
     protected function parseCounter(?string $value): int
@@ -218,11 +250,6 @@ class LinkShortener
     protected function entryCounterKey(string $slug): string
     {
         return $slug . ':counter';
-    }
-
-    protected function isEntryRecordKey(string $slug, string $name): bool
-    {
-        return str_starts_with($name, $slug . ':');
     }
 
     protected function sortEntryRecords(array &$entries): void
@@ -244,13 +271,23 @@ class LinkShortener
      */
     protected function payloadCandidates(string $payload): iterable
     {
-        yield $payload;
+        $candidates = [$payload];
 
-        if ($this->isGzipPayload($payload)) {
-            $decoded = gzdecode($payload);
+        $base64 = base64_decode($payload, true);
 
-            if ($decoded !== false) {
-                yield $decoded;
+        if (is_string($base64) && $base64 !== '') {
+            $candidates[] = $base64;
+        }
+
+        foreach ($candidates as $candidate) {
+            yield $candidate;
+
+            if ($this->isGzipPayload($candidate)) {
+                $decoded = gzdecode($candidate);
+
+                if ($decoded !== false) {
+                    yield $decoded;
+                }
             }
         }
     }
@@ -260,15 +297,31 @@ class LinkShortener
         return strlen($payload) >= 2 && str_starts_with($payload, "\x1F\x8B");
     }
 
-    protected function decodeJson(string $payload): ?array
+    /**
+     * @return array{0: int, 1: array<int, string>}|null
+     */
+    protected function extractEntrySegments(string $slug, string $name): ?array
     {
-        try {
-            $data = json_decode($payload, true, 512, JSON_THROW_ON_ERROR);
-        } catch (JsonException) {
+        $prefix = $slug . ':';
+
+        if (! str_starts_with($name, $prefix)) {
             return null;
         }
 
-        return is_array($data) ? $data : null;
+        $suffix = substr($name, strlen($prefix));
+
+        if ($suffix === '') {
+            return null;
+        }
+
+        $segments = explode(':', $suffix);
+        $index = array_shift($segments);
+
+        if (! is_string($index) || $index === '' || ! ctype_digit($index)) {
+            return null;
+        }
+
+        return [(int) $index, $segments];
     }
 
     protected function resolveShortLink(string $slug): ?string
@@ -278,5 +331,41 @@ class LinkShortener
         }
 
         return $this->buildShortLink($slug);
+    }
+
+    protected function decodeEntryValue(string $payload, string $slug, string $key, bool $allowRaw): mixed
+    {
+        foreach ($this->payloadCandidates($payload) as $candidate) {
+            [$decoded, $valid] = $this->tryDecodeJson($candidate);
+
+            if ($valid) {
+                return $decoded;
+            }
+        }
+
+        if ($allowRaw) {
+            return $payload;
+        }
+
+        Log::warning('Failed to decode Cloudflare link log payload', [
+            'slug' => $slug,
+            'key' => $key,
+        ]);
+
+        return null;
+    }
+
+    /**
+     * @return array{0: mixed, 1: bool}
+     */
+    protected function tryDecodeJson(string $payload): array
+    {
+        $decoded = json_decode($payload, true);
+
+        if (json_last_error() === JSON_ERROR_NONE) {
+            return [$decoded, true];
+        }
+
+        return [null, false];
     }
 }
