@@ -45,7 +45,7 @@ class CloudflareClient
         );
     }
 
-    public function links(): LinkShortener
+    public function shortener(): LinkShortener
     {
         return new LinkShortener($this);
     }

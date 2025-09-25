@@ -4,7 +4,6 @@ namespace App\Providers;
 
 use App\Models\ChatwootContext;
 use App\Models\CloudflareLink;
-use App\Models\CloudflareLinkClick;
 use App\Models\Document;
 use App\Models\DocumentEntry;
 use App\Models\Email;
@@ -73,8 +72,7 @@ class AppServiceProvider extends ServiceProvider
             15 => EmaProduct::class,
             16 => ChatwootContext::class,
             17 => CloudflareLink::class,
-            18 => CloudflareLinkClick::class,
-            19 => StripeEvent::class,
+            18 => StripeEvent::class,
         ]);
     }
 }

@@ -46,9 +46,15 @@ class KVNamespace
             return null;
         }
 
-        $decoded = base64_decode($response->body(), true);
+        $body = $response->body();
 
-        return $decoded === false ? null : $decoded;
+        $decoded = base64_decode($body, true);
+
+        if ($decoded !== false) {
+            return $decoded;
+        }
+
+        return $body;
     }
 
     /**
