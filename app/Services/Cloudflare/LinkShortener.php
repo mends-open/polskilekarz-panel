@@ -84,23 +84,25 @@ class LinkShortener
     {
         $slug = trim($slug);
 
-        $entries = [];
-        $counter = 0;
-
-        if ($slug !== '' && $this->logsNamespace !== '') {
-            $kv = $this->cloudflare->kv($this->logsNamespace);
-
-            $entries = $this->mergeEntryLogs($kv, $slug);
-            $counter = $this->extractCounter($kv->retrieve($slug . ':counter'));
-        }
-
-        return [
+        $result = [
             'slug' => $slug,
             'url' => $url,
             'short_url' => $this->buildShortLinkIfConfigured($slug),
-            'total' => $counter,
-            'entries' => $entries,
+            'total' => 0,
+            'entries' => [],
         ];
+
+        if ($slug === '' || $this->logsNamespace === '') {
+            return $result;
+        }
+
+        $kv = $this->cloudflare->kv($this->logsNamespace);
+        [$entries, $counter] = $this->readEntryLogs($kv, $slug);
+
+        $result['entries'] = $entries;
+        $result['total'] = $counter;
+
+        return $result;
     }
 
     public function logs(CloudflareLink $link): array
@@ -113,16 +115,35 @@ class LinkShortener
         return Str::random($this->slugLength);
     }
 
-    protected function mergeEntryLogs(KVNamespace $kv, string $slug): array
+    /**
+     * @return array{0: array<int, array<string, mixed>>, 1: int}
+     */
+    protected function readEntryLogs(KVNamespace $kv, string $slug): array
     {
         $keys = $kv->listKeys(['prefix' => $slug . ':']);
 
+        if ($keys === []) {
+            return [[], 0];
+        }
+
         $entries = [];
+        $counter = 0;
+        $counterKey = $this->counterKey($slug);
 
         foreach ($keys as $key) {
             $name = (string) ($key['name'] ?? '');
 
-            if ($name === '' || $name === $slug . ':counter') {
+            if ($name === '') {
+                continue;
+            }
+
+            if ($name === $counterKey) {
+                $counter = $this->extractCounter($kv->retrieve($name));
+
+                continue;
+            }
+
+            if (! $this->isEntryKey($slug, $name)) {
                 continue;
             }
 
@@ -138,52 +159,33 @@ class LinkShortener
                 continue;
             }
 
-            $entries[] = array_merge([
+            $entries[] = [
                 'key' => $name,
                 'index' => $this->extractIndex($slug, $name),
-            ], $decoded);
+            ] + $decoded;
         }
 
-        usort($entries, function (array $left, array $right): int {
-            $leftIndex = $left['index'] ?? PHP_INT_MAX;
-            $rightIndex = $right['index'] ?? PHP_INT_MAX;
+        $this->sortEntries($entries);
 
-            if ($leftIndex === $rightIndex) {
-                return strcmp((string) ($left['timestamp'] ?? ''), (string) ($right['timestamp'] ?? ''));
-            }
-
-            return $leftIndex <=> $rightIndex;
-        });
-
-        return array_values($entries);
+        return [array_values($entries), $counter];
     }
 
     protected function decodeEntryPayload(string $payload, string $slug, string $key): ?array
     {
-        $decoded = gzdecode($payload);
+        foreach ($this->candidatePayloads($payload) as $candidate) {
+            $decoded = $this->decodeJson($candidate);
 
-        if ($decoded === false) {
-            Log::warning('Failed to decompress Cloudflare link log payload', [
-                'slug' => $slug,
-                'key' => $key,
-            ]);
-
-            return null;
+            if ($decoded !== null) {
+                return $decoded;
+            }
         }
 
-        try {
-            $data = json_decode($decoded, true, 512, JSON_THROW_ON_ERROR);
-        } catch (JsonException $exception) {
-            Log::warning('Failed to decode Cloudflare link log payload', [
-                'slug' => $slug,
-                'key' => $key,
-                'error' => $exception->getMessage(),
-            ]);
+        Log::warning('Failed to decode Cloudflare link log payload', [
+            'slug' => $slug,
+            'key' => $key,
+        ]);
 
-            return null;
-        }
-
-        return is_array($data) ? $data : null;
+        return null;
     }
 
     protected function extractIndex(string $slug, string $name): ?int
@@ -206,6 +208,62 @@ class LinkShortener
         }
 
         return (int) $value;
+    }
+
+    protected function counterKey(string $slug): string
+    {
+        return $slug . ':counter';
+    }
+
+    protected function isEntryKey(string $slug, string $name): bool
+    {
+        return str_starts_with($name, $slug . ':');
+    }
+
+    protected function sortEntries(array &$entries): void
+    {
+        usort($entries, function (array $left, array $right): int {
+            $leftIndex = $left['index'] ?? PHP_INT_MAX;
+            $rightIndex = $right['index'] ?? PHP_INT_MAX;
+
+            if ($leftIndex === $rightIndex) {
+                return strcmp((string) ($left['timestamp'] ?? ''), (string) ($right['timestamp'] ?? ''));
+            }
+
+            return $leftIndex <=> $rightIndex;
+        });
+    }
+
+    /**
+     * @return iterable<string>
+     */
+    protected function candidatePayloads(string $payload): iterable
+    {
+        yield $payload;
+
+        if ($this->isGzipPayload($payload)) {
+            $decoded = gzdecode($payload);
+
+            if ($decoded !== false) {
+                yield $decoded;
+            }
+        }
+    }
+
+    protected function isGzipPayload(string $payload): bool
+    {
+        return strlen($payload) >= 2 && str_starts_with($payload, "\x1F\x8B");
+    }
+
+    protected function decodeJson(string $payload): ?array
+    {
+        try {
+            $data = json_decode($payload, true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            return null;
+        }
+
+        return is_array($data) ? $data : null;
     }
 
     protected function buildShortLinkIfConfigured(string $slug): ?string

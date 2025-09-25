@@ -53,6 +53,32 @@ it('merges Cloudflare link entry logs into a single payload structure', function
     expect($result['entries'][1]['timestamp'])->toBe('2024-10-01T10:05:00Z');
 });
 
+it('handles plain JSON payloads without compression', function () {
+    $entries = [
+        'beta:0' => json_encode([
+            'slug' => 'beta',
+            'timestamp' => '2024-10-02T11:00:00Z',
+            'request' => [
+                'method' => 'GET',
+                'url' => 'https://worker.test/beta',
+            ],
+            'response' => [
+                'status' => 302,
+            ],
+        ], JSON_THROW_ON_ERROR),
+        'beta:counter' => '1',
+    ];
+
+    $client = new FakeCloudflareClient($entries);
+    $shortener = new LinkShortener($client);
+
+    $result = $shortener->entry('beta');
+
+    expect($result['entries'])->toHaveCount(1);
+    expect($result['entries'][0]['timestamp'])->toBe('2024-10-02T11:00:00Z');
+    expect($result['total'])->toBe(1);
+});
+
 it('returns an empty structure when the logs namespace is not configured', function () {
     $client = new FakeCloudflareClient([], [
         'links' => [
