@@ -1,0 +1,1 @@
+<livewire:chatwoot-context-relay />

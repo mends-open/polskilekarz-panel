@@ -40,6 +40,10 @@ class AppPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([])
+            ->renderHook(
+                'panels::body.end',
+                fn (): string => view('filament.hooks.chatwoot-context-relay')->render(),
+            )
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,

@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Events\ChatwootContextReceived;
+use App\Listeners\LogChatwootContext;
 use App\Models\ChatwootContext;
 use App\Models\CloudflareLink;
 use App\Models\Document;
@@ -21,11 +23,11 @@ use App\Models\Phone;
 use App\Models\Submission;
 use App\Models\StripeEvent;
 use App\Models\User;
-use App\Events\ChatwootContextReceived;
-use App\Listeners\LogChatwootContext;
 use App\Services\Chatwoot\ChatwootClient;
 use App\Services\Cloudflare\CloudflareClient;
 use App\Services\Cloudflare\LinkShortener;
+use Filament\Support\Assets\Js;
+use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\ServiceProvider;
@@ -58,6 +60,10 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         URL::forceScheme('https');
+
+        FilamentAsset::register([
+            Js::make('chatwoot-dashboard-listener', resource_path('js/filament/chatwoot-dashboard.js')),
+        ], package: 'app');
 
         Event::listen(ChatwootContextReceived::class, LogChatwootContext::class);
 
