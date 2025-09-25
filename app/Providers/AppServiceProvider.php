@@ -24,8 +24,11 @@ use App\Models\User;
 use App\Services\Chatwoot\ChatwootClient;
 use App\Services\Cloudflare\CloudflareClient;
 use App\Services\Cloudflare\LinkShortener;
+use Filament\Support\Assets\Js;
+use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Client\Factory as HttpFactory;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -53,6 +56,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        FilamentAsset::register([
+            Js::make('chatwoot', __DIR__ . '/../../resources/js/chatwoot.js'),
+        ]);
+
+        URL::forceScheme('https');
+
         Relation::enforceMorphMap([
             0 => User::class,
             1 => Entity::class,
