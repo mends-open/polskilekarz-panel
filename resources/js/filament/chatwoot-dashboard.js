@@ -1,5 +1,5 @@
 if (typeof window !== 'undefined') {
-    document.addEventListener('livewire:load', () => {
+    const registerListener = () => {
         if (window.__chatwootDashboardListenerAdded) {
             return;
         }
@@ -10,6 +10,8 @@ if (typeof window !== 'undefined') {
             if (! window.Livewire || typeof window.Livewire.dispatch !== 'function') {
                 return;
             }
+
+            console.info('[Chatwoot] dashboard context received', context);
 
             window.Livewire.dispatch('chatwoot-dashboard.context-received', { context });
         };
@@ -33,5 +35,11 @@ if (typeof window !== 'undefined') {
         window.addEventListener('message', handleDashboardEvent, false);
 
         window.parent?.postMessage({ name: 'dashboard_app:ready' }, '*');
-    });
+    };
+
+    if (window.Livewire) {
+        registerListener();
+    } else {
+        document.addEventListener('livewire:init', registerListener, { once: true });
+    }
 }

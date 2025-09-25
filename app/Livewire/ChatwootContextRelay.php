@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Events\ChatwootContextReceived;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -17,6 +18,10 @@ class ChatwootContextRelay extends Component
         if (! is_array($context)) {
             return;
         }
+
+        Log::info('Chatwoot dashboard context received.', [
+            'context' => $context,
+        ]);
 
         ChatwootContextReceived::dispatch($context);
     }
