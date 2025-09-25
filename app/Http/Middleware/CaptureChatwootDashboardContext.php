@@ -53,6 +53,14 @@ class CaptureChatwootDashboardContext
     {
         $payload = $request->input('chatwoot_context');
 
+        if (is_string($payload)) {
+            $decoded = json_decode($payload, true);
+
+            if (json_last_error() === JSON_ERROR_NONE) {
+                $payload = $decoded;
+            }
+        }
+
         if (! is_array($payload)) {
             return null;
         }

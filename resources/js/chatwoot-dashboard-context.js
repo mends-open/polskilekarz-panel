@@ -109,7 +109,20 @@ const handleContext = (payload) => {
     logContext('Context received', summary, meta);
 };
 
+const buildContextPayload = () => ({
+    summary: state.summary ?? {},
+    raw: state.raw ?? {},
+    meta: state.meta ?? {},
+    received_at: state.receivedAt ?? new Date().toISOString(),
+});
+
+let livewireHooksRegistered = false;
+
 const attachContextToLivewireRequests = () => {
+    if (livewireHooksRegistered) {
+        return;
+    }
+
     if (!window.Livewire || typeof window.Livewire.hook !== 'function') {
         return;
     }
@@ -119,23 +132,27 @@ const attachContextToLivewireRequests = () => {
             return;
         }
 
-        let body;
+        const payload = buildContextPayload();
+        const { body } = options;
 
-        try {
-            body = JSON.parse(options.body ?? '{}');
-        } catch (error) {
-            console.warn('[Chatwoot] Unable to attach context to Livewire request payload', error);
+        if (body && typeof body.set === 'function') {
+            body.set('chatwoot_context', JSON.stringify(payload));
             return;
         }
 
-        body.chatwoot_context = {
-            summary: state.summary ?? {},
-            raw: state.raw ?? {},
-            meta: state.meta ?? {},
-            received_at: state.receivedAt ?? new Date().toISOString(),
-        };
+        if (typeof body === 'string') {
+            try {
+                const parsed = body ? JSON.parse(body) : {};
+                parsed.chatwoot_context = payload;
+                options.body = JSON.stringify(parsed);
+            } catch (error) {
+                console.warn('[Chatwoot] Unable to attach context to Livewire request payload', error);
+            }
 
-        options.body = JSON.stringify(body);
+            return;
+        }
+
+        options.body = JSON.stringify({ chatwoot_context: payload });
     });
 
     window.Livewire.hook('commit', ({ succeed }) => {
@@ -143,6 +160,8 @@ const attachContextToLivewireRequests = () => {
             logContext('Livewire request context', state.summary);
         });
     });
+
+    livewireHooksRegistered = true;
 };
 
 window.addEventListener(
@@ -169,5 +188,9 @@ window.addEventListener(
 );
 
 document.addEventListener('livewire:init', attachContextToLivewireRequests);
+
+if (window.Livewire) {
+    attachContextToLivewireRequests();
+}
 
 export {}; // ensure module scope
