@@ -41,3 +41,4 @@ if (! function_exists('cloudflare')) {
         return app(CloudflareClient::class);
     }
 }
+
