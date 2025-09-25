@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Listeners\LogChatwootContext;
 use App\Models\ChatwootContext;
 use App\Models\CloudflareLink;
 use App\Models\Document;
@@ -28,8 +29,10 @@ use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Client\Factory as HttpFactory;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Reverb\Events\MessageReceived;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -59,6 +62,8 @@ class AppServiceProvider extends ServiceProvider
         FilamentAsset::register([
             Js::make('chatwoot', __DIR__ . '/../../resources/js/chatwoot.js'),
         ]);
+
+        Event::listen(MessageReceived::class, LogChatwootContext::class);
 
         URL::forceScheme('https');
 
