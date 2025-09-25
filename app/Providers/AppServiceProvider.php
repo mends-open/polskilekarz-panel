@@ -28,6 +28,7 @@ use App\Services\Cloudflare\CloudflareClient;
 use App\Services\Cloudflare\LinkShortener;
 use Filament\Support\Assets\Js;
 use Filament\Support\Facades\FilamentAsset;
+use Illuminate\Support\Facades\File;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Support\ServiceProvider;
@@ -61,8 +62,22 @@ class AppServiceProvider extends ServiceProvider
     {
         URL::forceScheme('https');
 
+        $chatwootListener = resource_path('js/filament/chatwoot-dashboard.js');
+        $chatwootListenerId = 'chatwoot-dashboard-listener';
+        $chatwootPublicPath = public_path("js/app/{$chatwootListenerId}.js");
+
+        if (File::exists($chatwootListener)) {
+            $shouldPublish = ! File::exists($chatwootPublicPath)
+                || File::lastModified($chatwootListener) > File::lastModified($chatwootPublicPath);
+
+            if ($shouldPublish) {
+                File::ensureDirectoryExists(dirname($chatwootPublicPath));
+                File::copy($chatwootListener, $chatwootPublicPath);
+            }
+        }
+
         FilamentAsset::register([
-            Js::make('chatwoot-dashboard-listener', resource_path('js/filament/chatwoot-dashboard.js')),
+            Js::make($chatwootListenerId, $chatwootListener),
         ], package: 'app');
 
         Event::listen(ChatwootContextReceived::class, LogChatwootContext::class);
