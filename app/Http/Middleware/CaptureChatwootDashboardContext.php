@@ -16,7 +16,13 @@ class CaptureChatwootDashboardContext
             return $next($request);
         }
 
-        $context = $request->session()->get('chatwoot.dashboard.context');
+        $context = $this->extractContextFromRequest($request);
+
+        if (! is_array($context)) {
+            $context = $request->session()->get('chatwoot.dashboard.context');
+        } else {
+            $request->session()->put('chatwoot.dashboard.context', $context);
+        }
 
         if (is_array($context)) {
             $summary = Arr::get($context, 'summary', []);
@@ -41,5 +47,27 @@ class CaptureChatwootDashboardContext
         }
 
         return $next($request);
+    }
+
+    protected function extractContextFromRequest(Request $request): ?array
+    {
+        $payload = $request->input('chatwoot_context');
+
+        if (! is_array($payload)) {
+            return null;
+        }
+
+        $summary = Arr::get($payload, 'summary');
+        $raw = Arr::get($payload, 'raw');
+
+        if (! is_array($summary)) {
+            return null;
+        }
+
+        return array_filter([
+            'received_at' => Arr::get($payload, 'received_at') ?? now()->toIso8601String(),
+            'summary' => $summary,
+            'data' => is_array($raw) ? $raw : null,
+        ]);
     }
 }

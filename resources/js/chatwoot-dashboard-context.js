@@ -1,10 +1,10 @@
-const CONTEXT_ENDPOINT = '/chatwoot/context';
 const CONTEXT_STORAGE_KEY = 'ChatwootDashboardContext';
 
 const state = {
     summary: null,
     raw: null,
-    lastPersistedAt: null,
+    meta: null,
+    receivedAt: null,
 };
 
 const normalizeContext = (payload) => {
@@ -82,46 +82,18 @@ const logContext = (label, summary, meta) => {
     console.groupEnd();
 };
 
-const persistContext = async (payload) => {
-    if (!window?.axios) {
-        console.warn('[Chatwoot] Axios is not available. Backend context logging is disabled.');
-        return;
-    }
-
-    try {
-        const response = await window.axios.post(
-            CONTEXT_ENDPOINT,
-            {
-                event: 'appContext',
-                data: payload,
-            },
-            {
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                withCredentials: true,
-            },
-        );
-
-        state.lastPersistedAt = Date.now();
-
-        if (response?.data?.summary) {
-            logContext('Backend context acknowledged', response.data.summary);
-        }
-    } catch (error) {
-        console.error('[Chatwoot] Failed to persist context to backend', error);
-    }
-};
-
 const handleContext = (payload) => {
     const { summary, meta } = normalizeContext(payload);
 
     state.summary = summary;
     state.raw = payload;
+    state.meta = meta;
+    state.receivedAt = new Date().toISOString();
 
     window[CONTEXT_STORAGE_KEY] = {
         summary,
         meta,
+        receivedAt: state.receivedAt,
     };
 
     document.dispatchEvent(
@@ -129,12 +101,48 @@ const handleContext = (payload) => {
             detail: {
                 summary,
                 meta,
+                receivedAt: state.receivedAt,
             },
         }),
     );
 
     logContext('Context received', summary, meta);
-    persistContext(payload);
+};
+
+const attachContextToLivewireRequests = () => {
+    if (!window.Livewire || typeof window.Livewire.hook !== 'function') {
+        return;
+    }
+
+    window.Livewire.hook('request', ({ options }) => {
+        if (!state.summary && !state.raw) {
+            return;
+        }
+
+        let body;
+
+        try {
+            body = JSON.parse(options.body ?? '{}');
+        } catch (error) {
+            console.warn('[Chatwoot] Unable to attach context to Livewire request payload', error);
+            return;
+        }
+
+        body.chatwoot_context = {
+            summary: state.summary ?? {},
+            raw: state.raw ?? {},
+            meta: state.meta ?? {},
+            received_at: state.receivedAt ?? new Date().toISOString(),
+        };
+
+        options.body = JSON.stringify(body);
+    });
+
+    window.Livewire.hook('commit', ({ succeed }) => {
+        succeed(() => {
+            logContext('Livewire request context', state.summary);
+        });
+    });
 };
 
 window.addEventListener(
@@ -160,18 +168,6 @@ window.addEventListener(
     false,
 );
 
-const registerLivewireHooks = () => {
-    if (!window.Livewire || typeof window.Livewire.hook !== 'function') {
-        return;
-    }
-
-    window.Livewire.hook('commit', ({ succeed }) => {
-        succeed(() => {
-            logContext('Livewire request context', state.summary);
-        });
-    });
-};
-
-document.addEventListener('livewire:init', registerLivewireHooks);
+document.addEventListener('livewire:init', attachContextToLivewireRequests);
 
 export {}; // ensure module scope
