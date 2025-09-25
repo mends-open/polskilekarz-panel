@@ -16,10 +16,6 @@ return Application::configure(basePath: dirname(__DIR__))
             'stripe/events',
             'cloudflare/link-clicks',
         ]);
-
-        $middleware->appendToGroup('web', [
-            \App\Http\Middleware\CaptureChatwootDashboardContext::class,
-        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

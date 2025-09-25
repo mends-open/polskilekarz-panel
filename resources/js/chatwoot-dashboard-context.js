@@ -7,6 +7,18 @@ const state = {
     receivedAt: null,
 };
 
+const dispatchLivewireEvent = (eventName, detail = {}) => {
+    if (!window.Livewire || typeof window.Livewire.dispatch !== 'function') {
+        return;
+    }
+
+    try {
+        window.Livewire.dispatch(eventName, detail);
+    } catch (error) {
+        console.warn('[Chatwoot] Unable to dispatch Livewire event', eventName, error);
+    }
+};
+
 const normalizeContext = (payload) => {
     const conversation = payload?.conversation ?? {};
     const contact = payload?.contact ?? {};
@@ -107,6 +119,12 @@ const handleContext = (payload) => {
     );
 
     logContext('Context received', summary, meta);
+
+    dispatchLivewireEvent('chatwoot-context::updated', {
+        summary,
+        meta,
+        receivedAt: state.receivedAt,
+    });
 };
 
 const buildContextPayload = () => ({
@@ -158,6 +176,12 @@ const attachContextToLivewireRequests = () => {
     window.Livewire.hook('commit', ({ succeed }) => {
         succeed(() => {
             logContext('Livewire request context', state.summary);
+
+            dispatchLivewireEvent('chatwoot-context::logged', {
+                summary: state.summary,
+                meta: state.meta,
+                receivedAt: state.receivedAt,
+            });
         });
     });
 
