@@ -2,7 +2,6 @@
 
 namespace App\Services\Chatwoot\Concerns;
 
-use BadMethodCallException;
 use RuntimeException;
 
 trait HandlesResources
@@ -17,7 +16,7 @@ trait HandlesResources
      */
     abstract protected function resources(): array;
 
-    public function __get(string $name): object
+    protected function resolveResource(string $name): object
     {
         $resources = $this->resources();
 
@@ -31,19 +30,5 @@ trait HandlesResources
         }
 
         return $this->resolvedResources[$name];
-    }
-
-    public function __call(string $name, array $arguments): object
-    {
-        if ($arguments === []) {
-            return $this->__get($name);
-        }
-
-        throw new BadMethodCallException(sprintf('Chatwoot resource [%s] does not accept arguments.', $name));
-    }
-
-    public function __isset(string $name): bool
-    {
-        return array_key_exists($name, $this->resources());
     }
 }

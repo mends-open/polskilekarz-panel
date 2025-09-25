@@ -37,6 +37,30 @@ class Application extends Service
         ];
     }
 
+    public function messages(): Messages
+    {
+        /** @var Messages $messages */
+        $messages = $this->resolveResource('messages');
+
+        return $messages;
+    }
+
+    public function contacts(): Contacts
+    {
+        /** @var Contacts $contacts */
+        $contacts = $this->resolveResource('contacts');
+
+        return $contacts;
+    }
+
+    public function conversations(): Conversations
+    {
+        /** @var Conversations $conversations */
+        $conversations = $this->resolveResource('conversations');
+
+        return $conversations;
+    }
+
     protected function resolveAuthToken(?string $authToken): string
     {
         if (is_string($authToken) && $authToken !== '') {
