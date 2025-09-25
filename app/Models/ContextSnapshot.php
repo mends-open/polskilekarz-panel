@@ -9,19 +9,28 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 
-class ChatwootContext extends Model
+class ContextSnapshot extends Model
 {
     use AutomaticDateFormat, HasFactory, SoftDeletes, ValidatesAttributes;
 
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
         'contextable_id',
         'contextable_type',
-        'chatwoot_account_id',
-        'chatwoot_inbox_id',
-        'chatwoot_conversation_id',
-        'chatwoot_contact_id',
-        'chatwoot_user_id',
-        'chatwoot_message_id',
+        'snapshot',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'snapshot' => 'array',
     ];
 
     public function contextable(): MorphTo
@@ -34,12 +43,7 @@ class ChatwootContext extends Model
         return [
             'contextable_id' => ['required', 'integer'],
             'contextable_type' => ['required', 'integer'],
-            'chatwoot_account_id' => ['required', 'integer'],
-            'chatwoot_inbox_id' => ['required', 'integer'],
-            'chatwoot_conversation_id' => ['required', 'integer'],
-            'chatwoot_contact_id' => ['required', 'integer'],
-            'chatwoot_user_id' => ['required', 'integer'],
-            'chatwoot_message_id' => ['required', 'integer'],
+            'snapshot' => ['required', 'array'],
         ];
     }
 }

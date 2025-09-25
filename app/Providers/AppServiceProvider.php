@@ -2,7 +2,7 @@
 
 namespace App\Providers;
 
-use App\Models\ChatwootContext;
+use App\Models\ContextSnapshot;
 use App\Models\CloudflareLink;
 use App\Models\Document;
 use App\Models\DocumentEntry;
@@ -70,7 +70,7 @@ class AppServiceProvider extends ServiceProvider
             13 => Media::class,
             14 => EmaSubstance::class,
             15 => EmaProduct::class,
-            16 => ChatwootContext::class,
+            16 => ContextSnapshot::class,
             17 => CloudflareLink::class,
             18 => StripeEvent::class,
         ]);
