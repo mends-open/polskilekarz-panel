@@ -56,6 +56,7 @@ return [
             'namespace_id' => env('CLOUDFLARE_LINKS_NAMESPACE_ID'),
             'domain' => env('CLOUDFLARE_LINKS_DOMAIN'),
             'slug_length' => env('CLOUDFLARE_LINKS_SLUG_LENGTH', 8),
+            'logs_namespace_id' => env('CLOUDFLARE_LINKS_LOGS_NAMESPACE_ID'),
         ],
     ],
 
