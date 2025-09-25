@@ -50,11 +50,6 @@ class CloudflareClient
         return new LinkShortener($this);
     }
 
-    public function links(): LinkShortener
-    {
-        return $this->shortener();
-    }
-
     public function endpoint(): string
     {
         return $this->endpoint;

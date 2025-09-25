@@ -50,10 +50,3 @@ if (! function_exists('cloudflareShortener')) {
     }
 }
 
-if (! function_exists('cloudflareLinks')) {
-    function cloudflareLinks(): LinkShortener
-    {
-        return cloudflareShortener();
-    }
-}
-
