@@ -3,8 +3,6 @@
 namespace App\Services\Chatwoot;
 
 use Illuminate\Http\Client\Factory;
-use RuntimeException;
-
 class ChatwootClient extends Service
 {
     public function __construct(Factory $http, ?string $endpoint = null)
@@ -22,12 +20,4 @@ class ChatwootClient extends Service
         return new Application($accessToken, $this->http, $this->endpoint);
     }
 
-    public function __get(string $name): Service
-    {
-        if (! method_exists($this, $name)) {
-            throw new RuntimeException(sprintf('Chatwoot entrypoint [%s] is not defined.', $name));
-        }
-
-        return $this->{$name}();
-    }
 }

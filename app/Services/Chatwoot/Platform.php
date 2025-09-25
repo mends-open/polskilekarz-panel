@@ -2,6 +2,7 @@
 
 namespace App\Services\Chatwoot;
 
+use App\Services\Chatwoot\Application;
 use App\Services\Chatwoot\Concerns\HandlesResources;
 use App\Services\Chatwoot\Resources\Platform\AccountUsers;
 use App\Services\Chatwoot\Resources\Platform\Accounts;
@@ -32,7 +33,7 @@ class Platform extends Service
      */
     public function getUser(int $accountId, int $userId): array
     {
-        return $this->users->get($userId, $accountId);
+        return $this->users()->get($userId, $accountId);
     }
 
     /**
@@ -42,7 +43,7 @@ class Platform extends Service
     public function impersonate(int $userId, ?int $accountId = null): Application
     {
         $user = $accountId === null
-            ? $this->users->get($userId)
+            ? $this->users()->get($userId)
             : $this->getUser($accountId, $userId);
 
         $authToken = $this->extractAuthToken($user);
@@ -129,5 +130,29 @@ class Platform extends Service
             'accountUsers' => AccountUsers::class,
             'users' => Users::class,
         ];
+    }
+
+    public function accounts(): Accounts
+    {
+        /** @var Accounts $accounts */
+        $accounts = $this->resolveResource('accounts');
+
+        return $accounts;
+    }
+
+    public function accountUsers(): AccountUsers
+    {
+        /** @var AccountUsers $accountUsers */
+        $accountUsers = $this->resolveResource('accountUsers');
+
+        return $accountUsers;
+    }
+
+    public function users(): Users
+    {
+        /** @var Users $users */
+        $users = $this->resolveResource('users');
+
+        return $users;
     }
 }
