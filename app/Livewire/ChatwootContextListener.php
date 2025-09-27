@@ -34,6 +34,8 @@ class ChatwootContextListener extends Component
         $chatwootContext = [
             'account_id' => $data['conversation']['account_id'] ?? null,
             'conversation_id' => $data['conversation']['id'] ?? null,
+            'sender_id' => $data['conversation']['meta']['sender']['id'] ?? null,
+            'sender_type' => $data['conversation']['meta']['sender']['type'] ?? null,
             'last_message_id' => $lastMessageId ?? null,
             'contact_id' => $data['contact']['id'] ?? null,
             'user_id' => $data['currentAgent']['id'] ?? null,
