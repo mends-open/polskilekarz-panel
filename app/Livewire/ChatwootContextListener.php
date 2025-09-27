@@ -12,6 +12,10 @@ use Livewire\Component;
 
 class ChatwootContextListener extends Component
 {
+    private const EVENT_REQUEST_CONTEXT = 'chatwoot.get-context';
+
+    private const EVENT_RECEIVE_CONTEXT = 'chatwoot.post-context';
+
     public function render(): View
     {
         return view('livewire.chatwoot-context-listener');
@@ -19,15 +23,17 @@ class ChatwootContextListener extends Component
 
     public function mount(): void
     {
-        $this->dispatch('chatwoot.get-context');
+        $this->dispatch(self::EVENT_REQUEST_CONTEXT);
     }
 
-    #[On('chatwoot.post-context')]
-    public function capture(array $payload = []): void
+    #[On(self::EVENT_RECEIVE_CONTEXT)]
+    public function capture(?array $payload = null): void
     {
         $context = $this->extractContext($payload);
 
         if ($context === null) {
+            Log::debug('Chatwoot context payload missing required conversation identifiers.');
+
             return;
         }
 
@@ -45,13 +51,15 @@ class ChatwootContextListener extends Component
         ]));
     }
 
-    private function extractContext(array $payload): ?array
+    private function extractContext(?array $payload): ?array
     {
+        if (! is_array($payload)) {
+            return null;
+        }
+
         $conversation = data_get($payload, 'conversation');
 
         if (! is_array($conversation) || ! isset($conversation['id'], $conversation['account_id'])) {
-            Log::debug('Chatwoot context payload missing required conversation identifiers.');
-
             return null;
         }
 

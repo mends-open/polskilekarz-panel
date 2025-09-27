@@ -1,40 +1,48 @@
 @script
 <script>
     const CHATWOOT_FETCH_EVENT = 'chatwoot-dashboard-app:fetch-info';
+    const CHATWOOT_CONTEXT_EVENT = 'appContext';
     const isEmbeddedInChatwoot = window.parent && window.parent !== window;
+
+    const parseMessage = (raw) => {
+        if (typeof raw === 'string') {
+            try {
+                return JSON.parse(raw);
+            } catch (error) {
+                console.error('Failed to parse Chatwoot message payload.', error);
+
+                return null;
+            }
+        }
+
+        if (raw && typeof raw === 'object') {
+            return raw;
+        }
+
+        return null;
+    };
 
     if (! isEmbeddedInChatwoot) {
         console.warn('Chatwoot context listener loaded outside an embed. Skipping.');
-
-        return;
-    }
-
-    // Listen for messages from the Chatwoot iframe
-    window.addEventListener('message', function (event) {
-        if (! event || typeof event.data === 'undefined') {
-            return;
-        }
-
-        try {
-            const payload = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-
-            if (! payload || typeof payload !== 'object') {
+    } else {
+        window.addEventListener('message', (event) => {
+            if (event.source !== window.parent || typeof event.data === 'undefined') {
                 return;
             }
 
-            // Forward the raw data payload to the Livewire backend
-            $wire.dispatch('chatwoot.post-context', payload);
-        } catch (error) {
-            console.error('Failed to parse Chatwoot message payload.', error);
-        }
-    });
+            const payload = parseMessage(event.data);
 
-    // When the backend triggers a context request
-    $wire.on('chatwoot.get-context', () => {
-        // Ask the parent (Chatwoot dashboard) for the full context object
-        // Replace '*' with the expected origin for better security
-        window.parent.postMessage(CHATWOOT_FETCH_EVENT, '*');
-    });
+            if (! payload || payload.event !== CHATWOOT_CONTEXT_EVENT || typeof payload.data !== 'object') {
+                return;
+            }
+
+            $wire.dispatch('chatwoot.post-context', payload.data);
+        });
+
+        $wire.on('chatwoot.get-context', () => {
+            window.parent.postMessage({ event: CHATWOOT_FETCH_EVENT }, '*');
+        });
+    }
 </script>
 @endscript
 <div></div>
