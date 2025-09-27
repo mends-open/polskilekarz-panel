@@ -17,7 +17,7 @@ use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 class User extends Authenticatable implements HasMedia
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, InteractsWithMedia, Notifiable, SoftDeletes, ValidatesAttributes, AutomaticDateFormat;
+    use AutomaticDateFormat, HasFactory, InteractsWithMedia, Notifiable, SoftDeletes, ValidatesAttributes;
 
     /**
      * The attributes that are mass assignable.

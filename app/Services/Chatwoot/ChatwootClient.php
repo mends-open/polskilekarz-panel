@@ -3,6 +3,7 @@
 namespace App\Services\Chatwoot;
 
 use Illuminate\Http\Client\Factory;
+
 class ChatwootClient extends Service
 {
     public function __construct(Factory $http, ?string $endpoint = null)
@@ -19,5 +20,4 @@ class ChatwootClient extends Service
     {
         return new Application($accessToken, $this->http, $this->endpoint);
     }
-
 }

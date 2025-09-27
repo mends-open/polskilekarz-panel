@@ -17,15 +17,14 @@ class ImportProducts implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public function __construct(public string $path)
-    {
-    }
+    public function __construct(public string $path) {}
 
     public function handle(): void
     {
         $handle = fopen($this->path, 'r');
-        if (!$handle) {
+        if (! $handle) {
             Log::warning('Unable to open EMA chunk for import', ['path' => $this->path]);
+
             return;
         }
 
@@ -42,7 +41,7 @@ class ImportProducts implements ShouldQueue
             }
 
             $country = Country::tryFromName($countryName ?? '');
-            if (!$country) {
+            if (! $country) {
                 continue;
             }
             $countryValue = $country->value;
@@ -92,7 +91,7 @@ class ImportProducts implements ShouldQueue
 
         foreach ($existing as $record) {
             $key = $record->ema_substance_id.'|'.mb_strtolower($record->name);
-            if (!isset($products[$key])) {
+            if (! isset($products[$key])) {
                 continue;
             }
 
@@ -108,8 +107,9 @@ class ImportProducts implements ShouldQueue
 
         foreach (array_chunk($products, 500, true) as $chunk) {
             $records = array_map(function ($product) {
-                $model = new EmaProduct();
+                $model = new EmaProduct;
                 $model->forceFill($product);
+
                 return $model->getAttributes();
             }, $chunk);
 

@@ -16,8 +16,7 @@ class KVNamespace
         protected string $accountId,
         protected string $namespaceId,
         protected ?string $defaultDomain = null,
-    ) {
-    }
+    ) {}
 
     public function create(string $key, string $value, array $headers = []): KVResult
     {
@@ -88,7 +87,7 @@ class KVNamespace
             throw new InvalidArgumentException('Short link domain is not configured.');
         }
 
-        return rtrim($domain, '/') . '/' . $key;
+        return rtrim($domain, '/').'/'.$key;
     }
 
     protected function baseRequest(): PendingRequest

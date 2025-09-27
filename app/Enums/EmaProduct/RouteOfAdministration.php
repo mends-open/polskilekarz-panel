@@ -150,7 +150,7 @@ enum RouteOfAdministration: int implements HasLabel
 
     public function getLabel(): ?string
     {
-        return __('ema_product.route_of_administration.' . $this->value);
+        return __('ema_product.route_of_administration.'.$this->value);
     }
 
     public static function labels(): array

@@ -3,8 +3,8 @@
 namespace Database\Factories;
 
 use App\Enums\Entry\Type as EntryType;
-use App\Models\Entry;
 use App\Models\Entity;
+use App\Models\Entry;
 use App\Models\Patient;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;

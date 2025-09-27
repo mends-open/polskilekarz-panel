@@ -10,15 +10,12 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use App\Jobs\Ema\ConvertProductsToCsv;
 
 class DownloadProducts implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public function __construct(public ?string $endpoint = null)
-    {
-    }
+    public function __construct(public ?string $endpoint = null) {}
 
     public function handle(): void
     {

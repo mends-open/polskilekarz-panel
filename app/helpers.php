@@ -9,8 +9,6 @@ use Stripe\StripeClient;
 if (! function_exists('stripe')) {
     /**
      * Get the Stripe client.
-     *
-     * @return StripeClient
      */
     function stripe(): StripeClient
     {
@@ -49,4 +47,3 @@ if (! function_exists('cloudflareShortener')) {
         return cloudflare()->shortener();
     }
 }
-

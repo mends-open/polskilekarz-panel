@@ -10,7 +10,7 @@ use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\Request;
 
 it('retrieves a user by id from the Chatwoot platform API', function () {
-    $http = new Factory();
+    $http = new Factory;
 
     $http->fake([
         'https://chatwoot.test/platform/api/v1/users/2' => Factory::response([
@@ -42,7 +42,7 @@ it('retrieves a user by id from the Chatwoot platform API', function () {
 });
 
 it('impersonates a user using the embedded access token', function () {
-    $http = new Factory();
+    $http = new Factory;
 
     $http->fake([
         'https://chatwoot.test/platform/api/v1/users/42' => Factory::response([
@@ -69,7 +69,7 @@ it('impersonates a user using the embedded access token', function () {
 });
 
 it('sends a message using the access token embedded in the user payload', function () {
-    $http = new Factory();
+    $http = new Factory;
 
     $http->fake(function (Request $request) {
         if ($request->url() === 'https://chatwoot.test/platform/api/v1/users/15') {
@@ -113,7 +113,7 @@ it('sends a message using the access token embedded in the user payload', functi
 });
 
 it('throws when the user payload does not contain an access token and no fallback is configured', function () {
-    $http = new Factory();
+    $http = new Factory;
 
     $http->fake([
         'https://chatwoot.test/platform/api/v1/users/2' => Factory::response([
@@ -132,7 +132,7 @@ it('throws when the user payload does not contain an access token and no fallbac
 
 it('falls back to the configured access token when the user payload does not include one', function () {
     $originalContainer = Container::getInstance();
-    $container = new Container();
+    $container = new Container;
     Container::setInstance($container);
 
     try {
@@ -146,7 +146,7 @@ it('falls back to the configured access token when the user payload does not inc
             ],
         ]));
 
-        $http = new Factory();
+        $http = new Factory;
 
         $http->fake(function (Request $request) {
             if ($request->url() === 'https://chatwoot.test/platform/api/v1/users/2') {
@@ -184,7 +184,7 @@ it('falls back to the configured access token when the user payload does not inc
 
 it('throws when the platform access token is missing', function () {
     $originalContainer = Container::getInstance();
-    $container = new Container();
+    $container = new Container;
     Container::setInstance($container);
 
     try {
@@ -197,7 +197,7 @@ it('throws when the platform access token is missing', function () {
             ],
         ]));
 
-        $http = new Factory();
+        $http = new Factory;
 
         expect(fn () => new Platform($http))->toThrow(\RuntimeException::class, 'platform access token');
     } finally {
@@ -206,7 +206,7 @@ it('throws when the platform access token is missing', function () {
 });
 
 it('lists account users through the platform resource', function () {
-    $http = new Factory();
+    $http = new Factory;
 
     $http->fake([
         'https://chatwoot.test/platform/api/v1/accounts/3/account_users' => Factory::response([
@@ -229,7 +229,7 @@ it('lists account users through the platform resource', function () {
 });
 
 it('creates a contact through the application resource', function () {
-    $http = new Factory();
+    $http = new Factory;
 
     $http->fake([
         'https://chatwoot.test/api/v1/accounts/4/contacts' => Factory::response([

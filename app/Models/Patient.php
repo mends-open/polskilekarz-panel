@@ -12,7 +12,7 @@ use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 
 class Patient extends Model
 {
-    use HasFactory, SoftDeletes, ValidatesAttributes, AutomaticDateFormat;
+    use AutomaticDateFormat, HasFactory, SoftDeletes, ValidatesAttributes;
 
     protected $fillable = [
         'first_name',

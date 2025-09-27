@@ -77,7 +77,7 @@ class LinkShortener
 
     public function buildShortLink(string $slug): string
     {
-        return rtrim($this->domain, '/') . '/' . $slug;
+        return rtrim($this->domain, '/').'/'.$slug;
     }
 
     public function entries(string $slug, ?string $url = null): array
@@ -125,7 +125,7 @@ class LinkShortener
      */
     protected function collectEntryRecords(KVNamespace $kv, string $slug): array
     {
-        $keys = $kv->listKeys(['prefix' => $slug . ':']);
+        $keys = $kv->listKeys(['prefix' => $slug.':']);
 
         if ($keys === []) {
             return [[], 0];
@@ -168,7 +168,7 @@ class LinkShortener
                 continue;
             }
 
-            $entry =& $entries[$index];
+            $entry = &$entries[$index];
 
             if (! isset($entry)) {
                 $entry = [
@@ -210,7 +210,7 @@ class LinkShortener
     }
 
     /**
-     * @param array<int, string> $path
+     * @param  array<int, string>  $path
      */
     protected function assignEntryValue(array &$entry, array $path, mixed $value): void
     {
@@ -249,7 +249,7 @@ class LinkShortener
 
     protected function entryCounterKey(string $slug): string
     {
-        return $slug . ':counter';
+        return $slug.':counter';
     }
 
     protected function sortEntryRecords(array &$entries): void
@@ -302,7 +302,7 @@ class LinkShortener
      */
     protected function extractEntrySegments(string $slug, string $name): ?array
     {
-        $prefix = $slug . ':';
+        $prefix = $slug.':';
 
         if (! str_starts_with($name, $prefix)) {
             return null;

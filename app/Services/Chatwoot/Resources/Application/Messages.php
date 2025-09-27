@@ -10,9 +10,7 @@ use Illuminate\Http\Client\RequestException;
 
 class Messages extends Resource
 {
-    public function __construct(private readonly Application $application)
-    {
-    }
+    public function __construct(private readonly Application $application) {}
 
     /**
      * @throws RequestException

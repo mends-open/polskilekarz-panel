@@ -18,14 +18,15 @@ use App\Models\Media;
 use App\Models\Patient;
 use App\Models\PatientPhone;
 use App\Models\Phone;
-use App\Models\Submission;
 use App\Models\StripeEvent;
+use App\Models\Submission;
 use App\Models\User;
 use App\Services\Chatwoot\ChatwootClient;
 use App\Services\Cloudflare\CloudflareClient;
 use App\Services\Cloudflare\LinkShortener;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Client\Factory as HttpFactory;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -53,6 +54,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        URL::forceScheme('https');
+
         Relation::enforceMorphMap([
             0 => User::class,
             1 => Entity::class,

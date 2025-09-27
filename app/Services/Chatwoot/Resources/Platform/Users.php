@@ -11,9 +11,7 @@ use RuntimeException;
 
 class Users extends Resource
 {
-    public function __construct(private readonly Platform $platform)
-    {
-    }
+    public function __construct(private readonly Platform $platform) {}
 
     /**
      * @throws RequestException

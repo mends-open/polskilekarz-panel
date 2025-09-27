@@ -11,8 +11,7 @@ class KVResult
         protected string $key,
         protected Response $response,
         protected ?string $defaultDomain = null,
-    ) {
-    }
+    ) {}
 
     public function key(): string
     {
@@ -57,6 +56,6 @@ class KVResult
             throw new InvalidArgumentException('Short link domain is not configured.');
         }
 
-        return rtrim($domain, '/') . '/' . $this->key;
+        return rtrim($domain, '/').'/'.$this->key;
     }
 }
