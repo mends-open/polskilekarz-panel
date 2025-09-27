@@ -23,15 +23,11 @@ class ChatwootContextListener extends Component
     }
 
     #[On('chatwoot.post-context')]
-    public function capture(array $payload): void
+    public function capture(array $payload = []): void
     {
         $context = $this->extractContext($payload);
 
         if ($context === null) {
-            Log::warning('Chatwoot context payload is missing required conversation data.', [
-                'payload_keys' => array_keys($payload),
-            ]);
-
             return;
         }
 
@@ -51,42 +47,27 @@ class ChatwootContextListener extends Component
 
     private function extractContext(array $payload): ?array
     {
-        $validator = validator($payload, [
-            'conversation' => ['required', 'array'],
-            'conversation.id' => ['required', 'integer'],
-            'conversation.account_id' => ['required', 'integer'],
-            'conversation.inbox_id' => ['nullable', 'integer'],
-            'conversation.meta.sender.id' => ['nullable', 'integer'],
-            'conversation.meta.sender.type' => ['nullable', 'string'],
-            'conversation.last_non_activity_message.id' => ['nullable', 'integer'],
-            'conversation.messages' => ['nullable', 'array'],
-            'conversation.messages.*.id' => ['integer'],
-            'contact.id' => ['nullable', 'integer'],
-            'currentAgent.id' => ['nullable', 'integer'],
-        ]);
+        $conversation = data_get($payload, 'conversation');
 
-        if ($validator->fails()) {
-            Log::debug('Chatwoot context payload validation failed.', [
-                'errors' => $validator->errors()->all(),
-            ]);
+        if (! is_array($conversation) || ! isset($conversation['id'], $conversation['account_id'])) {
+            Log::debug('Chatwoot context payload missing required conversation identifiers.');
 
             return null;
         }
 
-        $messages = Arr::wrap(data_get($payload, 'conversation.messages', []));
+        $messages = Arr::wrap($conversation['messages'] ?? []);
 
-        $lastMessageId = data_get($payload, 'conversation.last_non_activity_message.id');
+        $lastMessageId = data_get($conversation, 'last_non_activity_message.id');
         if ($lastMessageId === null && $messages !== []) {
-            $lastMessage = Arr::last($messages) ?? [];
-            $lastMessageId = $lastMessage['id'] ?? null;
+            $lastMessageId = data_get(Arr::last($messages), 'id');
         }
 
         return array_filter([
-            'account_id' => data_get($payload, 'conversation.account_id'),
-            'inbox_id' => data_get($payload, 'conversation.inbox_id'),
-            'conversation_id' => data_get($payload, 'conversation.id'),
-            'sender_id' => data_get($payload, 'conversation.meta.sender.id'),
-            'sender_type' => data_get($payload, 'conversation.meta.sender.type'),
+            'account_id' => $conversation['account_id'],
+            'inbox_id' => $conversation['inbox_id'] ?? null,
+            'conversation_id' => $conversation['id'],
+            'sender_id' => data_get($conversation, 'meta.sender.id'),
+            'sender_type' => data_get($conversation, 'meta.sender.type'),
             'last_message_id' => $lastMessageId,
             'contact_id' => data_get($payload, 'contact.id'),
             'user_id' => data_get($payload, 'currentAgent.id'),
