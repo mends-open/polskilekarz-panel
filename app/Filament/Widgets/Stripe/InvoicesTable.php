@@ -6,6 +6,7 @@ use App\Jobs\Chatwoot\CreateInvoiceShortLink;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Notifications\Notification;
+use Filament\Support\Colors\ColorManager;
 use Filament\Support\Enums\FontFamily;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
@@ -61,20 +62,28 @@ class InvoicesTable extends TableWidget
             ])
             ->filters([])
             ->headerActions([
-                Action::make('create'),
+                Action::make('create')
+                    ->icon(Heroicon::OutlinedDocumentPlus)
+                    ->color('success')
+                    ->outlined(),
                 Action::make('duplicateLatest')
+                    ->icon(Heroicon::OutlinedDocumentDuplicate)
+                    ->outlined()
+                    ->color(fn () => $this->getCustomerInvoices() == [] ? 'gray' : 'primary')
                     ->disabled(fn () => $this->getCustomerInvoices() == []),
                 Action::make('sendLatest')
+                    ->outlined()
+                    ->color(fn () => $this->getCustomerInvoices() == [] ? 'gray' : 'primary')
                     ->disabled(fn () => $this->getCustomerInvoices() == []),
             ])
             ->recordActions([
                 Action::make('duplicateInvoice')
                     ->label('Duplicate')
-                    ->icon(Heroicon::OutlinedChevronDoubleUp),
+                    ->icon(Heroicon::OutlinedDocumentDuplicate),
                 Action::make('sendInvoiceShortUrl')
                     ->action(fn ($record) => $this->sendShortUrl($record['hosted_invoice_url']))
                     ->label('Send')
-                    ->icon(Heroicon::OutlinedArrowUpRight)
+                    ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
                     ->requiresConfirmation(),
                 Action::make('openInvoiceUrl')
                     ->url(fn ($record) => $record['hosted_invoice_url'])
