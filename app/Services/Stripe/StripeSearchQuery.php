@@ -1,7 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services\Stripe;
 
+use BadMethodCallException;
+use DateTimeInterface;
+use InvalidArgumentException;
 use Stringable;
 
 final class StripeSearchQuery

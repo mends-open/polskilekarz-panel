@@ -2,7 +2,6 @@
 
 namespace App\Livewire;
 
-use Arr;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Livewire\Attributes\Session;
@@ -55,8 +54,23 @@ class ChatwootContextListener extends Component
     #[On('chatwoot.set-context')]
     public function setStripeContext(): void
     {
+        $contactId = $this->chatwoot['contact_id'] ?? null;
+
+        if ($contactId === null) {
+            $this->stripe = [
+                'customer_id' => null,
+                'previous_customer_ids' => [],
+            ];
+
+            return;
+        }
+
+        $query = stripeSearchQuery()
+            ->metadata('chatwoot_contact_id')
+            ->equals((string) $contactId);
+
         $customers = stripe()->customers->search([
-            'query' => 'metadata["chatwoot_contact_id"]:"' . $this->chatwoot['contact_id'] . '"',
+            'query' => $query->toString(),
         ])->toArray()['data'];
 
         $this->stripe = [
