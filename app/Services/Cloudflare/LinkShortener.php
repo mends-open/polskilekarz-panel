@@ -32,7 +32,7 @@ class LinkShortener
     /**
      * Create a short link.
      */
-    public function shorten(string $rawUrl): array
+    public function shorten(string $rawUrl): string
     {
         $slug = $this->generateSlug();
 
@@ -40,7 +40,7 @@ class LinkShortener
         $result = $kv->createIfAbsent($slug, $rawUrl);
 
         if ($result->conflicted()) {
-            return ['success' => false, 'created' => false];
+            throw new \RuntimeException('Short link already exists');
         }
 
         if ($result->failed()) {
@@ -52,7 +52,7 @@ class LinkShortener
                 'body' => $response->body(),
             ]);
 
-            return ['success' => false, 'created' => false];
+            throw new \RuntimeException('Failed to store Cloudflare short link');
         }
 
         $link = CloudflareLink::create([
@@ -66,13 +66,7 @@ class LinkShortener
             'link_id' => $link->id,
         ]);
 
-        return [
-            'success' => true,
-            'created' => $result->created(),
-            'short_url' => $result->buildShortLink(),
-            'url' => $rawUrl,
-            'link' => $link,
-        ];
+        return $result->buildShortLink();
     }
 
     public function buildShortLink(string $slug): string

@@ -3,7 +3,7 @@
 use App\Services\Chatwoot\ChatwootClient;
 use App\Services\Cloudflare\CloudflareClient;
 use App\Services\Cloudflare\LinkShortener;
-use App\Services\StripeSearchQuery;
+use App\Services\Stripe\StripeSearchQuery;
 use Stripe\StripeClient;
 
 if (! function_exists('stripe')) {
