@@ -84,7 +84,6 @@ class SendInvoiceShortLinkMessage implements ShouldQueue
             ->title($title)
             ->body($body)
             ->status($status)
-            ->sendToDatabase($user, isEventDispatched: true)
             ->broadcast($user);
     }
 

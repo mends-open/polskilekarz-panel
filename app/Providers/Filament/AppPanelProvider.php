@@ -34,7 +34,7 @@ class AppPanelProvider extends PanelProvider
     {
         return $panel
             ->default()
-            ->databaseNotifications()
+            ->broadcasting()
             ->spa()
             ->id('app')
             ->path('')
