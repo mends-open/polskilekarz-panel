@@ -2,9 +2,10 @@
 
 namespace App\Filament\Widgets\Stripe;
 
-use App\Services\Cloudflare\LinkShortener;
+use App\Jobs\Chatwoot\CreateInvoiceShortLink;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
+use Filament\Notifications\Notification;
 use Filament\Support\Enums\FontFamily;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
@@ -92,18 +93,33 @@ class InvoicesTable extends TableWidget
      */
     private function sendShortUrl(string $url): void
     {
-        $shortUrl = app(LinkShortener::class)->shorten($url);
         $account = session()->get('chatwoot.account_id');
         $user = session()->get('chatwoot.current_user_id');
         $conversation = session()->get('chatwoot.conversation_id');
 
-        chatwoot()
-            ->platform()
-            ->impersonate($user)
-            ->messages()
-            ->create($account, $conversation, [
-                'content' => $shortUrl,
-            ]);
+        if (! $account || ! $user || ! $conversation) {
+            Notification::make()
+                ->title('Missing Chatwoot context')
+                ->body('Unable to send the invoice link because the Chatwoot context is incomplete.')
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        CreateInvoiceShortLink::dispatch(
+            url: $url,
+            accountId: $account,
+            conversationId: $conversation,
+            impersonatorId: $user,
+            notifiableId: auth()->id(),
+        );
+
+        Notification::make()
+            ->title('Sending invoice link')
+            ->body('We are preparing the invoice link and will send it to the conversation shortly.')
+            ->info()
+            ->send();
 
     }
 
