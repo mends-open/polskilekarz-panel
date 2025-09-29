@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Models\Concerns\ValidatesAttributes;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -16,7 +17,7 @@ use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 
 class User extends Authenticatable implements HasMedia
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use AutomaticDateFormat, HasFactory, InteractsWithMedia, Notifiable, SoftDeletes, ValidatesAttributes;
 
     /**
