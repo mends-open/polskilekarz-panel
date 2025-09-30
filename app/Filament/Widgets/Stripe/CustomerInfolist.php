@@ -4,6 +4,7 @@ namespace App\Filament\Widgets\Stripe;
 
 use App\Filament\Widgets\BaseWidget;
 use Arr;
+use Filament\Actions\Action;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Concerns\InteractsWithInfolists;
 use Filament\Infolists\Contracts\HasInfolists;
@@ -49,10 +50,17 @@ class CustomerInfolist extends BaseWidget
      */
     public function schema(Schema $schema): Schema
     {
+        $contactReady = session()->has('chatwoot.contact_id');
         return $schema
-            ->record($this->getStripeCustomer())
+            ->state($this->getStripeCustomer())
             ->components([
                 Section::make('customer')
+                    ->headerActions([
+                        Action::make('fetchFromContact')
+                            ->outlined()
+                            ->color($contactReady ? 'primary' : 'gray')
+                            ->disabled(!$contactReady)
+                    ])
                     ->schema([
                         TextEntry::make('id')
                             ->inlineLabel()

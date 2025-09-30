@@ -49,7 +49,7 @@ class ContactInfolist extends BaseWidget
     public function schema(Schema $schema): Schema
     {
         return $schema
-            ->record($this->getChatwootContact())
+            ->state($this->getChatwootContact())
             ->components([
                 Section::make('contact')
                     ->schema([
