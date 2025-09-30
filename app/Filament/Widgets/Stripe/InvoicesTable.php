@@ -74,7 +74,8 @@ class InvoicesTable extends TableWidget
                 Action::make('sendLatest')
                     ->outlined()
                     ->color(fn () => $this->getCustomerInvoices() == [] ? 'gray' : 'primary')
-                    ->disabled(fn () => $this->getCustomerInvoices() == []),
+                    ->disabled(fn () => $this->getCustomerInvoices() == [])
+                    ->action(fn () => $this->sendLatestInvoice()),
             ])
             ->recordActions([
                 Action::make('duplicateInvoice')
@@ -154,5 +155,32 @@ class InvoicesTable extends TableWidget
     public function refreshContext(): void
     {
         $this->resetTable();
+    }
+
+    private function sendLatestInvoice(): void
+    {
+        $invoices = $this->getCustomerInvoices();
+
+        if ($invoices === []) {
+            return;
+        }
+
+        $latest = collect($invoices)
+            ->sortByDesc('created')
+            ->first();
+
+        $invoiceUrl = data_get($latest, 'hosted_invoice_url');
+
+        if (blank($invoiceUrl)) {
+            Notification::make()
+                ->title('Invoice link unavailable')
+                ->body('We could not find a hosted invoice URL on the latest invoice.')
+                ->warning()
+                ->send();
+
+            return;
+        }
+
+        $this->sendShortUrl($invoiceUrl);
     }
 }
