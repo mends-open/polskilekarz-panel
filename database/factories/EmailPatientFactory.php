@@ -21,4 +21,3 @@ class EmailPatientFactory extends Factory
         ];
     }
 }
-

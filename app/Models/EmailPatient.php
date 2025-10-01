@@ -10,7 +10,7 @@ use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 
 class EmailPatient extends Pivot
 {
-    use HasFactory, ValidatesAttributes, AutomaticDateFormat;
+    use AutomaticDateFormat, HasFactory, ValidatesAttributes;
 
     public $incrementing = true;
 

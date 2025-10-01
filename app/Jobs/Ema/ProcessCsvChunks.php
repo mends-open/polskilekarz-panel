@@ -10,7 +10,6 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use App\Jobs\Ema\DeleteFile;
 
 class ProcessCsvChunks implements ShouldQueue
 {
@@ -25,6 +24,7 @@ class ProcessCsvChunks implements ShouldQueue
         if ($files->isEmpty()) {
             $store->deleteDirectory($storage);
             Log::info('EMA CSV chunk processing complete');
+
             return;
         }
 
@@ -36,7 +36,7 @@ class ProcessCsvChunks implements ShouldQueue
         Bus::chain([
             new ImportProducts($path),
             new DeleteFile($disk, $file),
-            new self(),
+            new self,
         ])->dispatch();
     }
 }

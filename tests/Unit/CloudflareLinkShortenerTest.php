@@ -117,7 +117,7 @@ class FakeCloudflareClient extends CloudflareClient
 {
     public function __construct(private array $store, private array $overrides = [])
     {
-        parent::__construct(new Factory());
+        parent::__construct(new Factory);
     }
 
     protected function configuration(): array
@@ -151,7 +151,7 @@ class FakeKVNamespace extends KVNamespace
 {
     public function __construct(private array $store)
     {
-        parent::__construct(new Factory(), 'https://api.cloudflare.test', 'token', 'account', 'entries', null);
+        parent::__construct(new Factory, 'https://api.cloudflare.test', 'token', 'account', 'entries', null);
     }
 
     public function listKeys(array $query = []): array

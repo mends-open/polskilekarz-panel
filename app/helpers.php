@@ -3,14 +3,12 @@
 use App\Services\Chatwoot\ChatwootClient;
 use App\Services\Cloudflare\CloudflareClient;
 use App\Services\Cloudflare\LinkShortener;
-use App\Services\StripeSearchQuery;
+use App\Services\Stripe\StripeSearchQuery;
 use Stripe\StripeClient;
 
 if (! function_exists('stripe')) {
     /**
      * Get the Stripe client.
-     *
-     * @return StripeClient
      */
     function stripe(): StripeClient
     {
@@ -49,4 +47,3 @@ if (! function_exists('cloudflareShortener')) {
         return cloudflare()->shortener();
     }
 }
-

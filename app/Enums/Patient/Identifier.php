@@ -24,7 +24,7 @@ enum Identifier: int implements HasLabel
 
     public function getLabel(): ?string
     {
-        return __('patient.identifier.' . $this->value);
+        return __('patient.identifier.'.$this->value);
     }
 
     public static function labels(): array
@@ -38,4 +38,3 @@ enum Identifier: int implements HasLabel
         return $labels;
     }
 }
-

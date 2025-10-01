@@ -10,9 +10,7 @@ use Illuminate\Http\Client\RequestException;
 
 class AccountUsers extends Resource
 {
-    public function __construct(private readonly Platform $platform)
-    {
-    }
+    public function __construct(private readonly Platform $platform) {}
 
     /**
      * @throws RequestException

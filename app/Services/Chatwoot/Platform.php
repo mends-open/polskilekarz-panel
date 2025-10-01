@@ -2,10 +2,9 @@
 
 namespace App\Services\Chatwoot;
 
-use App\Services\Chatwoot\Application;
 use App\Services\Chatwoot\Concerns\HandlesResources;
-use App\Services\Chatwoot\Resources\Platform\AccountUsers;
 use App\Services\Chatwoot\Resources\Platform\Accounts;
+use App\Services\Chatwoot\Resources\Platform\AccountUsers;
 use App\Services\Chatwoot\Resources\Platform\Users;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory;
@@ -87,7 +86,7 @@ class Platform extends Service
             $this->extractAuthTokenFromSsoLink($payload),
         ];
 
-        return array_find($candidates, fn($candidate) => is_string($candidate) && $candidate !== '');
+        return array_find($candidates, fn ($candidate) => is_string($candidate) && $candidate !== '');
 
     }
 

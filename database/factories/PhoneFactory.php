@@ -16,4 +16,3 @@ class PhoneFactory extends Factory
         ];
     }
 }
-

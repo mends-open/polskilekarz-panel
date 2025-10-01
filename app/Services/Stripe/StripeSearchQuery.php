@@ -2,21 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Services;
+namespace App\Services\Stripe;
 
 use BadMethodCallException;
 use DateTimeInterface;
 use InvalidArgumentException;
 use Stringable;
-
-enum StripeSearchFieldType: string
-{
-    case String = 'string';
-    case Numeric = 'numeric';
-    case Timestamp = 'timestamp';
-    case Boolean = 'boolean';
-    case Unknown = 'unknown';
-}
 
 final class StripeSearchQuery
 {
@@ -293,7 +284,7 @@ final class StripeSearchQuery
     /**
      * Combine the current query with a grouped clause using AND.
      *
-     * @param callable(self): (self|string|void)|string $builder
+     * @param  callable(self): (self|string|void)|string  $builder
      */
     public function andGroup(callable|string $builder): self
     {
@@ -303,7 +294,7 @@ final class StripeSearchQuery
     /**
      * Combine the current query with a grouped clause using OR.
      *
-     * @param callable(self): (self|string|void)|string $builder
+     * @param  callable(self): (self|string|void)|string  $builder
      */
     public function orGroup(callable|string $builder): self
     {
@@ -315,7 +306,7 @@ final class StripeSearchQuery
      */
     public function not(): self
     {
-        $this->expression = '-' . $this->wrapIfNeeded($this->requireExpression());
+        $this->expression = '-'.$this->wrapIfNeeded($this->requireExpression());
 
         return $this;
     }
@@ -325,7 +316,7 @@ final class StripeSearchQuery
      */
     public function grouped(): self
     {
-        $this->expression = '(' . $this->requireExpression() . ')';
+        $this->expression = '('.$this->requireExpression().')';
 
         return $this;
     }
@@ -333,12 +324,12 @@ final class StripeSearchQuery
     /**
      * Build a grouped clause using the provided callback or raw clause.
      *
-     * @param callable(self): (self|string|void)|string $builder
+     * @param  callable(self): (self|string|void)|string  $builder
      */
     public function group(callable|string $builder): string
     {
         if (is_callable($builder)) {
-            $nested = new self();
+            $nested = new self;
             $result = $builder($nested);
 
             if ($result instanceof PendingField) {
@@ -358,7 +349,7 @@ final class StripeSearchQuery
             throw new InvalidArgumentException('Group must contain at least one clause.');
         }
 
-        return '(' . $this->sanitizeClause($clause) . ')';
+        return '('.$this->sanitizeClause($clause).')';
     }
 
     /**
@@ -390,8 +381,7 @@ final class StripeSearchQuery
         string $operator,
         mixed $value,
         StripeSearchFieldType $type = StripeSearchFieldType::Unknown,
-    ): string
-    {
+    ): string {
         $operator = trim($operator);
 
         if (! in_array($operator, $this->allowedOperators($type), true)) {
@@ -418,16 +408,13 @@ final class StripeSearchQuery
     {
         $field = $this->sanitizeField($field);
 
-        if (str_starts_with($field, "metadata[")) {
+        if (str_starts_with($field, 'metadata[')) {
             return sprintf('-%s:null', $field);
         }
 
         return sprintf("%s:'*'", $field);
     }
 
-    /**
-     * @param self|string|PendingField $clause
-     */
     private function combine(string $operator, self|string|PendingField $clause): self
     {
         if ($clause instanceof PendingField) {
@@ -578,7 +565,7 @@ final class StripeSearchQuery
             || str_starts_with($upper, '-')
         ) {
             if (! (str_starts_with($trimmed, '(') && str_ends_with($trimmed, ')'))) {
-                return '(' . $trimmed . ')';
+                return '('.$trimmed.')';
             }
         }
 
@@ -701,7 +688,7 @@ final class StripeSearchQuery
                 return $value;
             }
 
-            return '\'' . str_replace(["\\", "'"], ["\\\\", "\\'"], $value) . '\'';
+            return '\''.str_replace(['\\', "'"], ['\\\\', "\\'"], $value).'\'';
         }
 
         throw new InvalidArgumentException('Unsupported value type provided.');
@@ -715,65 +702,8 @@ final class StripeSearchQuery
             throw new InvalidArgumentException('Metadata key cannot be empty.');
         }
 
-        $escaped = str_replace(["\\", "'"], ["\\\\", "\\'"], $key);
+        $escaped = str_replace(['\\', "'"], ['\\\\', "\\'"], $key);
 
         return "metadata['{$escaped}']";
-    }
-}
-
-final class PendingField
-{
-    public function __construct(
-        private readonly StripeSearchQuery $query,
-        private readonly string $field,
-        private readonly ?string $boolean,
-        private readonly StripeSearchFieldType $type,
-        private bool $resolved = false,
-    ) {
-    }
-
-    public function equals(mixed $value): StripeSearchQuery
-    {
-        return $this->complete($this->query->buildComparison($this->field, ':', $value, $this->type));
-    }
-
-    public function greaterThan(mixed $value): StripeSearchQuery
-    {
-        return $this->complete($this->query->buildComparison($this->field, '>', $value, $this->type));
-    }
-
-    public function greaterThanOrEquals(mixed $value): StripeSearchQuery
-    {
-        return $this->complete($this->query->buildComparison($this->field, '>=', $value, $this->type));
-    }
-
-    public function lessThan(mixed $value): StripeSearchQuery
-    {
-        return $this->complete($this->query->buildComparison($this->field, '<', $value, $this->type));
-    }
-
-    public function lessThanOrEquals(mixed $value): StripeSearchQuery
-    {
-        return $this->complete($this->query->buildComparison($this->field, '<=', $value, $this->type));
-    }
-
-    public function exists(): StripeSearchQuery
-    {
-        return $this->complete($this->query->buildExistence($this->field));
-    }
-
-    public function __toString(): string
-    {
-        throw new BadMethodCallException('Pending field must be resolved with a condition before being cast to a string.');
-    }
-
-    private function complete(string $clause): StripeSearchQuery
-    {
-        if (! $this->resolved) {
-            $this->query->appendClause($clause, $this->boolean);
-            $this->resolved = true;
-        }
-
-        return $this->query;
     }
 }

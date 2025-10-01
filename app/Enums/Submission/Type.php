@@ -12,7 +12,7 @@ enum Type: int implements HasLabel
 
     public function getLabel(): ?string
     {
-        return __('submission.type.' . $this->value);
+        return __('submission.type.'.$this->value);
     }
 
     public static function labels(): array
@@ -26,4 +26,3 @@ enum Type: int implements HasLabel
         return $labels;
     }
 }
-

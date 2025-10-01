@@ -13,7 +13,7 @@ use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 
 class Entity extends Model implements HasMedia
 {
-    use HasFactory, InteractsWithMedia, SoftDeletes, ValidatesAttributes, AutomaticDateFormat;
+    use AutomaticDateFormat, HasFactory, InteractsWithMedia, SoftDeletes, ValidatesAttributes;
 
     protected $fillable = [
         'name',

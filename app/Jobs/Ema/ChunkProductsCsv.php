@@ -25,8 +25,9 @@ class ChunkProductsCsv implements ShouldQueue
         $store = Storage::disk($disk);
         $csvPath = $store->path($this->path);
         $handle = fopen($csvPath, 'r');
-        if (!$handle) {
+        if (! $handle) {
             Log::warning('Unable to open EMA CSV for chunking', ['path' => $csvPath]);
+
             return;
         }
 
