@@ -7,14 +7,12 @@ use BadMethodCallException;
 final class PendingField
 {
     public function __construct(
-        private readonly StripeSearchQuery     $query,
-        private readonly string                $field,
-        private readonly ?string               $boolean,
+        private readonly StripeSearchQuery $query,
+        private readonly string $field,
+        private readonly ?string $boolean,
         private readonly StripeSearchFieldType $type,
-        private bool                           $resolved = false,
-    )
-    {
-    }
+        private bool $resolved = false,
+    ) {}
 
     public function equals(mixed $value): StripeSearchQuery
     {
@@ -53,7 +51,7 @@ final class PendingField
 
     private function complete(string $clause): StripeSearchQuery
     {
-        if (!$this->resolved) {
+        if (! $this->resolved) {
             $this->query->appendClause($clause, $this->boolean);
             $this->resolved = true;
         }

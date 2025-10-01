@@ -4,25 +4,19 @@ namespace App\Filament\Widgets\Stripe;
 
 use App\Filament\Widgets\BaseTableWidget;
 use App\Jobs\Chatwoot\CreateInvoiceShortLink;
+use App\Support\Dashboard\DashboardContext;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
-use Filament\Actions\BulkActionGroup;
 use Filament\Notifications\Notification;
-use Filament\Support\Colors\ColorManager;
-use Filament\Support\Enums\FontFamily;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\Layout\Panel;
 use Filament\Tables\Columns\Layout\Split;
 use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Filament\Widgets\TableWidget;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
-use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
-use Phiki\Phast\Text;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Stripe\Exception\ApiErrorException;
@@ -33,20 +27,22 @@ class InvoicesTable extends BaseTableWidget
 
     protected static ?string $heading = 'Invoices';
 
-    /**
-     * @throws ContainerExceptionInterface
-     * @throws NotFoundExceptionInterface
-     */
+    protected DashboardContext $dashboardContext;
+
+    public function boot(DashboardContext $dashboardContext): void
+    {
+        $this->dashboardContext = $dashboardContext;
+    }
     public function isReady(): bool
     {
-        return session()->get('ready');
+        return $this->dashboardContext->isReady();
     }
+
     #[On('reset')]
     public function resetComponent(): void
     {
         $this->reset();
     }
-
 
     public function table(Table $table): Table
     {
@@ -96,8 +92,8 @@ class InvoicesTable extends BaseTableWidget
                             ->listWithLineBreaks()
                             ->money(fn ($record) => $record['currency'], 100)
                             ->badge(),
-                        ]),
-                    ])->collapsible(),
+                    ]),
+                ])->collapsible(),
             ])
             ->filters([])
             ->headerActions([
@@ -119,7 +115,7 @@ class InvoicesTable extends BaseTableWidget
                     ->action(fn () => $this->reset())
                     ->hiddenLabel()
                     ->icon(Heroicon::OutlinedArrowPath)
-                    ->link()
+                    ->link(),
             ])
             ->recordActions([
                 ActionGroup::make([
@@ -141,17 +137,13 @@ class InvoicesTable extends BaseTableWidget
             ->toolbarActions([]);
     }
 
-    /**
-     * @throws NotFoundExceptionInterface
-     * @throws ContainerExceptionInterface
-     * @throws RequestException
-     * @throws ConnectionException
-     */
     private function sendShortUrl(string $url): void
     {
-        $account = session()->get('chatwoot.account_id');
-        $user = session()->get('chatwoot.current_user_id');
-        $conversation = session()->get('chatwoot.conversation_id');
+        $context = $this->dashboardContext->chatwoot();
+
+        $account = $context->accountId;
+        $user = $context->currentUserId;
+        $conversation = $context->conversationId;
 
         if (! $account || ! $user || ! $conversation) {
             Notification::make()
@@ -186,9 +178,9 @@ class InvoicesTable extends BaseTableWidget
      */
     private function getCustomerInvoices(): array
     {
-        $customerId = session()->get('stripe.customer_id');
+        $customerId = $this->dashboardContext->stripe()->customerId;
 
-        return $customerId ? stripe()->invoices->all(['customer' => $customerId,])->toArray()['data'] : [];
+        return $customerId ? stripe()->invoices->all(['customer' => $customerId])->toArray()['data'] : [];
     }
 
     #[On('stripe.set-context')]

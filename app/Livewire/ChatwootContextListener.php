@@ -2,30 +2,27 @@
 
 namespace App\Livewire;
 
-use App\Filament\Widgets\Chatwoot\ContactInfolist;
-use App\Filament\Widgets\Stripe\CustomerInfolist;
-use App\Filament\Widgets\Stripe\InvoicesTable;
-use App\Filament\Widgets\Stripe\PaymentsTable;
-use Filament\Widgets\Widget;
+use App\Support\Dashboard\ChatwootContext;
+use App\Support\Dashboard\DashboardContext;
+use App\Support\Dashboard\StripeContext;
+use App\Support\Dashboard\StripeCustomerFinder;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
-use Livewire\Attributes\Session;
+use JsonException;
 use Livewire\Attributes\On;
 use Livewire\Component;
-use Psr\Container\ContainerExceptionInterface;
-use Psr\Container\NotFoundExceptionInterface;
 
 class ChatwootContextListener extends Component
 {
-    /**
-     * This property will be automatically persisted
-     * in the session and restored on reload.
-     */
-    #[Session (key: 'chatwoot')]
-    public array $chatwoot = [];
+    protected DashboardContext $dashboardContext;
 
-    #[Session (key: 'stripe')]
-    public array $stripe = [];
+    protected StripeCustomerFinder $stripeCustomerFinder;
+
+    public function boot(DashboardContext $dashboardContext, StripeCustomerFinder $stripeCustomerFinder): void
+    {
+        $this->dashboardContext = $dashboardContext;
+        $this->stripeCustomerFinder = $stripeCustomerFinder;
+    }
 
     public function render(): View
     {
@@ -34,72 +31,61 @@ class ChatwootContextListener extends Component
 
     public function mount(): void
     {
-        session()->put('ready', false);
+        $this->dashboardContext->storeChatwoot(ChatwootContext::empty());
+        $this->dashboardContext->storeStripe(StripeContext::empty());
+        $this->dashboardContext->markReady(false);
     }
 
     #[On('chatwoot.post-context')]
     public function setChatwootContext($data): void
     {
-        $context = is_string($data) ? json_decode($data, true) : (array) $data;
+        try {
+            $payload = is_string($data)
+                ? json_decode($data, true, 512, JSON_THROW_ON_ERROR)
+                : (array) $data;
+        } catch (JsonException $exception) {
+            Log::warning('Failed to decode Chatwoot context payload', [
+                'exception' => $exception->getMessage(),
+                'payload' => $data,
+            ]);
 
-        $this->chatwoot = [
-            'account_id' => $context['conversation']['account_id'] ?? null,
-            'conversation_id' => $context['conversation']['id'] ?? null,
-            'inbox_id' => $context['conversation']['inbox_id'] ?? null,
-            'contact_id' => $context['contact']['id'] ?? null,
-            'assigned_user_id' => $context['conversation']['meta']['assignee']['id'] ?? null,
-            'current_user_id' => $context['currentAgent']['id'] ?? null,
-        ];
-        Log::info('chatwoot context set', $this->chatwoot);
-        $this->setStripeContext();
+            $payload = [];
+        }
+
+        $chatwootContext = ChatwootContext::fromPayload($payload);
+
+        $this->dashboardContext->storeChatwoot($chatwootContext);
+
+        Log::info('chatwoot context set', $chatwootContext->toArray());
+
+        $this->synchroniseStripeContext($chatwootContext);
     }
 
-    public function setStripeContext(): void
+    protected function synchroniseStripeContext(ChatwootContext $chatwootContext): void
     {
-        $contactId = $this->chatwoot['contact_id'] ?? null;
-
-        if ($contactId === null) {
-            $this->stripe = [
-                'customer_id' => null,
-                'previous_customer_ids' => [],
-            ];
+        if (! $chatwootContext->hasContact()) {
+            $this->dashboardContext->storeStripe(StripeContext::empty());
+            $this->dashboardContext->markReady(false);
+            $this->dispatch('reset');
 
             return;
         }
 
-        $query = stripeSearchQuery()
-            ->metadata('chatwoot_contact_id')
-            ->equals((string) $contactId);
+        $stripeContext = $this->stripeCustomerFinder->forChatwootContact($chatwootContext->contactId);
 
-        $customers = stripe()->customers->search([
-            'query' => $query->toString(),
-        ])->toArray()['data'];
+        $this->dashboardContext->storeStripe($stripeContext);
+        $this->dashboardContext->markReady();
 
-        $this->stripe = [
-            'customer_id' => $customers[0]['id'] ?? null,
-            'previous_customer_ids' => collect($customers)->pluck('id')->slice(1)->values()->all(),
-        ];
-
-        session()->put('ready', true);
         $this->dispatch('reset');
     }
 
-    /**
-     * @throws ContainerExceptionInterface
-     * @throws NotFoundExceptionInterface
-     */
     public static function getContext(): array
     {
-        // This works because Livewire stores the property in session
-        return session()->get('chatwoot', []);
+        return app(DashboardContext::class)->chatwoot()->toArray();
     }
 
-    /**
-     * @throws ContainerExceptionInterface
-     * @throws NotFoundExceptionInterface
-     */
     public static function hasContext(): bool
     {
-        return ! empty(self::getContext());
+        return ! app(DashboardContext::class)->chatwoot()->isEmpty();
     }
 }

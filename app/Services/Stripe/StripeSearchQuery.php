@@ -284,7 +284,7 @@ final class StripeSearchQuery
     /**
      * Combine the current query with a grouped clause using AND.
      *
-     * @param callable(self): (self|string|void)|string $builder
+     * @param  callable(self): (self|string|void)|string  $builder
      */
     public function andGroup(callable|string $builder): self
     {
@@ -294,7 +294,7 @@ final class StripeSearchQuery
     /**
      * Combine the current query with a grouped clause using OR.
      *
-     * @param callable(self): (self|string|void)|string $builder
+     * @param  callable(self): (self|string|void)|string  $builder
      */
     public function orGroup(callable|string $builder): self
     {
@@ -306,7 +306,7 @@ final class StripeSearchQuery
      */
     public function not(): self
     {
-        $this->expression = '-' . $this->wrapIfNeeded($this->requireExpression());
+        $this->expression = '-'.$this->wrapIfNeeded($this->requireExpression());
 
         return $this;
     }
@@ -316,7 +316,7 @@ final class StripeSearchQuery
      */
     public function grouped(): self
     {
-        $this->expression = '(' . $this->requireExpression() . ')';
+        $this->expression = '('.$this->requireExpression().')';
 
         return $this;
     }
@@ -324,7 +324,7 @@ final class StripeSearchQuery
     /**
      * Build a grouped clause using the provided callback or raw clause.
      *
-     * @param callable(self): (self|string|void)|string $builder
+     * @param  callable(self): (self|string|void)|string  $builder
      */
     public function group(callable|string $builder): string
     {
@@ -349,7 +349,7 @@ final class StripeSearchQuery
             throw new InvalidArgumentException('Group must contain at least one clause.');
         }
 
-        return '(' . $this->sanitizeClause($clause) . ')';
+        return '('.$this->sanitizeClause($clause).')';
     }
 
     /**
@@ -377,15 +377,14 @@ final class StripeSearchQuery
      * @internal
      */
     public function buildComparison(
-        string                $field,
-        string                $operator,
-        mixed                 $value,
+        string $field,
+        string $operator,
+        mixed $value,
         StripeSearchFieldType $type = StripeSearchFieldType::Unknown,
-    ): string
-    {
+    ): string {
         $operator = trim($operator);
 
-        if (!in_array($operator, $this->allowedOperators($type), true)) {
+        if (! in_array($operator, $this->allowedOperators($type), true)) {
             throw new InvalidArgumentException(sprintf(
                 'Operator "%s" is not supported for %s fields.',
                 $operator,
@@ -489,11 +488,10 @@ final class StripeSearchQuery
     }
 
     private function pendingField(
-        ?string                $operator,
-        string                 $field,
+        ?string $operator,
+        string $field,
         ?StripeSearchFieldType $type = null,
-    ): PendingField
-    {
+    ): PendingField {
         $sanitizedField = $this->sanitizeField($field);
 
         return new PendingField(
@@ -548,7 +546,7 @@ final class StripeSearchQuery
             throw new InvalidArgumentException('Field segment cannot be empty.');
         }
 
-        if (!preg_match('/^[A-Za-z0-9_]+$/', $segment)) {
+        if (! preg_match('/^[A-Za-z0-9_]+$/', $segment)) {
             throw new InvalidArgumentException('Field segment contains invalid characters.');
         }
 
@@ -566,8 +564,8 @@ final class StripeSearchQuery
             || str_starts_with($upper, 'NOT ')
             || str_starts_with($upper, '-')
         ) {
-            if (!(str_starts_with($trimmed, '(') && str_ends_with($trimmed, ')'))) {
-                return '(' . $trimmed . ')';
+            if (! (str_starts_with($trimmed, '(') && str_ends_with($trimmed, ')'))) {
+                return '('.$trimmed.')';
             }
         }
 
@@ -623,7 +621,7 @@ final class StripeSearchQuery
         if (is_string($value) && is_numeric($value)) {
             $numeric = 0 + $value;
 
-            return is_float($numeric) ? (float)$numeric : (int)$numeric;
+            return is_float($numeric) ? (float) $numeric : (int) $numeric;
         }
 
         throw new InvalidArgumentException('Numeric fields require numeric values.');
@@ -640,7 +638,7 @@ final class StripeSearchQuery
         }
 
         if (is_string($value) && ctype_digit($value)) {
-            return (int)$value;
+            return (int) $value;
         }
 
         throw new InvalidArgumentException('Timestamp fields require Unix timestamps or DateTime instances.');
@@ -653,7 +651,7 @@ final class StripeSearchQuery
         }
 
         if ($value instanceof Stringable) {
-            return (string)$value;
+            return (string) $value;
         }
 
         if (is_bool($value)) {
@@ -661,7 +659,7 @@ final class StripeSearchQuery
         }
 
         if (is_int($value) || is_float($value)) {
-            return (string)$value;
+            return (string) $value;
         }
 
         throw new InvalidArgumentException('String fields require scalar or stringable values.');
@@ -674,7 +672,7 @@ final class StripeSearchQuery
         }
 
         if ($value instanceof Stringable) {
-            $value = (string)$value;
+            $value = (string) $value;
         }
 
         if (is_int($value) || is_float($value)) {
@@ -690,7 +688,7 @@ final class StripeSearchQuery
                 return $value;
             }
 
-            return '\'' . str_replace(['\\', "'"], ['\\\\', "\\'"], $value) . '\'';
+            return '\''.str_replace(['\\', "'"], ['\\\\', "\\'"], $value).'\'';
         }
 
         throw new InvalidArgumentException('Unsupported value type provided.');
