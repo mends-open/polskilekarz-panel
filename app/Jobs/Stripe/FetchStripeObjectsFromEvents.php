@@ -81,7 +81,7 @@ class FetchStripeObjectsFromEvents implements ShouldQueue
         try {
             $stripe->request('post', sprintf('%s/%s', $resourceClass::classUrl(), $objectId), [
                 'metadata' => $metadata,
-            ]);
+            ], []);
 
             Log::info('Updated Stripe object metadata to trigger event dispatch', [
                 'object_type' => $this->objectType,
