@@ -4,17 +4,16 @@ namespace App\Support\Dashboard;
 
 use Illuminate\Support\Arr;
 
-class ChatwootContext
+readonly class ChatwootContext
 {
     public function __construct(
-        public readonly ?int $accountId,
-        public readonly ?int $conversationId,
-        public readonly ?int $inboxId,
-        public readonly ?int $contactId,
-        public readonly ?int $assignedUserId,
-        public readonly ?int $currentUserId,
-    ) {
-    }
+        public ?int $accountId,
+        public ?int $conversationId,
+        public ?int $inboxId,
+        public ?int $contactId,
+        public ?int $assignedUserId,
+        public ?int $currentUserId,
+    ) {}
 
     public static function empty(): self
     {

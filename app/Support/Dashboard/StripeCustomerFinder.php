@@ -4,11 +4,9 @@ namespace App\Support\Dashboard;
 
 use Stripe\StripeClient;
 
-class StripeCustomerFinder
+readonly class StripeCustomerFinder
 {
-    public function __construct(private readonly StripeClient $stripe)
-    {
-    }
+    public function __construct(private StripeClient $stripe) {}
 
     public function forChatwootContact(?int $contactId): StripeContext
     {

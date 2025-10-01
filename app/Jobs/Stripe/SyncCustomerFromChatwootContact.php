@@ -24,8 +24,7 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
         public readonly int|string $impersonatorId,
         public readonly string $customerId,
         public readonly ?int $notifiableId,
-    ) {
-    }
+    ) {}
 
     public function handle(): void
     {

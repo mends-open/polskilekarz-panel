@@ -18,7 +18,6 @@ use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Stripe\Exception\ApiErrorException;
 
-
 class CustomerInfolist extends BaseSchemaWidget
 {
     protected DashboardContext $dashboardContext;
@@ -36,6 +35,7 @@ class CustomerInfolist extends BaseSchemaWidget
     {
         return $this->dashboardContext->isReady();
     }
+
     #[On('reset')]
     public function resetComponent(): void
     {
@@ -43,9 +43,7 @@ class CustomerInfolist extends BaseSchemaWidget
     }
 
     /**
-     * @throws ContainerExceptionInterface
      * @throws ApiErrorException
-     * @throws NotFoundExceptionInterface
      */
     protected function getStripeCustomer(): array
     {
@@ -59,10 +57,10 @@ class CustomerInfolist extends BaseSchemaWidget
      * @throws ApiErrorException
      * @throws NotFoundExceptionInterface
      */
-
     public function schema(Schema $schema): Schema
     {
         $contactReady = $this->dashboardContext->chatwoot()->hasContact();
+
         return $schema
             ->state($this->getStripeCustomer())
             ->components([
@@ -71,13 +69,13 @@ class CustomerInfolist extends BaseSchemaWidget
                         Action::make('fetchFromContact')
                             ->outlined()
                             ->color($contactReady ? 'primary' : 'gray')
-                            ->disabled(!$contactReady)
+                            ->disabled(! $contactReady)
                             ->action(fn () => $this->syncCustomerFromChatwootContact()),
                         Action::make('reset')
                             ->action(fn () => $this->reset())
                             ->hiddenLabel()
                             ->icon(Heroicon::OutlinedArrowPath)
-                            ->link()
+                            ->link(),
                     ])
                     ->schema([
                         TextEntry::make('id')
@@ -102,7 +100,7 @@ class CustomerInfolist extends BaseSchemaWidget
                             ->inlineLabel()
                             ->badge()
                             ->placeholder('No currency'),
-                        ])
+                    ]),
             ]);
     }
 
@@ -152,5 +150,4 @@ class CustomerInfolist extends BaseSchemaWidget
 
         $this->reset();
     }
-
 }

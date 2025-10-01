@@ -2,13 +2,12 @@
 
 namespace App\Support\Dashboard;
 
-class StripeContext
+readonly class StripeContext
 {
     public function __construct(
-        public readonly ?string $customerId,
-        public readonly array $previousCustomerIds = [],
-    ) {
-    }
+        public ?string $customerId,
+        public array $previousCustomerIds = [],
+    ) {}
 
     public static function empty(): self
     {

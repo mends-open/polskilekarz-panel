@@ -29,6 +29,7 @@ class PaymentsTable extends BaseTableWidget
     {
         $this->dashboardContext = $dashboardContext;
     }
+
     /**
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface

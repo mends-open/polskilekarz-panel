@@ -28,8 +28,7 @@ class CreateInvoiceShortLink implements ShouldQueue
         public readonly int|string $conversationId,
         public readonly int|string $impersonatorId,
         public readonly ?int $notifiableId,
-    ) {
-    }
+    ) {}
 
     public function handle(LinkShortener $shortener): void
     {

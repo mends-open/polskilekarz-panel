@@ -6,13 +6,11 @@ use App\Support\Dashboard\ChatwootContext;
 use App\Support\Dashboard\DashboardContext;
 use App\Support\Dashboard\StripeContext;
 use App\Support\Dashboard\StripeCustomerFinder;
-use JsonException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
+use JsonException;
 use Livewire\Attributes\On;
 use Livewire\Component;
-use Psr\Container\ContainerExceptionInterface;
-use Psr\Container\NotFoundExceptionInterface;
 
 class ChatwootContextListener extends Component
 {
@@ -81,19 +79,11 @@ class ChatwootContextListener extends Component
         $this->dispatch('reset');
     }
 
-    /**
-     * @throws ContainerExceptionInterface
-     * @throws NotFoundExceptionInterface
-     */
     public static function getContext(): array
     {
         return app(DashboardContext::class)->chatwoot()->toArray();
     }
 
-    /**
-     * @throws ContainerExceptionInterface
-     * @throws NotFoundExceptionInterface
-     */
     public static function hasContext(): bool
     {
         return ! app(DashboardContext::class)->chatwoot()->isEmpty();

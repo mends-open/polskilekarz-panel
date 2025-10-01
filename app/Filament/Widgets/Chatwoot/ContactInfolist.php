@@ -77,7 +77,7 @@ class ContactInfolist extends BaseSchemaWidget
                             ->action(fn () => $this->reset())
                             ->hiddenLabel()
                             ->icon(Heroicon::OutlinedArrowPath)
-                            ->link()
+                            ->link(),
                     ])
                     ->schema([
                         TextEntry::make('id')
@@ -101,7 +101,7 @@ class ContactInfolist extends BaseSchemaWidget
                             ->inlineLabel()
                             ->badge()
                             ->placeholder('No created'),
-                    ])
+                    ]),
             ]);
     }
 }

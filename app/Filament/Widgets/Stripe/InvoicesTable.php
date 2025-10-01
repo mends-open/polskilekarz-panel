@@ -7,7 +7,6 @@ use App\Jobs\Chatwoot\CreateInvoiceShortLink;
 use App\Support\Dashboard\DashboardContext;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
-use Filament\Actions\BulkActionGroup;
 use Filament\Notifications\Notification;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\Layout\Panel;
@@ -34,21 +33,16 @@ class InvoicesTable extends BaseTableWidget
     {
         $this->dashboardContext = $dashboardContext;
     }
-
-    /**
-     * @throws ContainerExceptionInterface
-     * @throws NotFoundExceptionInterface
-     */
     public function isReady(): bool
     {
         return $this->dashboardContext->isReady();
     }
+
     #[On('reset')]
     public function resetComponent(): void
     {
         $this->reset();
     }
-
 
     public function table(Table $table): Table
     {
@@ -98,8 +92,8 @@ class InvoicesTable extends BaseTableWidget
                             ->listWithLineBreaks()
                             ->money(fn ($record) => $record['currency'], 100)
                             ->badge(),
-                        ]),
-                    ])->collapsible(),
+                    ]),
+                ])->collapsible(),
             ])
             ->filters([])
             ->headerActions([
@@ -121,7 +115,7 @@ class InvoicesTable extends BaseTableWidget
                     ->action(fn () => $this->reset())
                     ->hiddenLabel()
                     ->icon(Heroicon::OutlinedArrowPath)
-                    ->link()
+                    ->link(),
             ])
             ->recordActions([
                 ActionGroup::make([
@@ -143,12 +137,6 @@ class InvoicesTable extends BaseTableWidget
             ->toolbarActions([]);
     }
 
-    /**
-     * @throws NotFoundExceptionInterface
-     * @throws ContainerExceptionInterface
-     * @throws RequestException
-     * @throws ConnectionException
-     */
     private function sendShortUrl(string $url): void
     {
         $context = $this->dashboardContext->chatwoot();
@@ -192,7 +180,7 @@ class InvoicesTable extends BaseTableWidget
     {
         $customerId = $this->dashboardContext->stripe()->customerId;
 
-        return $customerId ? stripe()->invoices->all(['customer' => $customerId,])->toArray()['data'] : [];
+        return $customerId ? stripe()->invoices->all(['customer' => $customerId])->toArray()['data'] : [];
     }
 
     #[On('stripe.set-context')]

@@ -6,13 +6,13 @@ use Illuminate\Contracts\Session\Session;
 
 class DashboardContext
 {
-    private const READY_KEY = 'ready';
-    private const CHATWOOT_KEY = 'chatwoot';
-    private const STRIPE_KEY = 'stripe';
+    private const string READY_KEY = 'ready';
 
-    public function __construct(private readonly Session $session)
-    {
-    }
+    private const string CHATWOOT_KEY = 'chatwoot';
+
+    private const string STRIPE_KEY = 'stripe';
+
+    public function __construct(private readonly Session $session) {}
 
     public function storeChatwoot(ChatwootContext $context): void
     {
