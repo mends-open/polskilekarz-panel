@@ -6,6 +6,7 @@ use App\Filament\Widgets\Chatwoot\ContactInfolist;
 use App\Filament\Widgets\Stripe\CustomerInfolist;
 use App\Filament\Widgets\Stripe\InvoicesTable;
 use App\Filament\Widgets\Stripe\PaymentsTable;
+use App\Livewire\ChatwootContextListener;
 use Filament\Actions\Action;
 use Filament\Pages\Dashboard;
 use Filament\Support\Enums\Width;
@@ -25,8 +26,8 @@ class Payments extends Dashboard
     public function getWidgets(): array
     {
         return [
-            CustomerInfolist::class,
             ContactInfolist::class,
+            CustomerInfolist::class,
             InvoicesTable::class,
             PaymentsTable::class,
         ];

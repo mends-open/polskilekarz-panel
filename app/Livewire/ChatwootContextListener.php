@@ -2,6 +2,11 @@
 
 namespace App\Livewire;
 
+use App\Filament\Widgets\Chatwoot\ContactInfolist;
+use App\Filament\Widgets\Stripe\CustomerInfolist;
+use App\Filament\Widgets\Stripe\InvoicesTable;
+use App\Filament\Widgets\Stripe\PaymentsTable;
+use Filament\Widgets\Widget;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Livewire\Attributes\Session;
@@ -29,9 +34,7 @@ class ChatwootContextListener extends Component
 
     public function mount(): void
     {
-        $this->chatwoot = [];
-        $this->stripe = [];
-        $this->dispatch('chatwoot.get-context');
+        session()->put('ready', false);
     }
 
     #[On('chatwoot.post-context')]
@@ -48,10 +51,9 @@ class ChatwootContextListener extends Component
             'current_user_id' => $context['currentAgent']['id'] ?? null,
         ];
         Log::info('chatwoot context set', $this->chatwoot);
-        $this->dispatch('chatwoot.set-context');
+        $this->setStripeContext();
     }
 
-    #[On('chatwoot.set-context')]
     public function setStripeContext(): void
     {
         $contactId = $this->chatwoot['contact_id'] ?? null;
@@ -78,7 +80,8 @@ class ChatwootContextListener extends Component
             'previous_customer_ids' => collect($customers)->pluck('id')->slice(1)->values()->all(),
         ];
 
-        $this->dispatch('stripe.set-context');
+        session()->put('ready', true);
+        $this->dispatch('reset');
     }
 
     /**

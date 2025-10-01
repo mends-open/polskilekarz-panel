@@ -2,63 +2,102 @@
 
 namespace App\Filament\Widgets\Stripe;
 
+use App\Filament\Widgets\BaseTableWidget;
 use App\Jobs\Chatwoot\CreateInvoiceShortLink;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Notifications\Notification;
 use Filament\Support\Colors\ColorManager;
 use Filament\Support\Enums\FontFamily;
 use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\Layout\Panel;
+use Filament\Tables\Columns\Layout\Split;
+use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Phiki\Phast\Text;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Stripe\Exception\ApiErrorException;
 
-class InvoicesTable extends TableWidget
+class InvoicesTable extends BaseTableWidget
 {
     protected int|string|array $columnSpan = 'full';
 
     protected static ?string $heading = 'Invoices';
 
+    /**
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     */
+    public function isReady(): bool
+    {
+        return session()->get('ready');
+    }
+    #[On('reset')]
+    public function resetComponent(): void
+    {
+        $this->reset();
+    }
+
+
     public function table(Table $table): Table
     {
         return $table
             ->records(fn () => $this->getCustomerInvoices())
-            ->emptyState(view('empty-state'))
             ->columns([
-                TextColumn::make('id')
-                    ->fontFamily(FontFamily::Mono),
-                TextColumn::make('number'),
-                TextColumn::make('lines.data.*.description'),
-                TextColumn::make('total')
-                    ->state(fn ($record) => $record['total'] / 100)
-                    ->badge()
-                    ->money(fn ($record) => $record['currency'])
-                    ->color(fn ($record) => match ($record['status']) {
-                        'paid' => 'success',                     // ✅ money in
-                        'open', 'draft', 'uncollectible' => 'danger', // ❌ not collected
-                        'void' => 'gray',                        // ⚪ cancelled
-                        default => 'secondary',
-                    }),
-
-                TextColumn::make('status')
-                    ->badge()
-                    ->color(fn ($state) => match ($state) {
-                        'paid' => 'success',        // green
-                        'open' => 'info',           // blue
-                        'draft' => 'secondary',     // neutral
-                        'uncollectible' => 'danger',// red
-                        'void' => 'gray',           // gray
-                        default => 'secondary',
-                    }),
-                TextColumn::make('created')
-                    ->since(),
+                Split::make([
+                    Stack::make([
+                        TextColumn::make('id')
+                            ->color('gray')
+                            ->badge(),
+                        TextColumn::make('number')
+                            ->badge(),
+                    ])->space(2),
+                    Stack::make([
+                        TextColumn::make('total')
+                            ->badge()
+                            ->money(fn ($record) => $record['currency'], 100)
+                            ->color(fn ($record) => match ($record['status']) {
+                                'paid' => 'success',                     // ✅ money in
+                                'open', 'draft', 'uncollectible' => 'danger', // ❌ not collected
+                                'void' => 'gray',                        // ⚪ cancelled
+                                default => 'secondary',
+                            }),
+                        TextColumn::make('status')
+                            ->badge()
+                            ->color(fn ($state) => match ($state) {
+                                'paid' => 'success',        // green
+                                'open' => 'info',           // blue
+                                'draft' => 'secondary',     // neutral
+                                'uncollectible' => 'danger',// red
+                                'void' => 'gray',           // gray
+                                default => 'secondary',
+                            }),
+                    ])->space(2),
+                    TextColumn::make('created')
+                        ->since(),
+                ]),
+                Panel::make([
+                    Split::make([
+                        TextColumn::make('lines.data.*.description')
+                            ->listWithLineBreaks(),
+                        TextColumn::make('lines.data.*.quantity')
+                            ->prefix('x')
+                            ->listWithLineBreaks(),
+                        TextColumn::make('lines.data.*.amount')
+                            ->listWithLineBreaks()
+                            ->money(fn ($record) => $record['currency'], 100)
+                            ->badge(),
+                        ]),
+                    ])->collapsible(),
             ])
             ->filters([])
             ->headerActions([
@@ -76,21 +115,28 @@ class InvoicesTable extends TableWidget
                     ->color(fn () => $this->getCustomerInvoices() == [] ? 'gray' : 'primary')
                     ->disabled(fn () => $this->getCustomerInvoices() == [])
                     ->action(fn () => $this->sendLatestInvoice()),
+                Action::make('reset')
+                    ->action(fn () => $this->reset())
+                    ->hiddenLabel()
+                    ->icon(Heroicon::OutlinedArrowPath)
+                    ->link()
             ])
             ->recordActions([
-                Action::make('duplicateInvoice')
-                    ->label('Duplicate')
-                    ->icon(Heroicon::OutlinedDocumentDuplicate),
-                Action::make('sendInvoiceShortUrl')
-                    ->action(fn ($record) => $this->sendShortUrl($record['hosted_invoice_url']))
-                    ->label('Send')
-                    ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
-                    ->requiresConfirmation(),
-                Action::make('openInvoiceUrl')
-                    ->url(fn ($record) => $record['hosted_invoice_url'])
-                    ->openUrlInNewTab()
-                    ->label('Open')
-                    ->icon(Heroicon::OutlinedEnvelopeOpen),
+                ActionGroup::make([
+                    Action::make('duplicateInvoice')
+                        ->label('Duplicate')
+                        ->icon(Heroicon::OutlinedDocumentDuplicate),
+                    Action::make('sendInvoiceShortUrl')
+                        ->action(fn ($record) => $this->sendShortUrl($record['hosted_invoice_url']))
+                        ->label('Send')
+                        ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
+                        ->requiresConfirmation(),
+                    Action::make('openInvoiceUrl')
+                        ->url(fn ($record) => $record['hosted_invoice_url'])
+                        ->openUrlInNewTab()
+                        ->label('Open')
+                        ->icon(Heroicon::OutlinedEnvelopeOpen),
+                ]),
             ])
             ->toolbarActions([]);
     }
@@ -140,15 +186,9 @@ class InvoicesTable extends TableWidget
      */
     private function getCustomerInvoices(): array
     {
-        if (! session()->has('stripe.customer_id')) {
-            return [];
-        }
+        $customerId = session()->get('stripe.customer_id');
 
-        $customer = session()->get('stripe.customer_id');
-
-        return stripe()->invoices->all([
-            'customer' => $customer,
-        ])->toArray()['data'];
+        return $customerId ? stripe()->invoices->all(['customer' => $customerId,])->toArray()['data'] : [];
     }
 
     #[On('stripe.set-context')]

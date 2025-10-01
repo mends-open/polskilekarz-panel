@@ -1,18 +1,31 @@
 @script
 <script>
-    // Listen for messages from the Chatwoot iframe
-    window.addEventListener("message", function (event) {
-        // Forward the raw data payload to the Livewire backend
-        $wire.dispatch('chatwoot.post-context', JSON.parse(event.data));
-        console.log(event.data);
-    });
+    // Immediately ask for context (no DOMContentLoaded delay)
+    window.parent.postMessage('chatwoot-dashboard-app:fetch-info', '*');
+    console.log("🔵 Sent request: chatwoot-dashboard-app:fetch-info");
 
-    // When the backend triggers a context request
-    $wire.on('chatwoot.get-context', () => {
-        // Ask the parent (Chatwoot dashboard) for the full context object
-        // Replace '*' with the expected origin for better security
-        window.parent.postMessage('chatwoot-dashboard-app:fetch-info', '*');
+    // Listen for messages back from Chatwoot
+    window.addEventListener("message", function (event) {
+        console.log("🟡 Received raw event:", event);
+
+        // Safety: Only accept messages from the Chatwoot app
+        if (!event.data) return;
+
+        try {
+            let payload = typeof event.data === "string"
+                ? JSON.parse(event.data)
+                : event.data;
+
+            console.log("🟢 Parsed payload:", payload);
+
+            // Dispatch to Livewire backend
+            $wire.dispatch('chatwoot.post-context', payload);
+
+        } catch (e) {
+            console.error("🔴 Failed to parse Chatwoot context:", e, event.data);
+        }
     });
 </script>
 @endscript
-<div></div>
+
+<div style="display:none"></div>

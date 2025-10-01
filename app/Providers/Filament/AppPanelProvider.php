@@ -25,7 +25,7 @@ class AppPanelProvider extends PanelProvider
     public function boot(): void
     {
         FilamentView::registerRenderHook(
-            PanelsRenderHook::BODY_START,
+            PanelsRenderHook::HEAD_END,
             fn (): string => Blade::render('@livewire(\'chatwoot-context-listener\')'),
         );
     }

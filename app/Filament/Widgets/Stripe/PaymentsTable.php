@@ -2,59 +2,98 @@
 
 namespace App\Filament\Widgets\Stripe;
 
+use App\Filament\Widgets\BaseTableWidget;
+use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
+use Filament\Notifications\Notification;
 use Filament\Support\Enums\FontFamily;
+use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Columns\Layout\Split;
+use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Stripe\Exception\ApiErrorException;
 
-class PaymentsTable extends TableWidget
+class PaymentsTable extends BaseTableWidget
 {
     protected int|string|array $columnSpan = 'full';
 
     protected static ?string $heading = 'Payments';
+    /**
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     */
+    #[On('reset')]
+    public function resetComponent(): void
+    {
+        $this->reset();
+    }
+
+    public function isReady(): bool
+    {
+        return session()->get('ready');
+    }
 
     public function table(Table $table): Table
     {
         return $table
             ->records(fn () => $this->getCustomerPayments())
-            ->emptyState(view('empty-state'))
             ->columns([
-                TextColumn::make('id')
-                    ->fontFamily(FontFamily::Mono),
-
-                TextColumn::make('amount')
-                    ->state(fn ($record) => $record['amount'] / 100)
-                    ->badge()
-                    ->money(fn ($record) => $record['currency'])
-                    ->color(fn ($record) => match ($record['status']) {
-                        'succeeded' => 'success',   // ✅ money received
-                        default => 'gray',          // ❌ not yet cash
-                    }),
-
-                TextColumn::make('status')
-                    ->badge()
-                    ->color(fn ($state) => match ($state) {
-                        'succeeded' => 'success',             // green
-                        'processing' => 'warning',            // yellow
-                        'requires_payment_method' => 'danger',// red
-                        'requires_confirmation' => 'info',    // blue
-                        'requires_action' => 'purple',        // purple accent
-                        'requires_capture' => 'primary',      // stripe blue
-                        'canceled' => 'gray',                 // neutral gray
-                        default => 'secondary',
-                    }),
-
-                TextColumn::make('created')
-                    ->since(),
+                Split::make([
+                    Stack::make([
+                        TextColumn::make('id')
+                            ->color('gray')
+                            ->badge(),
+                    ])->space(2),
+                    Stack::make([
+                        TextColumn::make('amount')
+                            ->state(fn ($record) => $record['amount'] / 100)
+                            ->badge()
+                            ->money(fn ($record) => $record['currency'])
+                            ->color(fn ($record) => match ($record['status']) {
+                                'succeeded' => 'success',   // ✅ received
+                                default => 'gray',          // ❌ not yet settled
+                            }),
+                        TextColumn::make('status')
+                            ->badge()
+                            ->color(fn ($state) => match ($state) {
+                                'succeeded' => 'success',             // green
+                                'processing' => 'warning',            // yellow
+                                'requires_payment_method', 'requires_capture', 'requires_action', 'requires_confirmation' => 'danger',// red
+                                'canceled' => 'gray',                 // neutral
+                                default => 'secondary',
+                            }),
+                    ])->space(2),
+                    Stack::make([
+                        TextColumn::make('created')
+                            ->since(),
+                    ])->space(2),
+                ]),
             ])
             ->filters([])
-            ->headerActions([])
-            ->recordActions([])
+            ->headerActions([
+                Action::make('refresh')
+                    ->action(fn () => $this->reset())
+                    ->hiddenLabel()
+                    ->icon(Heroicon::OutlinedArrowPath)
+                    ->link(),
+            ])
+            ->recordActions([
+                ActionGroup::make([
+                    Action::make('openPaymentUrl')
+                        ->url(fn ($record) => $record['charges']['data'][0]['receipt_url'] ?? null)
+                        ->openUrlInNewTab()
+                        ->label('Open Receipt')
+                        ->icon(Heroicon::OutlinedEnvelopeOpen)
+                        ->hidden(fn ($record) => blank(data_get($record, 'charges.data.0.receipt_url'))),
+                ]),
+            ])
             ->toolbarActions([
                 BulkActionGroup::make([]),
             ]);
@@ -67,15 +106,11 @@ class PaymentsTable extends TableWidget
      */
     private function getCustomerPayments(): array
     {
-        if (! session()->has('stripe.customer_id')) {
-            return [];
-        }
+        $customerId = (string) session()->get('stripe.customer_id');
 
-        $customer = session()->get('stripe.customer_id');
-
-        return stripe()->paymentIntents->all([
-            'customer' => $customer,
-        ])->toArray()['data'];
+        return $customerId ? stripe()->paymentIntents->all([
+            'customer' => $customerId,
+        ])->toArray()['data'] : [];
     }
 
     #[On('stripe.set-context')]

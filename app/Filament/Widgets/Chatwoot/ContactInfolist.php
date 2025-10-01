@@ -2,20 +2,26 @@
 
 namespace App\Filament\Widgets\Chatwoot;
 
-use App\Filament\Widgets\BaseWidget;
+use App\Filament\Widgets\BaseSchemaWidget;
+use Filament\Actions\Action;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\FontFamily;
+use Filament\Support\Icons\Heroicon;
 use Filament\Widgets\Widget;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Reactive;
+use Livewire\Attributes\Session;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 
-class ContactInfolist extends BaseWidget
+class ContactInfolist extends BaseSchemaWidget
 {
+
     /**
      * @throws NotFoundExceptionInterface
      * @throws RequestException
@@ -24,9 +30,6 @@ class ContactInfolist extends BaseWidget
      */
     protected function getChatwootContact(): array
     {
-        if (! session()->has('chatwoot.current_user_id') || ! session()->has('chatwoot.account_id') || ! session()->has('chatwoot.contact_id') || ! str_contains(session()->get('chatwoot.current_user_id'), '')) {
-            return [];
-        }
         $account = session()->get('chatwoot.account_id');
         $contact = session()->get('chatwoot.contact_id');
         $user = session()->get('chatwoot.current_user_id');
@@ -34,8 +37,17 @@ class ContactInfolist extends BaseWidget
         return chatwoot()->platform()->impersonate($user)->contacts()->get($account, $contact)['payload'];
     }
 
-    #[On('chatwoot.set-context')]
-    public function refreshContext(): void
+    /**
+     * @throws ContainerExceptionInterface
+     * @throws NotFoundExceptionInterface
+     */
+    public function isReady(): bool
+    {
+        return session()->get('ready');
+    }
+
+    #[On('reset')]
+    public function resetComponent(): void
     {
         $this->reset();
     }
@@ -52,10 +64,18 @@ class ContactInfolist extends BaseWidget
             ->state($this->getChatwootContact())
             ->components([
                 Section::make('contact')
+                    ->headerActions([
+                        Action::make('reset')
+                            ->action(fn () => $this->reset())
+                            ->hiddenLabel()
+                            ->icon(Heroicon::OutlinedArrowPath)
+                            ->link()
+                    ])
                     ->schema([
                         TextEntry::make('id')
-                            ->inlineLabel()
-                            ->fontFamily(FontFamily::Mono),
+                            ->badge()
+                            ->color('gray')
+                            ->inlineLabel(),
                         TextEntry::make('name')
                             ->inlineLabel()
                             ->placeholder('No name'),
