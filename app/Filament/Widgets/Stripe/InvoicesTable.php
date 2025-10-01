@@ -4,7 +4,7 @@ namespace App\Filament\Widgets\Stripe;
 
 use App\Filament\Widgets\BaseTableWidget;
 use App\Jobs\Chatwoot\CreateInvoiceShortLink;
-use App\Support\Dashboard\DashboardContext;
+use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Notifications\Notification;
@@ -23,12 +23,14 @@ use Stripe\Exception\ApiErrorException;
 
 class InvoicesTable extends BaseTableWidget
 {
+    use InteractsWithDashboardContext;
+
     protected int|string|array $columnSpan = 'full';
 
     protected static ?string $heading = 'Invoices';
     public function isReady(): bool
     {
-        return $this->getDashboardContext()->isReady();
+        return $this->dashboardContextIsReady();
     }
 
     #[On('reset')]
@@ -139,7 +141,7 @@ class InvoicesTable extends BaseTableWidget
 
     private function sendShortUrl(string $url): void
     {
-        $context = $this->getDashboardContext()->chatwoot();
+        $context = $this->chatwootContext();
 
         $account = $context->accountId;
         $user = $context->currentUserId;
@@ -178,7 +180,7 @@ class InvoicesTable extends BaseTableWidget
      */
     private function getCustomerInvoices(): array
     {
-        $customerId = $this->getDashboardContext()->stripe()->customerId;
+        $customerId = $this->stripeContext()->customerId;
 
         return $customerId ? stripe()->invoices->all(['customer' => $customerId])->toArray()['data'] : [];
     }
@@ -216,8 +218,4 @@ class InvoicesTable extends BaseTableWidget
         $this->sendShortUrl($invoiceUrl);
     }
 
-    protected function getDashboardContext(): DashboardContext
-    {
-        return app(DashboardContext::class);
-    }
 }
