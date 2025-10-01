@@ -27,7 +27,7 @@ class InvoicesTable extends BaseTableWidget
 
     protected static ?string $heading = 'Invoices';
 
-    protected DashboardContext $dashboardContext;
+    protected ?DashboardContext $dashboardContext = null;
 
     public function boot(DashboardContext $dashboardContext): void
     {
@@ -35,7 +35,7 @@ class InvoicesTable extends BaseTableWidget
     }
     public function isReady(): bool
     {
-        return $this->dashboardContext->isReady();
+        return $this->getDashboardContext()->isReady();
     }
 
     #[On('reset')]
@@ -139,7 +139,7 @@ class InvoicesTable extends BaseTableWidget
 
     private function sendShortUrl(string $url): void
     {
-        $context = $this->dashboardContext->chatwoot();
+        $context = $this->getDashboardContext()->chatwoot();
 
         $account = $context->accountId;
         $user = $context->currentUserId;
@@ -178,7 +178,7 @@ class InvoicesTable extends BaseTableWidget
      */
     private function getCustomerInvoices(): array
     {
-        $customerId = $this->dashboardContext->stripe()->customerId;
+        $customerId = $this->getDashboardContext()->stripe()->customerId;
 
         return $customerId ? stripe()->invoices->all(['customer' => $customerId])->toArray()['data'] : [];
     }
@@ -214,5 +214,10 @@ class InvoicesTable extends BaseTableWidget
         }
 
         $this->sendShortUrl($invoiceUrl);
+    }
+
+    protected function getDashboardContext(): DashboardContext
+    {
+        return $this->dashboardContext ??= app(DashboardContext::class);
     }
 }

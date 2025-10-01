@@ -23,7 +23,7 @@ class PaymentsTable extends BaseTableWidget
 
     protected static ?string $heading = 'Payments';
 
-    protected DashboardContext $dashboardContext;
+    protected ?DashboardContext $dashboardContext = null;
 
     public function boot(DashboardContext $dashboardContext): void
     {
@@ -42,7 +42,7 @@ class PaymentsTable extends BaseTableWidget
 
     public function isReady(): bool
     {
-        return $this->dashboardContext->isReady();
+        return $this->getDashboardContext()->isReady();
     }
 
     public function table(Table $table): Table
@@ -111,7 +111,7 @@ class PaymentsTable extends BaseTableWidget
      */
     private function getCustomerPayments(): array
     {
-        $customerId = (string) $this->dashboardContext->stripe()->customerId;
+        $customerId = (string) $this->getDashboardContext()->stripe()->customerId;
 
         return $customerId ? stripe()->paymentIntents->all([
             'customer' => $customerId,
@@ -122,5 +122,10 @@ class PaymentsTable extends BaseTableWidget
     public function refreshContext(): void
     {
         $this->resetTable();
+    }
+
+    protected function getDashboardContext(): DashboardContext
+    {
+        return $this->dashboardContext ??= app(DashboardContext::class);
     }
 }
