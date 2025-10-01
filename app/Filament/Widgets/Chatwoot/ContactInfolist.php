@@ -3,7 +3,7 @@
 namespace App\Filament\Widgets\Chatwoot;
 
 use App\Filament\Widgets\BaseSchemaWidget;
-use App\Support\Dashboard\DashboardContext;
+use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use Filament\Actions\Action;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
@@ -17,6 +17,7 @@ use Psr\Container\NotFoundExceptionInterface;
 
 class ContactInfolist extends BaseSchemaWidget
 {
+    use InteractsWithDashboardContext;
 
     /**
      * @throws NotFoundExceptionInterface
@@ -26,7 +27,7 @@ class ContactInfolist extends BaseSchemaWidget
      */
     protected function getChatwootContact(): array
     {
-        $context = $this->getDashboardContext()->chatwoot();
+        $context = $this->chatwootContext();
 
         if (! $context->canImpersonate()) {
             return [];
@@ -45,7 +46,7 @@ class ContactInfolist extends BaseSchemaWidget
      */
     public function isReady(): bool
     {
-        return $this->getDashboardContext()->isReady();
+        return $this->dashboardContextIsReady();
     }
 
     #[On('reset')]
@@ -99,8 +100,4 @@ class ContactInfolist extends BaseSchemaWidget
             ]);
     }
 
-    protected function getDashboardContext(): DashboardContext
-    {
-        return app(DashboardContext::class);
-    }
 }

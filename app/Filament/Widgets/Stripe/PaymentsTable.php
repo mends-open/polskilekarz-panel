@@ -3,7 +3,7 @@
 namespace App\Filament\Widgets\Stripe;
 
 use App\Filament\Widgets\BaseTableWidget;
-use App\Support\Dashboard\DashboardContext;
+use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
@@ -19,6 +19,8 @@ use Stripe\Exception\ApiErrorException;
 
 class PaymentsTable extends BaseTableWidget
 {
+    use InteractsWithDashboardContext;
+
     protected int|string|array $columnSpan = 'full';
 
     protected static ?string $heading = 'Payments';
@@ -42,7 +44,7 @@ class PaymentsTable extends BaseTableWidget
 
     public function isReady(): bool
     {
-        return $this->getDashboardContext()->isReady();
+        return $this->dashboardContextIsReady();
     }
 
     public function table(Table $table): Table
@@ -111,7 +113,7 @@ class PaymentsTable extends BaseTableWidget
      */
     private function getCustomerPayments(): array
     {
-        $customerId = (string) $this->getDashboardContext()->stripe()->customerId;
+        $customerId = (string) $this->stripeContext()->customerId;
 
         return $customerId ? stripe()->paymentIntents->all([
             'customer' => $customerId,
@@ -124,8 +126,4 @@ class PaymentsTable extends BaseTableWidget
         $this->resetTable();
     }
 
-    protected function getDashboardContext(): DashboardContext
-    {
-        return app(DashboardContext::class);
-    }
 }
