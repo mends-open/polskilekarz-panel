@@ -23,13 +23,6 @@ class PaymentsTable extends BaseTableWidget
 
     protected static ?string $heading = 'Payments';
 
-    protected ?DashboardContext $dashboardContext = null;
-
-    public function boot(DashboardContext $dashboardContext): void
-    {
-        $this->dashboardContext = $dashboardContext;
-    }
-
     /**
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
@@ -126,6 +119,6 @@ class PaymentsTable extends BaseTableWidget
 
     protected function getDashboardContext(): DashboardContext
     {
-        return $this->dashboardContext ??= app(DashboardContext::class);
+        return app(DashboardContext::class);
     }
 }

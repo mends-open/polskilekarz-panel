@@ -17,12 +17,6 @@ use Psr\Container\NotFoundExceptionInterface;
 
 class ContactInfolist extends BaseSchemaWidget
 {
-    protected ?DashboardContext $dashboardContext = null;
-
-    public function boot(DashboardContext $dashboardContext): void
-    {
-        $this->dashboardContext = $dashboardContext;
-    }
 
     /**
      * @throws NotFoundExceptionInterface
@@ -107,6 +101,6 @@ class ContactInfolist extends BaseSchemaWidget
 
     protected function getDashboardContext(): DashboardContext
     {
-        return $this->dashboardContext ??= app(DashboardContext::class);
+        return app(DashboardContext::class);
     }
 }

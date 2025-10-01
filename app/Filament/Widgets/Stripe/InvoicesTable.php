@@ -26,13 +26,6 @@ class InvoicesTable extends BaseTableWidget
     protected int|string|array $columnSpan = 'full';
 
     protected static ?string $heading = 'Invoices';
-
-    protected ?DashboardContext $dashboardContext = null;
-
-    public function boot(DashboardContext $dashboardContext): void
-    {
-        $this->dashboardContext = $dashboardContext;
-    }
     public function isReady(): bool
     {
         return $this->getDashboardContext()->isReady();
@@ -218,6 +211,6 @@ class InvoicesTable extends BaseTableWidget
 
     protected function getDashboardContext(): DashboardContext
     {
-        return $this->dashboardContext ??= app(DashboardContext::class);
+        return app(DashboardContext::class);
     }
 }
