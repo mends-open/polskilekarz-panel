@@ -12,7 +12,7 @@ class ChatwootEventController extends Controller
 {
     public function __invoke(Request $request): JsonResponse
     {
-        $payload = $request->all();
+        $payload = $request->json()->all();
 
         $event = ChatwootEvent::create(['data' => $payload]);
 
