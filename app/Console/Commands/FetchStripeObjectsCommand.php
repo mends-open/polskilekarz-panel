@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Jobs\Stripe\FetchStripeObjectsFromEvents;
 use Illuminate\Console\Command;
+use Stripe\Util\ObjectTypes;
 
 class FetchStripeObjectsCommand extends Command
 {
@@ -14,6 +15,12 @@ class FetchStripeObjectsCommand extends Command
     public function handle(): int
     {
         $objectType = (string) $this->argument('objectType');
+
+        if (! isset(ObjectTypes::mapping[$objectType])) {
+            $this->error("Unsupported Stripe object type [{$objectType}].");
+
+            return self::INVALID;
+        }
 
         FetchStripeObjectsFromEvents::dispatch($objectType);
 

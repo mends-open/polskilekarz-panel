@@ -12,9 +12,12 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
+use Stripe\ApiResource;
 use Stripe\Collection;
 use Stripe\Exception\ApiErrorException;
+use Stripe\Stripe;
 use Stripe\StripeClient;
+use Stripe\Util\ObjectTypes;
 
 class FetchStripeObjectsFromEvents implements ShouldQueue
 {
@@ -22,6 +25,9 @@ class FetchStripeObjectsFromEvents implements ShouldQueue
 
     private const BATCH_SIZE = 25;
     private const PAGE_SIZE = 100;
+
+    /** @var array<string, bool> */
+    private array $processedObjectIds = [];
 
     public function __construct(private readonly string $objectType)
     {
@@ -34,23 +40,27 @@ class FetchStripeObjectsFromEvents implements ShouldQueue
     {
         $startingAfter = null;
         $jobs = [];
+        $resourceClass = $this->resolveResourceClass();
 
         do {
-            $events = $this->retrieveEvents($stripe, $startingAfter);
+            $objects = $this->retrieveObjects($stripe, $resourceClass, $startingAfter);
 
-            foreach ($events->data as $event) {
-                $eventArray = $event->toArray();
-                $stripeObjectType = Arr::get($eventArray, 'data.object.object');
+            foreach ($objects->data as $object) {
+                $objectId = (string) ($object->id ?? '');
 
-                if ($stripeObjectType !== $this->objectType) {
+                if ($objectId === '' || isset($this->processedObjectIds[$objectId])) {
                     continue;
                 }
 
-                $eventArray['metadata'] = array_merge($eventArray['metadata'] ?? [], [
-                    'fetched_via_events_sync' => $eventArray['created'] ?? now()->timestamp,
+                $this->processedObjectIds[$objectId] = true;
+
+                $objectArray = $object->toArray();
+                $objectArray['metadata'] = array_merge($objectArray['metadata'] ?? [], [
+                    'fetched_via_events_sync' => $objectArray['created'] ?? now()->timestamp,
                 ]);
 
-                $stripeEvent = $this->storeEvent($eventArray);
+                $eventPayload = $this->buildSyntheticEvent($objectArray);
+                $stripeEvent = $this->storeEvent($eventPayload);
                 $jobs[] = new ProcessEvent($stripeEvent);
 
                 if (count($jobs) >= self::BATCH_SIZE) {
@@ -59,7 +69,8 @@ class FetchStripeObjectsFromEvents implements ShouldQueue
                 }
             }
 
-            $startingAfter = $events->has_more ? Arr::last($events->data)?->id : null;
+            $lastObject = $objects->has_more ? Arr::last($objects->data) : null;
+            $startingAfter = $lastObject->id ?? null;
         } while ($startingAfter !== null);
 
         if ($jobs !== []) {
@@ -68,11 +79,9 @@ class FetchStripeObjectsFromEvents implements ShouldQueue
     }
 
     /**
-     * @return Collection<\Stripe\Event>
-     *
      * @throws ApiErrorException
      */
-    private function retrieveEvents(StripeClient $stripe, ?string $startingAfter): Collection
+    private function retrieveObjects(StripeClient $stripe, string $resourceClass, ?string $startingAfter): Collection
     {
         $params = ['limit' => self::PAGE_SIZE];
 
@@ -80,7 +89,8 @@ class FetchStripeObjectsFromEvents implements ShouldQueue
             $params['starting_after'] = $startingAfter;
         }
 
-        return $stripe->events->all($params);
+        /** @var class-string<ApiResource> $resourceClass */
+        return $stripe->requestCollection('get', $resourceClass::classUrl(), $params, []);
     }
 
     private function storeEvent(array $event): StripeEvent
@@ -95,6 +105,7 @@ class FetchStripeObjectsFromEvents implements ShouldQueue
             Log::info('Updated Stripe event fetched via job', [
                 'id' => $existing->id,
                 'stripe_id' => $event['id'],
+                'stripe_object_id' => $event['data']['object']['id'] ?? null,
                 'object_type' => $this->objectType,
             ]);
 
@@ -106,6 +117,7 @@ class FetchStripeObjectsFromEvents implements ShouldQueue
         Log::info('Stored Stripe event fetched via job', [
             'id' => $created->id,
             'stripe_id' => $event['id'],
+            'stripe_object_id' => $event['data']['object']['id'] ?? null,
             'object_type' => $this->objectType,
         ]);
 
@@ -120,5 +132,42 @@ class FetchStripeObjectsFromEvents implements ShouldQueue
         Bus::batch($jobs)
             ->name("Process Stripe events for {$this->objectType}")
             ->dispatch();
+    }
+
+    /**
+     * @return class-string<ApiResource>
+     */
+    private function resolveResourceClass(): string
+    {
+        $mapping = ObjectTypes::mapping;
+
+        if (! isset($mapping[$this->objectType])) {
+            throw new \InvalidArgumentException("Unsupported Stripe object type [{$this->objectType}]");
+        }
+
+        return $mapping[$this->objectType];
+    }
+
+    private function buildSyntheticEvent(array $object): array
+    {
+        $created = $object['created'] ?? now()->timestamp;
+        $eventId = sprintf('evt_sync_%s', $object['id']);
+
+        return [
+            'id' => $eventId,
+            'object' => 'event',
+            'type' => "{$this->objectType}.synced",
+            'created' => $created,
+            'livemode' => $object['livemode'] ?? false,
+            'pending_webhooks' => 0,
+            'request' => null,
+            'api_version' => Stripe::getApiVersion(),
+            'metadata' => [
+                'fetched_via_events_sync' => $created,
+            ],
+            'data' => [
+                'object' => $object,
+            ],
+        ];
     }
 }
