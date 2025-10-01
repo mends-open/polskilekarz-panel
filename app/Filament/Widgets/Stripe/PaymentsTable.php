@@ -23,13 +23,6 @@ class PaymentsTable extends BaseTableWidget
 
     protected static ?string $heading = 'Payments';
 
-    protected DashboardContext $dashboardContext;
-
-    public function boot(DashboardContext $dashboardContext): void
-    {
-        $this->dashboardContext = $dashboardContext;
-    }
-
     /**
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
@@ -37,12 +30,19 @@ class PaymentsTable extends BaseTableWidget
     #[On('reset')]
     public function resetComponent(): void
     {
-        $this->reset();
+        $this->resetTable();
+        $this->resetErrorBag();
+        $this->resetValidation();
+    }
+
+    private function refreshTable(): void
+    {
+        $this->resetComponent();
     }
 
     public function isReady(): bool
     {
-        return $this->dashboardContext->isReady();
+        return $this->getDashboardContext()->isReady();
     }
 
     public function table(Table $table): Table
@@ -84,7 +84,7 @@ class PaymentsTable extends BaseTableWidget
             ->filters([])
             ->headerActions([
                 Action::make('refresh')
-                    ->action(fn () => $this->reset())
+                    ->action(fn () => $this->refreshTable())
                     ->hiddenLabel()
                     ->icon(Heroicon::OutlinedArrowPath)
                     ->link(),
@@ -111,7 +111,7 @@ class PaymentsTable extends BaseTableWidget
      */
     private function getCustomerPayments(): array
     {
-        $customerId = (string) $this->dashboardContext->stripe()->customerId;
+        $customerId = (string) $this->getDashboardContext()->stripe()->customerId;
 
         return $customerId ? stripe()->paymentIntents->all([
             'customer' => $customerId,
@@ -122,5 +122,10 @@ class PaymentsTable extends BaseTableWidget
     public function refreshContext(): void
     {
         $this->resetTable();
+    }
+
+    protected function getDashboardContext(): DashboardContext
+    {
+        return app(DashboardContext::class);
     }
 }

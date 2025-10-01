@@ -17,12 +17,6 @@ use Psr\Container\NotFoundExceptionInterface;
 
 class ContactInfolist extends BaseSchemaWidget
 {
-    protected DashboardContext $dashboardContext;
-
-    public function boot(DashboardContext $dashboardContext): void
-    {
-        $this->dashboardContext = $dashboardContext;
-    }
 
     /**
      * @throws NotFoundExceptionInterface
@@ -32,7 +26,7 @@ class ContactInfolist extends BaseSchemaWidget
      */
     protected function getChatwootContact(): array
     {
-        $context = $this->dashboardContext->chatwoot();
+        $context = $this->getDashboardContext()->chatwoot();
 
         if (! $context->canImpersonate()) {
             return [];
@@ -51,7 +45,7 @@ class ContactInfolist extends BaseSchemaWidget
      */
     public function isReady(): bool
     {
-        return $this->dashboardContext->isReady();
+        return $this->getDashboardContext()->isReady();
     }
 
     #[On('reset')]
@@ -103,5 +97,10 @@ class ContactInfolist extends BaseSchemaWidget
                             ->placeholder('No created'),
                     ]),
             ]);
+    }
+
+    protected function getDashboardContext(): DashboardContext
+    {
+        return app(DashboardContext::class);
     }
 }

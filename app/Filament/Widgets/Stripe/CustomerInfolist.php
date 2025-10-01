@@ -20,12 +20,6 @@ use Stripe\Exception\ApiErrorException;
 
 class CustomerInfolist extends BaseSchemaWidget
 {
-    protected DashboardContext $dashboardContext;
-
-    public function boot(DashboardContext $dashboardContext): void
-    {
-        $this->dashboardContext = $dashboardContext;
-    }
 
     /**
      * @throws ContainerExceptionInterface
@@ -33,7 +27,7 @@ class CustomerInfolist extends BaseSchemaWidget
      */
     public function isReady(): bool
     {
-        return $this->dashboardContext->isReady();
+        return $this->getDashboardContext()->isReady();
     }
 
     #[On('reset')]
@@ -47,7 +41,7 @@ class CustomerInfolist extends BaseSchemaWidget
      */
     protected function getStripeCustomer(): array
     {
-        $customerId = $this->dashboardContext->stripe()->customerId;
+        $customerId = $this->getDashboardContext()->stripe()->customerId;
 
         return $customerId ? stripe()->customers->retrieve($customerId)->toArray() : [];
     }
@@ -59,7 +53,7 @@ class CustomerInfolist extends BaseSchemaWidget
      */
     public function schema(Schema $schema): Schema
     {
-        $contactReady = $this->dashboardContext->chatwoot()->hasContact();
+        $contactReady = $this->getDashboardContext()->chatwoot()->hasContact();
 
         return $schema
             ->state($this->getStripeCustomer())
@@ -106,8 +100,9 @@ class CustomerInfolist extends BaseSchemaWidget
 
     protected function syncCustomerFromChatwootContact(): void
     {
-        $stripeContext = $this->dashboardContext->stripe();
-        $chatwootContext = $this->dashboardContext->chatwoot();
+        $dashboardContext = $this->getDashboardContext();
+        $stripeContext = $dashboardContext->stripe();
+        $chatwootContext = $dashboardContext->chatwoot();
 
         $customerId = $stripeContext->customerId;
         $accountId = $chatwootContext->accountId;
@@ -149,5 +144,10 @@ class CustomerInfolist extends BaseSchemaWidget
             ->send();
 
         $this->reset();
+    }
+
+    protected function getDashboardContext(): DashboardContext
+    {
+        return app(DashboardContext::class);
     }
 }
