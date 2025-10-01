@@ -7,7 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Bus;
 use Stripe\ApiResource;
 use Stripe\Collection;
 use Stripe\Exception\ApiErrorException;
@@ -21,11 +21,10 @@ class FetchStripeObjectsFromEvents implements ShouldQueue
 
     private const PAGE_SIZE = 100;
 
-    /** @var array<string, bool> */
-    private array $processedObjectIds = [];
-
-    public function __construct(private readonly string $objectType)
-    {
+    public function __construct(
+        private readonly string $objectType,
+        private readonly ?string $startingAfter = null,
+    ) {
     }
 
     /**
@@ -33,27 +32,57 @@ class FetchStripeObjectsFromEvents implements ShouldQueue
      */
     public function handle(StripeClient $stripe): void
     {
-        $startingAfter = null;
         $resourceClass = $this->resolveResourceClass();
 
-        do {
-            $objects = $this->retrieveObjects($stripe, $resourceClass, $startingAfter);
+        $objects = $this->retrieveObjects($stripe, $resourceClass, $this->startingAfter);
 
-            foreach ($objects->data as $object) {
-                $objectId = (string) ($object->id ?? '');
+        $jobs = $this->prepareMetadataJobs($objects, $resourceClass);
 
-                if ($objectId === '' || isset($this->processedObjectIds[$objectId])) {
-                    continue;
-                }
+        if ($jobs !== []) {
+            Bus::batch($jobs)
+                ->name(sprintf('stripe-%s-events-sync', $this->objectType))
+                ->allowFailures()
+                ->dispatch();
+        }
 
-                $this->processedObjectIds[$objectId] = true;
+        if ($objects->has_more && ! empty($objects->data)) {
+            $lastObject = end($objects->data);
+            $nextCursor = $lastObject->id ?? null;
 
-                $this->tagObjectMetadata($stripe, $resourceClass, $object, $objectId);
+            if ($nextCursor !== null) {
+                self::dispatch($this->objectType, $nextCursor);
+            }
+        }
+    }
+
+    /**
+     * @param  class-string<ApiResource>  $resourceClass
+     * @return TagStripeObjectMetadataJob[]
+     */
+    private function prepareMetadataJobs(Collection $objects, string $resourceClass): array
+    {
+        $jobs = [];
+
+        foreach ($objects->data as $object) {
+            $objectId = (string) ($object->id ?? '');
+
+            if ($objectId === '') {
+                continue;
             }
 
-            $lastObject = $objects->has_more ? end($objects->data) : null;
-            $startingAfter = $lastObject->id ?? null;
-        } while ($startingAfter !== null);
+            $metadata = $this->prepareMetadata($object);
+            $timestamp = (int) ($object->created ?? now()->timestamp);
+
+            $jobs[] = new TagStripeObjectMetadataJob(
+                objectType: $this->objectType,
+                resourceClass: $resourceClass,
+                objectId: $objectId,
+                metadata: $metadata,
+                timestamp: $timestamp,
+            );
+        }
+
+        return $jobs;
     }
 
     /**
@@ -69,33 +98,6 @@ class FetchStripeObjectsFromEvents implements ShouldQueue
 
         /** @var class-string<ApiResource> $resourceClass */
         return $stripe->requestCollection('get', $resourceClass::classUrl(), $params, []);
-    }
-
-    private function tagObjectMetadata(StripeClient $stripe, string $resourceClass, ApiResource $object, string $objectId): void
-    {
-        $metadata = $this->prepareMetadata($object);
-
-        $timestamp = (int) ($object->created ?? now()->timestamp);
-        $metadata['fetched_via_events_sync'] = (string) $timestamp;
-
-        try {
-            $stripe->request('post', sprintf('%s/%s', $resourceClass::classUrl(), $objectId), [
-                'metadata' => $metadata,
-            ], []);
-
-            Log::info('Updated Stripe object metadata to trigger event dispatch', [
-                'object_type' => $this->objectType,
-                'object_id' => $objectId,
-                'metadata_key' => 'fetched_via_events_sync',
-                'metadata_value' => $timestamp,
-            ]);
-        } catch (ApiErrorException $exception) {
-            Log::warning('Failed to update Stripe object metadata for events sync', [
-                'object_type' => $this->objectType,
-                'object_id' => $objectId,
-                'exception' => $exception->getMessage(),
-            ]);
-        }
     }
 
     /**
