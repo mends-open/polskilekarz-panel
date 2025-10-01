@@ -8,9 +8,9 @@ use Stripe\Util\ObjectTypes;
 
 class FetchStripeObjectsCommand extends Command
 {
-    protected $signature = 'stripe:fetch-objects {objectType : The Stripe object type to fetch via events}';
+    protected $signature = 'stripe:fetch-objects {objectType : The Stripe object type to refresh via metadata tagging}';
 
-    protected $description = 'Dispatch a job to fetch Stripe objects through the events API and queue them for processing.';
+    protected $description = 'Dispatch a job to refresh Stripe objects metadata so that new events are emitted.';
 
     public function handle(): int
     {

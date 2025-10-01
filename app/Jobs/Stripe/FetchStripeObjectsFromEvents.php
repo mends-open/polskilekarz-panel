@@ -2,28 +2,23 @@
 
 namespace App\Jobs\Stripe;
 
-use App\Models\StripeEvent;
-use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 use Stripe\ApiResource;
 use Stripe\Collection;
 use Stripe\Exception\ApiErrorException;
-use Stripe\Stripe;
 use Stripe\StripeClient;
+use Stripe\StripeObject;
 use Stripe\Util\ObjectTypes;
 
 class FetchStripeObjectsFromEvents implements ShouldQueue
 {
-    use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    private const BATCH_SIZE = 25;
     private const PAGE_SIZE = 100;
 
     /** @var array<string, bool> */
@@ -39,7 +34,6 @@ class FetchStripeObjectsFromEvents implements ShouldQueue
     public function handle(StripeClient $stripe): void
     {
         $startingAfter = null;
-        $jobs = [];
         $resourceClass = $this->resolveResourceClass();
 
         do {
@@ -54,28 +48,12 @@ class FetchStripeObjectsFromEvents implements ShouldQueue
 
                 $this->processedObjectIds[$objectId] = true;
 
-                $objectArray = $object->toArray();
-                $objectArray['metadata'] = array_merge($objectArray['metadata'] ?? [], [
-                    'fetched_via_events_sync' => $objectArray['created'] ?? now()->timestamp,
-                ]);
-
-                $eventPayload = $this->buildSyntheticEvent($objectArray);
-                $stripeEvent = $this->storeEvent($eventPayload);
-                $jobs[] = new ProcessEvent($stripeEvent);
-
-                if (count($jobs) >= self::BATCH_SIZE) {
-                    $this->dispatchBatch($jobs);
-                    $jobs = [];
-                }
+                $this->tagObjectMetadata($stripe, $resourceClass, $object, $objectId);
             }
 
-            $lastObject = $objects->has_more ? Arr::last($objects->data) : null;
+            $lastObject = $objects->has_more ? end($objects->data) : null;
             $startingAfter = $lastObject->id ?? null;
         } while ($startingAfter !== null);
-
-        if ($jobs !== []) {
-            $this->dispatchBatch($jobs);
-        }
     }
 
     /**
@@ -93,45 +71,31 @@ class FetchStripeObjectsFromEvents implements ShouldQueue
         return $stripe->requestCollection('get', $resourceClass::classUrl(), $params, []);
     }
 
-    private function storeEvent(array $event): StripeEvent
+    private function tagObjectMetadata(StripeClient $stripe, string $resourceClass, ApiResource $object, string $objectId): void
     {
-        $existing = StripeEvent::query()
-            ->where('data->>id', $event['id'])
-            ->first();
+        $metadata = $this->prepareMetadata($object);
 
-        if ($existing !== null) {
-            $existing->update(['data' => $event]);
+        $timestamp = (int) ($object->created ?? now()->timestamp);
+        $metadata['fetched_via_events_sync'] = (string) $timestamp;
 
-            Log::info('Updated Stripe event fetched via job', [
-                'id' => $existing->id,
-                'stripe_id' => $event['id'],
-                'stripe_object_id' => $event['data']['object']['id'] ?? null,
-                'object_type' => $this->objectType,
+        try {
+            $stripe->request('post', sprintf('%s/%s', $resourceClass::classUrl(), $objectId), [
+                'metadata' => $metadata,
             ]);
 
-            return $existing;
+            Log::info('Updated Stripe object metadata to trigger event dispatch', [
+                'object_type' => $this->objectType,
+                'object_id' => $objectId,
+                'metadata_key' => 'fetched_via_events_sync',
+                'metadata_value' => $timestamp,
+            ]);
+        } catch (ApiErrorException $exception) {
+            Log::warning('Failed to update Stripe object metadata for events sync', [
+                'object_type' => $this->objectType,
+                'object_id' => $objectId,
+                'exception' => $exception->getMessage(),
+            ]);
         }
-
-        $created = StripeEvent::create(['data' => $event]);
-
-        Log::info('Stored Stripe event fetched via job', [
-            'id' => $created->id,
-            'stripe_id' => $event['id'],
-            'stripe_object_id' => $event['data']['object']['id'] ?? null,
-            'object_type' => $this->objectType,
-        ]);
-
-        return $created;
-    }
-
-    /**
-     * @param array<int, ProcessEvent> $jobs
-     */
-    private function dispatchBatch(array $jobs): void
-    {
-        Bus::batch($jobs)
-            ->name("Process Stripe events for {$this->objectType}")
-            ->dispatch();
     }
 
     /**
@@ -148,26 +112,26 @@ class FetchStripeObjectsFromEvents implements ShouldQueue
         return $mapping[$this->objectType];
     }
 
-    private function buildSyntheticEvent(array $object): array
+    /**
+     * @return array<string, string>
+     */
+    private function prepareMetadata(ApiResource $object): array
     {
-        $created = $object['created'] ?? now()->timestamp;
-        $eventId = sprintf('evt_sync_%s', $object['id']);
+        $metadata = [];
+        $objectMetadata = $object->metadata ?? [];
 
-        return [
-            'id' => $eventId,
-            'object' => 'event',
-            'type' => "{$this->objectType}.synced",
-            'created' => $created,
-            'livemode' => $object['livemode'] ?? false,
-            'pending_webhooks' => 0,
-            'request' => null,
-            'api_version' => Stripe::getApiVersion(),
-            'metadata' => [
-                'fetched_via_events_sync' => $created,
-            ],
-            'data' => [
-                'object' => $object,
-            ],
-        ];
+        if ($objectMetadata instanceof StripeObject) {
+            $metadata = $objectMetadata->toArray();
+        } elseif (is_array($objectMetadata)) {
+            $metadata = $objectMetadata;
+        }
+
+        foreach ($metadata as $key => $value) {
+            if (! is_string($value)) {
+                $metadata[$key] = (string) $value;
+            }
+        }
+
+        return $metadata;
     }
 }
