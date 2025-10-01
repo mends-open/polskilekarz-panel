@@ -3,24 +3,26 @@
 namespace App\Filament\Widgets\Chatwoot;
 
 use App\Filament\Widgets\BaseSchemaWidget;
+use App\Support\Dashboard\DashboardContext;
 use Filament\Actions\Action;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
-use Filament\Support\Enums\FontFamily;
 use Filament\Support\Icons\Heroicon;
-use Filament\Widgets\Widget;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
-use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
-use Livewire\Attributes\Reactive;
-use Livewire\Attributes\Session;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 
 class ContactInfolist extends BaseSchemaWidget
 {
+    protected DashboardContext $dashboardContext;
+
+    public function boot(DashboardContext $dashboardContext): void
+    {
+        $this->dashboardContext = $dashboardContext;
+    }
 
     /**
      * @throws NotFoundExceptionInterface
@@ -30,11 +32,17 @@ class ContactInfolist extends BaseSchemaWidget
      */
     protected function getChatwootContact(): array
     {
-        $account = session()->get('chatwoot.account_id');
-        $contact = session()->get('chatwoot.contact_id');
-        $user = session()->get('chatwoot.current_user_id');
+        $context = $this->dashboardContext->chatwoot();
 
-        return chatwoot()->platform()->impersonate($user)->contacts()->get($account, $contact)['payload'];
+        if (! $context->canImpersonate()) {
+            return [];
+        }
+
+        return chatwoot()
+            ->platform()
+            ->impersonate($context->currentUserId)
+            ->contacts()
+            ->get($context->accountId, $context->contactId)['payload'];
     }
 
     /**
@@ -43,7 +51,7 @@ class ContactInfolist extends BaseSchemaWidget
      */
     public function isReady(): bool
     {
-        return session()->get('ready');
+        return $this->dashboardContext->isReady();
     }
 
     #[On('reset')]

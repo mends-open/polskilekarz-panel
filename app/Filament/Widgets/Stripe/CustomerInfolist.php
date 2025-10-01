@@ -4,24 +4,16 @@ namespace App\Filament\Widgets\Stripe;
 
 use App\Filament\Widgets\BaseSchemaWidget;
 use App\Jobs\Stripe\SyncCustomerFromChatwootContact;
-use Arr;
+use App\Support\Dashboard\DashboardContext;
 use Filament\Actions\Action;
 use Filament\Infolists\Components\TextEntry;
-use Filament\Infolists\Concerns\InteractsWithInfolists;
-use Filament\Infolists\Contracts\HasInfolists;
 use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Section;
-use Filament\Schemas\Concerns\InteractsWithSchemas;
-use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Schemas\Schema;
-use Filament\Support\Enums\FontFamily;
-use Filament\Support\Enums\TextSize;
 use Filament\Support\Icons\Heroicon;
-use Filament\Widgets\Widget;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
-use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
-use Livewire\Attributes\Reactive;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Stripe\Exception\ApiErrorException;
@@ -29,13 +21,20 @@ use Stripe\Exception\ApiErrorException;
 
 class CustomerInfolist extends BaseSchemaWidget
 {
+    protected DashboardContext $dashboardContext;
+
+    public function boot(DashboardContext $dashboardContext): void
+    {
+        $this->dashboardContext = $dashboardContext;
+    }
+
     /**
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
      */
     public function isReady(): bool
     {
-        return session()->get('ready');
+        return $this->dashboardContext->isReady();
     }
     #[On('reset')]
     public function resetComponent(): void
@@ -50,7 +49,7 @@ class CustomerInfolist extends BaseSchemaWidget
      */
     protected function getStripeCustomer(): array
     {
-        $customerId = session()->get('stripe.customer_id');
+        $customerId = $this->dashboardContext->stripe()->customerId;
 
         return $customerId ? stripe()->customers->retrieve($customerId)->toArray() : [];
     }
@@ -63,7 +62,7 @@ class CustomerInfolist extends BaseSchemaWidget
 
     public function schema(Schema $schema): Schema
     {
-        $contactReady = session()->has('chatwoot.contact_id');
+        $contactReady = $this->dashboardContext->chatwoot()->hasContact();
         return $schema
             ->state($this->getStripeCustomer())
             ->components([
@@ -109,10 +108,13 @@ class CustomerInfolist extends BaseSchemaWidget
 
     protected function syncCustomerFromChatwootContact(): void
     {
-        $customerId = session()->get('stripe.customer_id');
-        $accountId = session()->get('chatwoot.account_id');
-        $contactId = session()->get('chatwoot.contact_id');
-        $impersonatorId = session()->get('chatwoot.current_user_id');
+        $stripeContext = $this->dashboardContext->stripe();
+        $chatwootContext = $this->dashboardContext->chatwoot();
+
+        $customerId = $stripeContext->customerId;
+        $accountId = $chatwootContext->accountId;
+        $contactId = $chatwootContext->contactId;
+        $impersonatorId = $chatwootContext->currentUserId;
 
         if (! $customerId) {
             Notification::make()

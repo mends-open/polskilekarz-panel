@@ -3,18 +3,15 @@
 namespace App\Filament\Widgets\Stripe;
 
 use App\Filament\Widgets\BaseTableWidget;
+use App\Support\Dashboard\DashboardContext;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
-use Filament\Notifications\Notification;
-use Filament\Support\Enums\FontFamily;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\Layout\Split;
 use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Filament\Widgets\TableWidget;
-use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
@@ -25,6 +22,13 @@ class PaymentsTable extends BaseTableWidget
     protected int|string|array $columnSpan = 'full';
 
     protected static ?string $heading = 'Payments';
+
+    protected DashboardContext $dashboardContext;
+
+    public function boot(DashboardContext $dashboardContext): void
+    {
+        $this->dashboardContext = $dashboardContext;
+    }
     /**
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface
@@ -37,7 +41,7 @@ class PaymentsTable extends BaseTableWidget
 
     public function isReady(): bool
     {
-        return session()->get('ready');
+        return $this->dashboardContext->isReady();
     }
 
     public function table(Table $table): Table
@@ -106,7 +110,7 @@ class PaymentsTable extends BaseTableWidget
      */
     private function getCustomerPayments(): array
     {
-        $customerId = (string) session()->get('stripe.customer_id');
+        $customerId = (string) $this->dashboardContext->stripe()->customerId;
 
         return $customerId ? stripe()->paymentIntents->all([
             'customer' => $customerId,
