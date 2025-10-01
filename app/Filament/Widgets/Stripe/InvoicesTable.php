@@ -34,7 +34,14 @@ class InvoicesTable extends BaseTableWidget
     #[On('reset')]
     public function resetComponent(): void
     {
-        $this->reset();
+        $this->resetTable();
+        $this->resetErrorBag();
+        $this->resetValidation();
+    }
+
+    private function refreshTable(): void
+    {
+        $this->resetComponent();
     }
 
     public function table(Table $table): Table
@@ -105,7 +112,7 @@ class InvoicesTable extends BaseTableWidget
                     ->disabled(fn () => $this->getCustomerInvoices() == [])
                     ->action(fn () => $this->sendLatestInvoice()),
                 Action::make('reset')
-                    ->action(fn () => $this->reset())
+                    ->action(fn () => $this->refreshTable())
                     ->hiddenLabel()
                     ->icon(Heroicon::OutlinedArrowPath)
                     ->link(),

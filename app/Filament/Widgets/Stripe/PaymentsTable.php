@@ -30,7 +30,14 @@ class PaymentsTable extends BaseTableWidget
     #[On('reset')]
     public function resetComponent(): void
     {
-        $this->reset();
+        $this->resetTable();
+        $this->resetErrorBag();
+        $this->resetValidation();
+    }
+
+    private function refreshTable(): void
+    {
+        $this->resetComponent();
     }
 
     public function isReady(): bool
@@ -77,7 +84,7 @@ class PaymentsTable extends BaseTableWidget
             ->filters([])
             ->headerActions([
                 Action::make('refresh')
-                    ->action(fn () => $this->reset())
+                    ->action(fn () => $this->refreshTable())
                     ->hiddenLabel()
                     ->icon(Heroicon::OutlinedArrowPath)
                     ->link(),

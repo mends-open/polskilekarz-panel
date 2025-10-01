@@ -1,6 +1,6 @@
 <x-filament-widgets::widget class="fi-wi-table">
     {{ \Filament\Support\Facades\FilamentView::renderHook(\Filament\Widgets\View\WidgetsRenderHook::TABLE_WIDGET_START, scopes: static::class) }}
-    @if ($this->isReady() && isset($this->table))
+    @if ($this->isReady())
         {{ $this->table }}
     @else
         <x-filament::loading-section />
