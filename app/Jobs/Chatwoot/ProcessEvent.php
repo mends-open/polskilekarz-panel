@@ -14,13 +14,17 @@ class ProcessEvent implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public function __construct(public ChatwootEvent $event)
+    public bool $afterCommit = true;
+
+    public function __construct(public readonly ChatwootEvent $event)
     {
     }
 
     public function handle(): void
     {
         Log::info('Processing Chatwoot event', ['id' => $this->event->id]);
+
+        // Add domain-specific handling here as needed.
 
         Log::info('Processed Chatwoot event', ['id' => $this->event->id]);
     }
