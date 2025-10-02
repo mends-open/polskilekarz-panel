@@ -7,18 +7,18 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
-class EnsureFilamentIframeParent
+class EnsureChatwootIframeParent
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $allowedParent = trim((string) config('filament.app.iframe_parent'));
+        $allowedParent = trim((string) config('filament.app.chatwoot_iframe_parent'));
 
         if ($allowedParent === '') {
             return $next($request);
         }
 
         if ($this->shouldBlockRequest($request, $allowedParent)) {
-            throw new HttpException(403, 'The Filament panel must be loaded inside the approved iframe parent.');
+            throw new HttpException(403, 'The Filament panel must be loaded inside the Chatwoot dashboard iframe.');
         }
 
         /** @var Response $response */

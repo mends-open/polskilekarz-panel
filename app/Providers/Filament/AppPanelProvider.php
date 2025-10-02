@@ -2,7 +2,7 @@
 
 namespace App\Providers\Filament;
 
-use App\Http\Middleware\EnsureFilamentIframeParent;
+use App\Http\Middleware\EnsureChatwootIframeParent;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -58,7 +58,7 @@ class AppPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
-                EnsureFilamentIframeParent::class,
+                EnsureChatwootIframeParent::class,
             ])
             ->authMiddleware([
                 Authenticate::class,
