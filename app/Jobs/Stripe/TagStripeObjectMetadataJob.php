@@ -9,6 +9,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Stripe\ApiResource;
 use Stripe\Exception\ApiErrorException;
 use Stripe\StripeClient;
@@ -33,7 +34,13 @@ class TagStripeObjectMetadataJob implements ShouldQueue
     public function handle(StripeClient $stripe): void
     {
         $metadata = $this->metadata;
-        $metadata['fetched_via_events_sync'] = (string) $this->timestamp;
+        $visibleSinceKey = config('services.stripe.visible_since_key');
+
+        if ($visibleSinceKey !== null && $visibleSinceKey !== '') {
+            $metadata[$visibleSinceKey] = (string) $this->timestamp;
+        }
+
+        $metadata['events_sync_nonce'] = (string) Str::uuid();
 
         try {
             /** @var class-string<ApiResource> $resourceClass */
@@ -44,8 +51,8 @@ class TagStripeObjectMetadataJob implements ShouldQueue
             Log::info('Updated Stripe object metadata to trigger event dispatch', [
                 'object_type' => $this->objectType,
                 'object_id' => $this->objectId,
-                'metadata_key' => 'fetched_via_events_sync',
-                'metadata_value' => $this->timestamp,
+                'metadata_key' => $visibleSinceKey,
+                'metadata_value' => $visibleSinceKey !== null && $visibleSinceKey !== '' ? $metadata[$visibleSinceKey] : null,
             ]);
         } catch (ApiErrorException $exception) {
             Log::warning('Failed to update Stripe object metadata for events sync', [
