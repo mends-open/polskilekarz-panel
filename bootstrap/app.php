@@ -16,8 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->validateCsrfTokens(except: [
-            'stripe/events',
-            'chatwoot/events',
+            'events/stripe',
+            'events/chatwoot',
             'cloudflare/link-clicks',
         ]);
     })
