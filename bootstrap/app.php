@@ -5,9 +5,6 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
 return Application::configure(basePath: dirname(__DIR__))
-    ->withCommands([
-        App\Console\Commands\FetchStripeObjectsCommand::class,
-    ])
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
@@ -18,7 +15,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->validateCsrfTokens(except: [
             'events/stripe',
             'events/chatwoot',
-            'cloudflare/link-clicks',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
