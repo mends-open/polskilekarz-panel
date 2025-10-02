@@ -29,19 +29,17 @@ class EnsureChatwootIframeParentTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_request_is_not_modified_when_parent_not_configured(): void
+    public function test_request_is_blocked_when_parent_not_configured(): void
     {
         config()->set('filament.app.chatwoot_iframe_parent', '');
 
         $request = Request::create('/filament', 'GET');
 
         $middleware = new EnsureChatwootIframeParent();
-
-        $response = $middleware->handle($request, fn () => new Response('ok'));
-
-        $this->assertInstanceOf(Response::class, $response);
-        $this->assertSame('ok', $response->getContent());
-        $this->assertFalse($response->headers->has('Content-Security-Policy'));
+        
+        $this->expectException(HttpException::class);
+        $this->expectExceptionMessage('The Filament panel requires the CHATWOOT_DASHBOARD_PARENT_URL environment variable to be configured.');
+        $middleware->handle($request, fn () => new Response('ok'));
     }
 
     public function test_request_is_allowed_when_loaded_from_iframe_destination(): void
@@ -77,7 +75,7 @@ class EnsureChatwootIframeParentTest extends TestCase
             $this->fail('Expected HttpException was not thrown.');
         } catch (HttpException $exception) {
             $this->assertSame(403, $exception->getStatusCode());
-            $this->assertSame('The Filament panel must be loaded inside the Chatwoot dashboard iframe.', $exception->getMessage());
+            $this->assertSame('The Filament panel must be loaded inside the Chatwoot Dashboard App iframe', $exception->getMessage());
         }
     }
 }
