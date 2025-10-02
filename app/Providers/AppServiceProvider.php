@@ -19,7 +19,6 @@ use App\Models\Media;
 use App\Models\Patient;
 use App\Models\PatientPhone;
 use App\Models\Phone;
-use App\Models\StripeEvent;
 use App\Models\Submission;
 use App\Models\User;
 use App\Services\Chatwoot\ChatwootClient;
@@ -76,7 +75,6 @@ class AppServiceProvider extends ServiceProvider
             15 => EmaProduct::class,
             16 => ChatwootContext::class,
             17 => CloudflareLink::class,
-            18 => StripeEvent::class,
             19 => ChatwootEvent::class,
         ]);
     }
