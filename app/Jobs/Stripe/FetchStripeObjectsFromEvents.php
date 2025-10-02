@@ -62,6 +62,8 @@ class FetchStripeObjectsFromEvents implements ShouldQueue
     private function prepareMetadataJobs(Collection $objects, string $resourceClass): array
     {
         $jobs = [];
+        $interval = (int) config('services.stripe.metadata_update_interval_seconds', 0);
+        $jobIndex = 0;
 
         foreach ($objects->data as $object) {
             $objectId = (string) ($object->id ?? '');
@@ -72,12 +74,19 @@ class FetchStripeObjectsFromEvents implements ShouldQueue
 
             $metadata = $this->prepareMetadata($object);
 
-            $jobs[] = new TagStripeObjectMetadataJob(
+            $job = new TagStripeObjectMetadataJob(
                 objectType: $this->objectType,
                 resourceClass: $resourceClass,
                 objectId: $objectId,
                 metadata: $metadata,
             );
+
+            if ($interval > 0) {
+                $job->delay(now()->addSeconds($interval * $jobIndex));
+            }
+
+            $jobs[] = $job;
+            $jobIndex++;
         }
 
         return $jobs;

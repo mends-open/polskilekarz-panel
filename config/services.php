@@ -64,6 +64,7 @@ return [
         'api_key' => env('STRIPE_API_KEY'),
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
         'visible_since_key' => env('STRIPE_VISIBLE_SINCE_KEY', 'pl_panel_visible_since'),
+        'metadata_update_interval_seconds' => (int) env('STRIPE_METADATA_UPDATE_INTERVAL_SECONDS', 0),
     ],
 
 ];

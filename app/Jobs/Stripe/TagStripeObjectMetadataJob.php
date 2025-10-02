@@ -9,7 +9,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
+use Symfony\Component\Uid\Uuid;
 use Stripe\ApiResource;
 use Stripe\Exception\ApiErrorException;
 use Stripe\StripeClient;
@@ -33,7 +33,7 @@ class TagStripeObjectMetadataJob implements ShouldQueue
     public function handle(StripeClient $stripe): void
     {
         $metadata = $this->metadata;
-        $metadata['events_sync_nonce'] = (string) Str::uuid();
+        $metadata['events_sync_nonce'] = Uuid::v7()->toRfc4122();
 
         try {
             /** @var class-string<ApiResource> $resourceClass */
