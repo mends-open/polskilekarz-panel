@@ -8,6 +8,7 @@ use App\Filament\Widgets\Stripe\InvoicesTable;
 use App\Filament\Widgets\Stripe\PaymentsTable;
 use Filament\Pages\Dashboard;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Contracts\View\View;
 
 class Payments extends Dashboard
 {

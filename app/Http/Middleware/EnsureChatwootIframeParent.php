@@ -18,7 +18,7 @@ class EnsureChatwootIframeParent
         }
 
         if ($this->shouldBlockRequest($request, $allowedParent)) {
-            throw new HttpException(403, 'The Filament panel must be loaded inside the Chatwoot dashboard iframe.');
+            throw new HttpException(403, 'The Filament panel must be loaded inside the Chatwoot Dashboard App iframe');
         }
 
         /** @var Response $response */
