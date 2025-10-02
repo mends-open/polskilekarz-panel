@@ -109,9 +109,10 @@ class InvoicesTable extends BaseTableWidget
                     ->color(fn () => $this->getCustomerInvoices() == [] ? 'gray' : 'primary')
                     ->disabled(fn () => $this->getCustomerInvoices() == []),
                 Action::make('sendLatest')
-                    ->icon(Heroicon::OutlinedPaperAirplane)
+                    ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
                     ->outlined()
                     ->requiresConfirmation()
+                    ->modalIcon(Heroicon::OutlinedExclamationTriangle)
                     ->modalHeading('Send latest invoice link?')
                     ->modalDescription('We will send the latest invoice link to the active Chatwoot conversation.')
                     ->color(fn () => $this->getCustomerInvoices() == [] ? 'gray' : 'warning')
@@ -134,6 +135,7 @@ class InvoicesTable extends BaseTableWidget
                         ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
                         ->color('warning')
                         ->requiresConfirmation()
+                        ->modalIcon(Heroicon::OutlinedExclamationTriangle)
                         ->modalHeading('Send invoice link?')
                         ->modalDescription('We will send this invoice link to the current Chatwoot conversation.'),
                     Action::make('openInvoiceUrl')
