@@ -69,11 +69,13 @@ class CustomerInfolist extends BaseSchemaWidget
                     ->headerActions([
                         Action::make('sendCustomerPortalLink')
                             ->label('Send portal link')
+                            ->icon(Heroicon::OutlinedPaperAirplane)
                             ->outlined()
                             ->color($portalReady ? 'primary' : 'gray')
                             ->disabled(! $portalReady)
                             ->action(fn () => $this->sendCustomerPortalLink()),
                         Action::make('fetchFromContact')
+                            ->icon(Heroicon::OutlinedArrowDownOnSquareStack)
                             ->outlined()
                             ->color($contactReady ? 'primary' : 'gray')
                             ->disabled(! $contactReady)

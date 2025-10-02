@@ -109,6 +109,7 @@ class InvoicesTable extends BaseTableWidget
                     ->color(fn () => $this->getCustomerInvoices() == [] ? 'gray' : 'primary')
                     ->disabled(fn () => $this->getCustomerInvoices() == []),
                 Action::make('sendLatest')
+                    ->icon(Heroicon::OutlinedPaperAirplane)
                     ->outlined()
                     ->color(fn () => $this->getCustomerInvoices() == [] ? 'gray' : 'primary')
                     ->disabled(fn () => $this->getCustomerInvoices() == [])
