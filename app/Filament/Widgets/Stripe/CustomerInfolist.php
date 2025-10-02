@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets\Stripe;
 
 use App\Filament\Widgets\BaseSchemaWidget;
+use App\Jobs\Stripe\CreateCustomerPortalSessionLink;
 use App\Jobs\Stripe\SyncCustomerFromChatwootContact;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use Filament\Actions\Action;
@@ -54,13 +55,24 @@ class CustomerInfolist extends BaseSchemaWidget
      */
     public function schema(Schema $schema): Schema
     {
-        $contactReady = $this->chatwootContext()->hasContact();
+        $chatwootContext = $this->chatwootContext();
+        $contactReady = $chatwootContext->hasContact();
+        $portalReady = $this->stripeContext()->hasCustomer()
+            && $chatwootContext->accountId !== null
+            && $chatwootContext->conversationId !== null
+            && $chatwootContext->currentUserId !== null;
 
         return $schema
             ->state($this->getStripeCustomer())
             ->components([
                 Section::make('customer')
                     ->headerActions([
+                        Action::make('sendCustomerPortalLink')
+                            ->label('Send portal link')
+                            ->outlined()
+                            ->color($portalReady ? 'primary' : 'gray')
+                            ->disabled(! $portalReady)
+                            ->action(fn () => $this->sendCustomerPortalLink()),
                         Action::make('fetchFromContact')
                             ->outlined()
                             ->color($contactReady ? 'primary' : 'gray')
@@ -140,6 +152,53 @@ class CustomerInfolist extends BaseSchemaWidget
         Notification::make()
             ->title('Syncing customer details')
             ->body('We are fetching the Chatwoot contact details and updating the Stripe customer.')
+            ->info()
+            ->send();
+
+        $this->reset();
+    }
+
+    protected function sendCustomerPortalLink(): void
+    {
+        $stripeContext = $this->stripeContext();
+        $chatwootContext = $this->chatwootContext();
+
+        $customerId = $stripeContext->customerId;
+        $accountId = $chatwootContext->accountId;
+        $conversationId = $chatwootContext->conversationId;
+        $impersonatorId = $chatwootContext->currentUserId;
+
+        if (! $customerId) {
+            Notification::make()
+                ->title('Missing Stripe customer')
+                ->body('We could not find the Stripe customer. Please select a customer first.')
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        if ($accountId === null || $conversationId === null || $impersonatorId === null) {
+            Notification::make()
+                ->title('Missing Chatwoot context')
+                ->body('We need a Chatwoot conversation to send the portal link. Please open this widget from a Chatwoot conversation.')
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        CreateCustomerPortalSessionLink::dispatch(
+            customerId: $customerId,
+            accountId: $accountId,
+            conversationId: $conversationId,
+            impersonatorId: $impersonatorId,
+            notifiableId: auth()->id(),
+        );
+
+        Notification::make()
+            ->title('Generating portal link')
+            ->body('We are generating a Stripe customer portal session and will send the link shortly.')
             ->info()
             ->send();
 
