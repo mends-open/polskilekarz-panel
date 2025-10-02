@@ -14,7 +14,10 @@ class EnsureChatwootIframeParent
         $allowedParent = trim((string) config('filament.app.chatwoot_iframe_parent'));
 
         if ($allowedParent === '') {
-            return $next($request);
+            throw new HttpException(
+                500,
+                'The Filament panel requires the CHATWOOT_DASHBOARD_PARENT_URL environment variable to be configured.',
+            );
         }
 
         if ($this->shouldBlockRequest($request, $allowedParent)) {
