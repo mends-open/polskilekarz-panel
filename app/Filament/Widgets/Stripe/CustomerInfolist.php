@@ -35,14 +35,13 @@ class CustomerInfolist extends BaseSchemaWidget
     #[On('reset')]
     public function resetComponent(): void
     {
-        $this->forgetComputed('stripeCustomer');
         $this->reset();
     }
 
     /**
      * @throws ApiErrorException
      */
-    #[Computed(cache: true)]
+    #[Computed(persist: true)]
     public function stripeCustomer(): array
     {
         $customerId = $this->stripeContext()->customerId;
@@ -146,7 +145,6 @@ class CustomerInfolist extends BaseSchemaWidget
             ->info()
             ->send();
 
-        $this->forgetComputed('stripeCustomer');
         $this->reset();
     }
 

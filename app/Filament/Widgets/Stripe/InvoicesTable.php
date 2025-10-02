@@ -37,7 +37,6 @@ class InvoicesTable extends BaseTableWidget
     #[On('reset')]
     public function resetComponent(): void
     {
-        $this->forgetComputed('customerInvoices');
         $this->resetTable();
         $this->resetErrorBag();
         $this->resetValidation();
@@ -45,7 +44,6 @@ class InvoicesTable extends BaseTableWidget
 
     private function refreshTable(): void
     {
-        $this->forgetComputed('customerInvoices');
         $this->resetComponent();
     }
 
@@ -181,7 +179,7 @@ class InvoicesTable extends BaseTableWidget
      * @throws NotFoundExceptionInterface
      * @throws ApiErrorException
      */
-    #[Computed(cache: true)]
+    #[Computed(persist: true)]
     public function customerInvoices(): array
     {
         $customerId = $this->stripeContext()->customerId;
@@ -192,7 +190,6 @@ class InvoicesTable extends BaseTableWidget
     #[On('stripe.set-context')]
     public function refreshContext(): void
     {
-        $this->forgetComputed('customerInvoices');
         $this->resetTable();
     }
 

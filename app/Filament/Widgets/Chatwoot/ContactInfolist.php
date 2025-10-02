@@ -26,7 +26,7 @@ class ContactInfolist extends BaseSchemaWidget
      * @throws ContainerExceptionInterface
      * @throws ConnectionException
      */
-    #[Computed(cache: true)]
+    #[Computed(persist: true)]
     public function chatwootContact(): array
     {
         $context = $this->chatwootContext();
@@ -54,7 +54,6 @@ class ContactInfolist extends BaseSchemaWidget
     #[On('reset')]
     public function resetComponent(): void
     {
-        $this->forgetComputed('chatwootContact');
         $this->reset();
     }
 

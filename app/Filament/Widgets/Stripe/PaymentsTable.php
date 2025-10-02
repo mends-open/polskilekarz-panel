@@ -33,7 +33,6 @@ class PaymentsTable extends BaseTableWidget
     #[On('reset')]
     public function resetComponent(): void
     {
-        $this->forgetComputed('customerPayments');
         $this->resetTable();
         $this->resetErrorBag();
         $this->resetValidation();
@@ -41,7 +40,6 @@ class PaymentsTable extends BaseTableWidget
 
     private function refreshTable(): void
     {
-        $this->forgetComputed('customerPayments');
         $this->resetComponent();
     }
 
@@ -114,7 +112,7 @@ class PaymentsTable extends BaseTableWidget
      * @throws ApiErrorException
      * @throws NotFoundExceptionInterface
      */
-    #[Computed(cache: true)]
+    #[Computed(persist: true)]
     public function customerPayments(): array
     {
         $customerId = (string) $this->stripeContext()->customerId;
@@ -127,7 +125,6 @@ class PaymentsTable extends BaseTableWidget
     #[On('stripe.set-context')]
     public function refreshContext(): void
     {
-        $this->forgetComputed('customerPayments');
         $this->resetTable();
     }
 
