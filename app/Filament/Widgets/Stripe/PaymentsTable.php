@@ -12,6 +12,7 @@ use Filament\Tables\Columns\Layout\Split;
 use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
@@ -32,6 +33,7 @@ class PaymentsTable extends BaseTableWidget
     #[On('reset')]
     public function resetComponent(): void
     {
+        $this->forgetComputed('customerPayments');
         $this->resetTable();
         $this->resetErrorBag();
         $this->resetValidation();
@@ -39,6 +41,7 @@ class PaymentsTable extends BaseTableWidget
 
     private function refreshTable(): void
     {
+        $this->forgetComputed('customerPayments');
         $this->resetComponent();
     }
 
@@ -50,7 +53,7 @@ class PaymentsTable extends BaseTableWidget
     public function table(Table $table): Table
     {
         return $table
-            ->records(fn () => $this->getCustomerPayments())
+            ->records(fn () => $this->customerPayments)
             ->columns([
                 Split::make([
                     Stack::make([
@@ -111,7 +114,8 @@ class PaymentsTable extends BaseTableWidget
      * @throws ApiErrorException
      * @throws NotFoundExceptionInterface
      */
-    private function getCustomerPayments(): array
+    #[Computed(cache: true)]
+    public function customerPayments(): array
     {
         $customerId = (string) $this->stripeContext()->customerId;
 
@@ -123,6 +127,7 @@ class PaymentsTable extends BaseTableWidget
     #[On('stripe.set-context')]
     public function refreshContext(): void
     {
+        $this->forgetComputed('customerPayments');
         $this->resetTable();
     }
 

@@ -16,6 +16,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
@@ -36,6 +37,7 @@ class InvoicesTable extends BaseTableWidget
     #[On('reset')]
     public function resetComponent(): void
     {
+        $this->forgetComputed('customerInvoices');
         $this->resetTable();
         $this->resetErrorBag();
         $this->resetValidation();
@@ -43,13 +45,14 @@ class InvoicesTable extends BaseTableWidget
 
     private function refreshTable(): void
     {
+        $this->forgetComputed('customerInvoices');
         $this->resetComponent();
     }
 
     public function table(Table $table): Table
     {
         return $table
-            ->records(fn () => $this->getCustomerInvoices())
+            ->records(fn () => $this->customerInvoices)
             ->columns([
                 Split::make([
                     Stack::make([
@@ -106,12 +109,12 @@ class InvoicesTable extends BaseTableWidget
                 Action::make('duplicateLatest')
                     ->icon(Heroicon::OutlinedDocumentDuplicate)
                     ->outlined()
-                    ->color(fn () => $this->getCustomerInvoices() == [] ? 'gray' : 'primary')
-                    ->disabled(fn () => $this->getCustomerInvoices() == []),
+                    ->color(fn () => $this->customerInvoices === [] ? 'gray' : 'primary')
+                    ->disabled(fn () => $this->customerInvoices === []),
                 Action::make('sendLatest')
                     ->outlined()
-                    ->color(fn () => $this->getCustomerInvoices() == [] ? 'gray' : 'primary')
-                    ->disabled(fn () => $this->getCustomerInvoices() == [])
+                    ->color(fn () => $this->customerInvoices === [] ? 'gray' : 'primary')
+                    ->disabled(fn () => $this->customerInvoices === [])
                     ->action(fn () => $this->sendLatestInvoice()),
                 Action::make('reset')
                     ->action(fn () => $this->refreshTable())
@@ -178,7 +181,8 @@ class InvoicesTable extends BaseTableWidget
      * @throws NotFoundExceptionInterface
      * @throws ApiErrorException
      */
-    private function getCustomerInvoices(): array
+    #[Computed(cache: true)]
+    public function customerInvoices(): array
     {
         $customerId = $this->stripeContext()->customerId;
 
@@ -188,12 +192,13 @@ class InvoicesTable extends BaseTableWidget
     #[On('stripe.set-context')]
     public function refreshContext(): void
     {
+        $this->forgetComputed('customerInvoices');
         $this->resetTable();
     }
 
     private function sendLatestInvoice(): void
     {
-        $invoices = $this->getCustomerInvoices();
+        $invoices = $this->customerInvoices;
 
         if ($invoices === []) {
             return;

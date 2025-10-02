@@ -11,6 +11,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
@@ -25,7 +26,8 @@ class ContactInfolist extends BaseSchemaWidget
      * @throws ContainerExceptionInterface
      * @throws ConnectionException
      */
-    protected function getChatwootContact(): array
+    #[Computed(cache: true)]
+    public function chatwootContact(): array
     {
         $context = $this->chatwootContext();
 
@@ -52,6 +54,7 @@ class ContactInfolist extends BaseSchemaWidget
     #[On('reset')]
     public function resetComponent(): void
     {
+        $this->forgetComputed('chatwootContact');
         $this->reset();
     }
 
@@ -64,7 +67,7 @@ class ContactInfolist extends BaseSchemaWidget
     public function schema(Schema $schema): Schema
     {
         return $schema
-            ->state($this->getChatwootContact())
+            ->state($this->chatwootContact)
             ->components([
                 Section::make('contact')
                     ->headerActions([
