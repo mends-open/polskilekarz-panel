@@ -71,7 +71,10 @@ class CustomerInfolist extends BaseSchemaWidget
                             ->label('Send portal link')
                             ->icon(Heroicon::OutlinedPaperAirplane)
                             ->outlined()
-                            ->color($portalReady ? 'primary' : 'gray')
+                            ->requiresConfirmation()
+                            ->modalHeading('Send portal link?')
+                            ->modalDescription('We will create a Stripe customer portal session and send the short link in Chatwoot.')
+                            ->color($portalReady ? 'warning' : 'gray')
                             ->disabled(! $portalReady)
                             ->action(fn () => $this->sendCustomerPortalLink()),
                         Action::make('fetchFromContact')

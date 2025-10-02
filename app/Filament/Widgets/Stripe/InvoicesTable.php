@@ -111,7 +111,10 @@ class InvoicesTable extends BaseTableWidget
                 Action::make('sendLatest')
                     ->icon(Heroicon::OutlinedPaperAirplane)
                     ->outlined()
-                    ->color(fn () => $this->getCustomerInvoices() == [] ? 'gray' : 'primary')
+                    ->requiresConfirmation()
+                    ->modalHeading('Send latest invoice link?')
+                    ->modalDescription('We will send the latest invoice link to the active Chatwoot conversation.')
+                    ->color(fn () => $this->getCustomerInvoices() == [] ? 'gray' : 'warning')
                     ->disabled(fn () => $this->getCustomerInvoices() == [])
                     ->action(fn () => $this->sendLatestInvoice()),
                 Action::make('reset')
@@ -129,7 +132,10 @@ class InvoicesTable extends BaseTableWidget
                         ->action(fn ($record) => $this->sendShortUrl($record['hosted_invoice_url']))
                         ->label('Send')
                         ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
-                        ->requiresConfirmation(),
+                        ->color('warning')
+                        ->requiresConfirmation()
+                        ->modalHeading('Send invoice link?')
+                        ->modalDescription('We will send this invoice link to the current Chatwoot conversation.'),
                     Action::make('openInvoiceUrl')
                         ->url(fn ($record) => $record['hosted_invoice_url'])
                         ->openUrlInNewTab()
