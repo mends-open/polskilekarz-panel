@@ -9,6 +9,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
+use Symfony\Component\Uid\Uuid;
 use Stripe\ApiResource;
 use Stripe\Exception\ApiErrorException;
 use Stripe\StripeClient;
@@ -26,14 +27,13 @@ class TagStripeObjectMetadataJob implements ShouldQueue
         private readonly string $resourceClass,
         private readonly string $objectId,
         private readonly array $metadata,
-        private readonly int $timestamp,
     ) {
     }
 
     public function handle(StripeClient $stripe): void
     {
         $metadata = $this->metadata;
-        $metadata['fetched_via_events_sync'] = (string) $this->timestamp;
+        $metadata['events_sync_nonce'] = Uuid::v7()->toRfc4122();
 
         try {
             /** @var class-string<ApiResource> $resourceClass */
@@ -44,8 +44,6 @@ class TagStripeObjectMetadataJob implements ShouldQueue
             Log::info('Updated Stripe object metadata to trigger event dispatch', [
                 'object_type' => $this->objectType,
                 'object_id' => $this->objectId,
-                'metadata_key' => 'fetched_via_events_sync',
-                'metadata_value' => $this->timestamp,
             ]);
         } catch (ApiErrorException $exception) {
             Log::warning('Failed to update Stripe object metadata for events sync', [
