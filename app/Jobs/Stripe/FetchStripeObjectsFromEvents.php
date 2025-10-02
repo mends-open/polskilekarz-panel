@@ -71,14 +71,12 @@ class FetchStripeObjectsFromEvents implements ShouldQueue
             }
 
             $metadata = $this->prepareMetadata($object);
-            $timestamp = (int) ($object->created ?? now()->timestamp);
 
             $jobs[] = new TagStripeObjectMetadataJob(
                 objectType: $this->objectType,
                 resourceClass: $resourceClass,
                 objectId: $objectId,
                 metadata: $metadata,
-                timestamp: $timestamp,
             );
         }
 
