@@ -116,4 +116,8 @@ return [
 
     'system_route_prefix' => 'filament',
 
+    'app' => [
+        'iframe_parent' => env('FILAMENT_APP_IFRAME_PARENT', ''),
+    ],
+
 ];
