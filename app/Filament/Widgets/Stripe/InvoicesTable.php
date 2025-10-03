@@ -317,7 +317,7 @@ class InvoicesTable extends BaseTableWidget
 
                         $quantity = max(1, (int) data_get($line, 'quantity', 1));
 
-                        return array_fill(0, $quantity, ['price' => $priceId]);
+                        return array_fill(0, $quantity, $priceId);
                     })
                     ->values()
                     ->all();
