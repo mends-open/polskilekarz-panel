@@ -33,6 +33,7 @@ use Filament\Schemas\Components\Utilities\Set;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Stripe\Exception\ApiErrorException;
+use Stripe\StripeObject;
 
 class InvoicesTable extends BaseTableWidget
 {
@@ -453,7 +454,18 @@ class InvoicesTable extends BaseTableWidget
     {
         $customerId = $this->stripeContext()->customerId;
 
-        return $customerId ? stripe()->invoices->all(['customer' => $customerId])->toArray()['data'] : [];
+        if (! $customerId) {
+            return [];
+        }
+
+        $response = stripe()->invoices->all([
+            'customer' => $customerId,
+            'expand' => ['data.lines.data.price.product'],
+        ]);
+
+        return collect($response->data ?? [])
+            ->map(fn (mixed $invoice) => $this->normalizeStripeInvoice($invoice))
+            ->all();
     }
 
     #[On('stripe.set-context')]
@@ -487,6 +499,50 @@ class InvoicesTable extends BaseTableWidget
         }
 
         $this->sendShortUrl($invoiceUrl);
+    }
+
+    /**
+     * @param  StripeObject|array  $invoice
+     */
+    private function normalizeStripeInvoice(mixed $invoice): array
+    {
+        $normalized = $this->normalizeStripeObject($invoice);
+
+        $normalized['lines']['data'] = collect(data_get($normalized, 'lines.data', []))
+            ->map(function (array $line): array {
+                $line['description'] = $line['description']
+                    ?? data_get($line, 'price.product.name')
+                    ?? data_get($line, 'price.nickname')
+                    ?? data_get($line, 'price.id');
+
+                $line['amount'] = $line['amount']
+                    ?? data_get($line, 'amount_excluding_tax')
+                    ?? data_get($line, 'price.unit_amount');
+
+                return $line;
+            })
+            ->all();
+
+        return $normalized;
+    }
+
+    private function normalizeStripeObject(mixed $value): array
+    {
+        if ($value instanceof StripeObject) {
+            $value = $value->toArray();
+        }
+
+        if (! is_array($value)) {
+            return [];
+        }
+
+        foreach ($value as $key => $item) {
+            if ($item instanceof StripeObject || is_array($item)) {
+                $value[$key] = $this->normalizeStripeObject($item);
+            }
+        }
+
+        return $value;
     }
 
 }
