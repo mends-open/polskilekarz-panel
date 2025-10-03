@@ -102,7 +102,6 @@ class InvoicesTable extends BaseTableWidget
                     if ($this->isCurrencyResetSuppressed() || $state === $old) {
                         return;
                     }
-
                     $set('line_items', blank($state) ? [] : [null]);
                 }),
             Repeater::make('line_items')
@@ -200,22 +199,14 @@ class InvoicesTable extends BaseTableWidget
 
         $descriptionComponent = Text::make($description)
             ->container($schema)
-            ->grow()
-            ->extraAttributes(['class' => 'text-left']);
+            ->grow();
 
         $amountComponent = Text::make($amount)
             ->container($schema)
             ->badge()
-            ->color('primary')
-            ->size(TextSize::Small)
-            ->extraAttributes(['class' => 'whitespace-nowrap']);
+            ->color('primary');
 
-        return sprintf(
-            "<span class='%s'>%s%s</span>",
-            'flex w-full items-center justify-between gap-3',
-            $descriptionComponent->toHtml(),
-            $amountComponent->toHtml(),
-        );
+        return $descriptionComponent->toHtml() . $amountComponent->toHtml();
     }
 
     private function resolvePriceDescription(array $price): string
@@ -229,7 +220,7 @@ class InvoicesTable extends BaseTableWidget
 
     private function formatPriceAmount(array $price): string
     {
-        $currency = Str::upper((string) data_get($price, 'currency', 'USD'));
+        $currency = Str::upper((string) data_get($price, 'currency'));
         $amount = (int) data_get($price, 'unit_amount', 0);
 
         $divisor = $this->isZeroDecimalCurrency($currency) ? 1 : 100;
