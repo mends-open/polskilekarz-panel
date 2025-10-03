@@ -90,7 +90,13 @@ class InvoicesTable extends BaseTableWidget
                 ->inline()
                 ->live()
                 ->afterStateUpdated(function ($state, Set $set): void {
-                    $set('line_items', $state ? [null] : []);
+                    if (blank($state)) {
+                        $set('line_items', []);
+
+                        return;
+                    }
+
+                    $set('line_items', [['price' => null]]);
                 }),
             Repeater::make('line_items')
                 ->label('Line items')
@@ -99,7 +105,6 @@ class InvoicesTable extends BaseTableWidget
                 ->simple(
                     Select::make('price')
                         ->label('Product')
-                        ->statePath('')
                         ->required()
                         ->searchable()
                         ->allowHtml()
