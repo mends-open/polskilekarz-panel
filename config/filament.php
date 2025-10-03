@@ -117,7 +117,13 @@ return [
     'system_route_prefix' => 'filament',
 
     'app' => [
-        'chatwoot_iframe_parent' => env('CHATWOOT_DASHBOARD_PARENT_URL', ''),
+        'allowed_iframe_parents' => array_values(array_filter(
+            array_map(
+                static fn (string $origin): string => trim($origin),
+                explode(',', (string) env('FILAMENT_ALLOWED_IFRAME_PARENTS', '')),
+            ),
+            static fn (string $origin): bool => $origin !== '',
+        )),
     ],
 
 ];
