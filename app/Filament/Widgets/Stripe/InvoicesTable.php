@@ -44,6 +44,8 @@ class InvoicesTable extends BaseTableWidget
     protected int|string|array $columnSpan = 'full';
 
     protected static ?string $heading = 'Invoices';
+
+    private ?array $customerInvoicesCache = null;
     public function isReady(): bool
     {
         return $this->dashboardContextIsReady();
@@ -55,11 +57,17 @@ class InvoicesTable extends BaseTableWidget
         $this->resetTable();
         $this->resetErrorBag();
         $this->resetValidation();
+        $this->clearCustomerInvoicesCache();
     }
 
     private function refreshTable(): void
     {
         $this->resetComponent();
+    }
+
+    private function clearCustomerInvoicesCache(): void
+    {
+        $this->customerInvoicesCache = null;
     }
 
     #[Computed(persist: true)]
@@ -426,8 +434,14 @@ class InvoicesTable extends BaseTableWidget
                 Action::make('duplicateLatest')
                     ->icon(Heroicon::OutlinedDocumentDuplicate)
                     ->outlined()
-                    ->color(fn () => $this->getCustomerInvoices() == [] ? 'gray' : 'primary')
-                    ->disabled(fn () => $this->getCustomerInvoices() == []),
+                    ->color(fn () => $this->hasCustomerInvoices() ? 'primary' : 'gray')
+                    ->disabled(fn () => ! $this->hasCustomerInvoices())
+                    ->modalIcon(Heroicon::OutlinedDocumentDuplicate)
+                    ->modalHeading('Duplicate latest invoice')
+                    ->modalSubmitActionLabel('Create invoice')
+                    ->form($this->getCreateInvoiceForm())
+                    ->fillForm(fn () => $this->prepareInvoiceFormData($this->latestCustomerInvoice()))
+                    ->action(fn (array $data) => $this->handleCreateInvoice($data)),
                 Action::make('sendLatest')
                     ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
                     ->outlined()
@@ -435,8 +449,8 @@ class InvoicesTable extends BaseTableWidget
                     ->modalIcon(Heroicon::OutlinedExclamationTriangle)
                     ->modalHeading('Send latest invoice link?')
                     ->modalDescription('We will send the latest invoice link to the active Chatwoot conversation.')
-                    ->color(fn () => $this->getCustomerInvoices() == [] ? 'gray' : 'warning')
-                    ->disabled(fn () => $this->getCustomerInvoices() == [])
+                    ->color(fn () => $this->hasCustomerInvoices() ? 'warning' : 'gray')
+                    ->disabled(fn () => ! $this->hasCustomerInvoices())
                     ->action(fn () => $this->sendLatestInvoice()),
                 Action::make('reset')
                     ->action(fn () => $this->refreshTable())
@@ -448,7 +462,13 @@ class InvoicesTable extends BaseTableWidget
                 ActionGroup::make([
                     Action::make('duplicateInvoice')
                         ->label('Duplicate')
-                        ->icon(Heroicon::OutlinedDocumentDuplicate),
+                        ->icon(Heroicon::OutlinedDocumentDuplicate)
+                        ->modalIcon(Heroicon::OutlinedDocumentDuplicate)
+                        ->modalHeading('Duplicate invoice')
+                        ->modalSubmitActionLabel('Create invoice')
+                        ->form($this->getCreateInvoiceForm())
+                        ->fillForm(fn ($record) => $this->prepareInvoiceFormData(is_array($record) ? $record : null))
+                        ->action(fn (array $data) => $this->handleCreateInvoice($data)),
                     Action::make('sendInvoiceShortUrl')
                         ->action(fn ($record) => $this->sendShortUrl($record['hosted_invoice_url']))
                         ->label('Send')
@@ -509,17 +529,21 @@ class InvoicesTable extends BaseTableWidget
      */
     private function getCustomerInvoices(): array
     {
+        if ($this->customerInvoicesCache !== null) {
+            return $this->customerInvoicesCache;
+        }
+
         $customerId = $this->stripeContext()->customerId;
 
         if (! $customerId) {
-            return [];
+            return $this->customerInvoicesCache = [];
         }
 
         $response = stripe()->invoices->all([
             'customer' => $customerId,
         ]);
 
-        return collect($response->data ?? [])
+        return $this->customerInvoicesCache = collect($response->data ?? [])
             ->map(fn (mixed $invoice) => $this->normalizeStripeInvoice($invoice))
             ->all();
     }
@@ -528,19 +552,16 @@ class InvoicesTable extends BaseTableWidget
     public function refreshContext(): void
     {
         $this->resetTable();
+        $this->clearCustomerInvoicesCache();
     }
 
     private function sendLatestInvoice(): void
     {
-        $invoices = $this->getCustomerInvoices();
+        $latest = $this->latestCustomerInvoice();
 
-        if ($invoices === []) {
+        if (! $latest) {
             return;
         }
-
-        $latest = collect($invoices)
-            ->sortByDesc('created')
-            ->first();
 
         $invoiceUrl = data_get($latest, 'hosted_invoice_url');
 
@@ -555,6 +576,97 @@ class InvoicesTable extends BaseTableWidget
         }
 
         $this->sendShortUrl($invoiceUrl);
+    }
+
+    private function hasCustomerInvoices(): bool
+    {
+        return $this->getCustomerInvoices() !== [];
+    }
+
+    private function latestCustomerInvoice(): ?array
+    {
+        return collect($this->getCustomerInvoices())
+            ->sortByDesc('created')
+            ->first() ?: null;
+    }
+
+    private function prepareInvoiceFormData(?array $invoice): array
+    {
+        $state = $this->defaultInvoiceFormState();
+
+        if (! $invoice) {
+            return $state;
+        }
+
+        $currency = $this->resolveInvoiceCurrency($invoice);
+
+        if (! $currency) {
+            return $state;
+        }
+
+        $lineItems = $this->extractSelectablePriceLineItems($invoice);
+
+        if ($lineItems === []) {
+            $lineItems = [['price' => null]];
+        }
+
+        $state['currency'] = $currency;
+        $state['line_items'] = $lineItems;
+
+        return $state;
+    }
+
+    private function defaultInvoiceFormState(): array
+    {
+        return [
+            'currency' => null,
+            'line_items' => [],
+        ];
+    }
+
+    private function resolveInvoiceCurrency(array $invoice): ?string
+    {
+        $currency = data_get($invoice, 'currency');
+
+        if (! $currency) {
+            return null;
+        }
+
+        $currency = Str::lower((string) $currency);
+
+        return array_key_exists($currency, $this->getCurrencyOptions()) ? $currency : null;
+    }
+
+    private function extractSelectablePriceLineItems(array $invoice): array
+    {
+        $selectablePriceIds = array_flip(
+            $this->getStripePriceCollection()
+                ->pluck('id')
+                ->filter()
+                ->all()
+        );
+
+        if ($selectablePriceIds === []) {
+            return [];
+        }
+
+        return collect(data_get($invoice, 'lines.data', []))
+            ->map(function ($line) use ($selectablePriceIds) {
+                if (! is_array($line)) {
+                    return null;
+                }
+
+                $priceId = data_get($line, 'price.id') ?? data_get($line, 'price');
+
+                if (! is_string($priceId) || $priceId === '' || ! array_key_exists($priceId, $selectablePriceIds)) {
+                    return null;
+                }
+
+                return ['price' => $priceId];
+            })
+            ->filter()
+            ->values()
+            ->all();
     }
 
     /**
