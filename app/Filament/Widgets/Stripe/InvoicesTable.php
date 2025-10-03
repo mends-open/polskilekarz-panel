@@ -101,10 +101,6 @@ class InvoicesTable extends BaseTableWidget
                 ->live()
                 ->afterStateUpdated(function (?string $state, Set $set): void {
                     $set('line_items', []);
-
-                    if ($state) {
-                        $set('line_items', [null]);
-                    }
                 }),
             Repeater::make('line_items')
                 ->label('Line items')
@@ -116,11 +112,6 @@ class InvoicesTable extends BaseTableWidget
                     Select::make('price')
                         ->label('Product')
                         ->native(false)
-                        ->required()
-                        ->rules(['required'])
-                        ->validationMessages([
-                            'required' => 'Please select a product.',
-                        ])
                         ->searchable()
                         ->allowHtml()
                         ->options(fn (Get $get): array => $this->getPriceOptionsForCurrency($get('../../currency')))
