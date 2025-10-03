@@ -120,7 +120,7 @@ class InvoicesTable extends BaseTableWidget
                     }
 
                     Log::debug('Currency changed, resetting line items to a blank row.');
-                    $set('line_items', [['price' => null]]);
+                    $set('line_items', [null]);
                 }),
             Repeater::make('line_items')
                 ->label('Line items')
@@ -345,21 +345,54 @@ class InvoicesTable extends BaseTableWidget
             }
 
             if ($currency) {
-                $lineItems = collect(data_get($invoice, 'lines.data', []))
-                    ->flatMap(function (array $line) use ($currency): array {
-                        $priceId = data_get($line, 'price.id');
-                        $priceCurrency = Str::lower((string) data_get($line, 'price.currency'));
+                $rawLines = collect(data_get($invoice, 'lines.data', []));
+                $preparedItems = [];
 
-                        if (! $priceId || $priceCurrency !== $currency || ! $this->isSelectablePrice($priceId)) {
-                            return [];
-                        }
+                foreach ($rawLines as $line) {
+                    $rawPrice = data_get($line, 'price');
+                    $priceId = is_string($rawPrice) ? $rawPrice : data_get($line, 'price.id');
+                    $lineCurrency = data_get($line, 'price.currency') ?? data_get($line, 'currency');
+                    $lineCurrency = $lineCurrency ? Str::lower((string) $lineCurrency) : null;
 
-                        $quantity = max(1, (int) data_get($line, 'quantity', 1));
+                    Log::debug('Inspecting invoice line for duplication defaults.', [
+                        'raw_price' => $rawPrice,
+                        'resolved_price_id' => $priceId,
+                        'line_currency' => $lineCurrency,
+                        'quantity' => data_get($line, 'quantity'),
+                    ]);
 
-                        return array_fill(0, $quantity, $priceId);
-                    })
-                    ->values()
-                    ->all();
+                    if (! $priceId) {
+                        Log::debug('Skipping invoice line without a price identifier.');
+                        continue;
+                    }
+
+                    if ($lineCurrency && $lineCurrency !== $currency) {
+                        Log::debug('Skipping invoice line due to currency mismatch.', [
+                            'invoice_currency' => $currency,
+                        ]);
+                        continue;
+                    }
+
+                    if (! $this->isSelectablePrice($priceId)) {
+                        Log::debug('Skipping invoice line because the price is not selectable.', [
+                            'price_id' => $priceId,
+                        ]);
+                        continue;
+                    }
+
+                    $quantity = max(1, (int) data_get($line, 'quantity', 1));
+
+                    Log::debug('Adding invoice line items to duplication defaults.', [
+                        'price_id' => $priceId,
+                        'quantity' => $quantity,
+                    ]);
+
+                    for ($i = 0; $i < $quantity; $i++) {
+                        $preparedItems[] = $priceId;
+                    }
+                }
+
+                $lineItems = $preparedItems;
 
                 Log::info('Prepared line items from invoice.', [
                     'currency' => $currency,
@@ -370,10 +403,7 @@ class InvoicesTable extends BaseTableWidget
 
         $defaults = [
             'currency' => $currency,
-            'line_items' => array_map(
-                fn (string $priceId): array => ['price' => $priceId],
-                $lineItems,
-            ),
+            'line_items' => $lineItems,
         ];
 
         Log::info('Final invoice form defaults prepared.', $defaults);
