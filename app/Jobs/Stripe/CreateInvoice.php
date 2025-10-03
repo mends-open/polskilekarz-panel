@@ -26,6 +26,7 @@ class CreateInvoice implements ShouldQueue
      */
     public function __construct(
         public readonly string $customerId,
+        public readonly string $currency,
         public readonly array $priceIds,
         public readonly ?int $notifiableId,
     ) {}
@@ -41,6 +42,7 @@ class CreateInvoice implements ShouldQueue
 
         $invoice = $stripe->invoices->create([
             'customer' => $this->customerId,
+            'currency' => $this->currency,
             'pending_invoice_items_behavior' => 'exclude',
             'collection_method' => 'send_invoice',
             'days_until_due' => 0,

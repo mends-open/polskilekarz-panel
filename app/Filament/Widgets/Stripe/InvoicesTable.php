@@ -68,6 +68,7 @@ class InvoicesTable extends BaseTableWidget
         try {
             return stripe()->prices->all([
                 'active' => true,
+                'type' => 'one_time',
                 'expand' => ['data.product'],
                 'limit' => 100,
             ])->toArray()['data'] ?? [];
@@ -92,20 +93,22 @@ class InvoicesTable extends BaseTableWidget
                 ->afterStateUpdated(function ($state, Set $set): void {
                     if (blank($state)) {
                         $set('line_items', []);
-
                         return;
                     }
-
                     $set('line_items', [['price' => null]]);
                 }),
             Repeater::make('line_items')
+                ->live()
                 ->label('Line items')
                 ->minItems(1)
+                ->reorderable(false)
                 ->hidden(fn (Get $get): bool => blank($get('../../currency') ?? $get('currency')))
                 ->simple(
                     Select::make('price')
                         ->label('Product')
+                        ->native(false)
                         ->required()
+                        ->live()
                         ->searchable()
                         ->allowHtml()
                         ->options(fn (Get $get): array => $this->getPriceOptionsForCurrency($get('../../currency') ?? $get('currency')))
@@ -254,8 +257,11 @@ class InvoicesTable extends BaseTableWidget
             return;
         }
 
+        $currency = $data['currency'] ?? null;
+
         CreateInvoice::dispatch(
             customerId: $customerId,
+            currency: $currency,
             priceIds: $priceIds,
             notifiableId: auth()->id(),
         );
