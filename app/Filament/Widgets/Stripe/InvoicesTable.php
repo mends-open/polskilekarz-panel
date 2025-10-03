@@ -27,7 +27,6 @@ use Filament\Tables\Table;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Number;
 use Illuminate\Support\Str;
 use Livewire\Attributes\On;
@@ -84,9 +83,7 @@ class InvoicesTable extends BaseTableWidget
                 'limit' => 100,
             ])->toArray()['data'] ?? [];
         } catch (ApiErrorException $exception) {
-            Log::error('Failed to fetch Stripe prices.', [
-                'exception' => $exception,
-            ]);
+            report($exception);
 
             return [];
         }
@@ -94,8 +91,6 @@ class InvoicesTable extends BaseTableWidget
 
     private function getCreateInvoiceForm(): array
     {
-        Log::debug('Building create invoice form definition.');
-
         return [
             ToggleButtons::make('currency')
                 ->label('Currency')
@@ -104,31 +99,11 @@ class InvoicesTable extends BaseTableWidget
                 ->inline()
                 ->live()
                 ->afterStateUpdated(function (?string $state, Set $set, ?string $old): void {
-                    if ($this->isCurrencyResetSuppressed()) {
-                        Log::debug('Currency update triggered while suppression active, keeping existing line items.');
-
+                    if ($this->isCurrencyResetSuppressed() || $state === $old) {
                         return;
                     }
 
-                    Log::info('Invoice currency updated.', [
-                        'previous' => $old,
-                        'current' => $state,
-                    ]);
-
-                    if ($state === $old) {
-                        Log::debug('Currency unchanged, skipping line item reset.');
-                        return;
-                    }
-
-                    if (blank($state)) {
-                        Log::debug('Currency cleared, removing all line items.');
-                        $set('line_items', []);
-
-                        return;
-                    }
-
-                    Log::debug('Currency changed, resetting line items to a blank row.');
-                    $set('line_items', [null]);
+                    $set('line_items', blank($state) ? [] : [null]);
                 }),
             Repeater::make('line_items')
                 ->label('Line items')
@@ -140,15 +115,7 @@ class InvoicesTable extends BaseTableWidget
                         ->native(false)
                         ->searchable()
                         ->allowHtml()
-                        ->options(function (Get $get): array {
-                            $currency = $get('../../currency') ?? $get('currency');
-
-                            Log::debug('Resolving price options for repeater item.', [
-                                'currency_from_parent' => $currency,
-                            ]);
-
-                            return $this->getPriceOptionsForCurrency($currency);
-                        })
+                        ->options(fn (Get $get): array => $this->getPriceOptionsForCurrency($get('../../currency') ?? $get('currency')))
                         ->disabled(fn (Get $get): bool => blank($get('../../currency') ?? $get('currency')))
                         ->placeholder(fn (Get $get): string => ($get('../../currency') ?? $get('currency')) ? 'Select a product' : 'Choose a currency first'),
                 )
@@ -187,13 +154,12 @@ class InvoicesTable extends BaseTableWidget
     private function getPriceOptionsForCurrency(?string $currency): array
     {
         if (! $currency) {
-            Log::debug('No currency provided while fetching price options.');
             return [];
         }
 
         $currency = Str::lower($currency);
 
-        $options = $this->getStripePriceCollection()
+        return $this->getStripePriceCollection()
             ->filter(fn (array $price) => Str::lower($price['currency'] ?? '') === $currency)
             ->mapWithKeys(function (array $price): array {
                 return [
@@ -201,13 +167,6 @@ class InvoicesTable extends BaseTableWidget
                 ];
             })
             ->all();
-
-        Log::info('Loaded price options for currency.', [
-            'currency' => $currency,
-            'option_count' => count($options),
-        ]);
-
-        return $options;
     }
 
     private function getStripePriceCollection(): Collection
@@ -288,10 +247,6 @@ class InvoicesTable extends BaseTableWidget
 
     private function handleCreateInvoice(array $data): void
     {
-        Log::info('Handling invoice creation.', [
-            'raw_payload' => $data,
-        ]);
-
         $priceIds = collect($data['line_items'] ?? [])
             ->map(function ($item) {
                 if (is_array($item)) {
@@ -303,10 +258,6 @@ class InvoicesTable extends BaseTableWidget
             ->filter(fn (?string $priceId) => $this->isSelectablePrice($priceId))
             ->values()
             ->all();
-
-        Log::info('Prepared invoice line items for creation.', [
-            'price_ids' => $priceIds,
-        ]);
 
         if ($priceIds === []) {
             Notification::make()
@@ -325,12 +276,6 @@ class InvoicesTable extends BaseTableWidget
         }
 
         $currency = $data['currency'] ?? null;
-
-        Log::info('Dispatching invoice creation job.', [
-            'customer_id' => $customerId,
-            'currency' => $currency,
-            'price_count' => count($priceIds),
-        ]);
 
         CreateInvoice::dispatch(
             customerId: $customerId,
@@ -354,121 +299,62 @@ class InvoicesTable extends BaseTableWidget
         $lineItems = [];
 
         if ($invoice) {
-            Log::info('Preparing invoice defaults from existing invoice.', [
-                'invoice_id' => data_get($invoice, 'id'),
-            ]);
-
-            $invoiceId = data_get($invoice, 'id');
-
-            $currencyOptions = $this->getCurrencyOptions();
             $currency = data_get($invoice, 'currency');
             $currency = is_string($currency) ? Str::lower($currency) : null;
 
+            $currencyOptions = $this->getCurrencyOptions();
+
             if (! $currency || ! array_key_exists($currency, $currencyOptions)) {
-                Log::debug('Invoice currency not available in options.', [
-                    'invoice_currency' => $currency,
-                ]);
                 $currency = null;
             }
 
             if ($currency) {
-                $rawLines = collect();
+                $invoiceId = data_get($invoice, 'id');
+                $lines = collect();
 
                 if (is_string($invoiceId)) {
-                    $rawLines = collect($this->fetchInvoiceLineItems($invoiceId));
+                    $lines = collect($this->fetchInvoiceLineItems($invoiceId));
                 }
 
-                if ($rawLines->isEmpty()) {
-                    Log::debug('Falling back to embedded invoice lines for duplication defaults.');
-                    $rawLines = collect(data_get($invoice, 'lines.data', []));
+                if ($lines->isEmpty()) {
+                    $lines = collect(data_get($invoice, 'lines.data', []));
                 }
 
-                $preparedItems = [];
+                $lineItems = $lines
+                    ->map(fn ($line) => $line instanceof StripeObject ? $line->toArray() : (array) $line)
+                    ->map(function (array $line) use ($currency) {
+                        $priceId = $this->resolveLineItemPrice($line);
+                        $lineCurrency = data_get($line, 'price.currency') ?? data_get($line, 'currency');
+                        $lineCurrency = $lineCurrency ? Str::lower((string) $lineCurrency) : null;
 
-                foreach ($rawLines as $line) {
-                    $rawPrice = data_get($line, 'price');
-                    [$priceId, $priceSource] = $this->resolveLineItemPrice($line, $rawPrice);
-
-                    $lineCurrency = data_get($line, 'price.currency') ?? data_get($line, 'currency');
-                    $lineCurrency = $lineCurrency ? Str::lower((string) $lineCurrency) : null;
-
-                    Log::debug('Inspecting invoice line for duplication defaults.', [
-                        'raw_price' => $rawPrice,
-                        'resolved_price_id' => $priceId,
-                        'price_source' => $priceSource,
-                        'pricing_price_details_price' => data_get($line, 'pricing.price_details.price'),
-                        'line_currency' => $lineCurrency,
-                        'quantity' => data_get($line, 'quantity'),
-                    ]);
-
-                    if (! $priceId) {
-                        Log::debug('Skipping invoice line without a price identifier.', [
-                            'line_id' => data_get($line, 'id'),
-                        ]);
-                        continue;
-                    }
-
-                    if ($lineCurrency && $lineCurrency !== $currency) {
-                        Log::debug('Skipping invoice line due to currency mismatch.', [
-                            'invoice_currency' => $currency,
-                        ]);
-                        continue;
-                    }
-
-                    if (! $this->isSelectablePrice($priceId)) {
-                        Log::debug('Skipping invoice line because the price is not selectable.', [
-                            'price_id' => $priceId,
-                        ]);
-                        continue;
-                    }
-
-                    $quantity = max(1, (int) data_get($line, 'quantity', 1));
-
-                    Log::debug('Adding invoice line items to duplication defaults.', [
-                        'price_id' => $priceId,
-                        'quantity' => $quantity,
-                    ]);
-
-                    for ($i = 0; $i < $quantity; $i++) {
-                        $preparedItems[] = $priceId;
-                    }
-                }
-
-                $lineItems = $preparedItems;
-
-                Log::info('Prepared line items from invoice.', [
-                    'currency' => $currency,
-                    'line_item_count' => count($lineItems),
-                ]);
+                        return [
+                            'price' => $priceId,
+                            'currency' => $lineCurrency,
+                            'quantity' => max(1, (int) data_get($line, 'quantity', 1)),
+                        ];
+                    })
+                    ->filter(fn (array $line) => $line['price'] && (! $line['currency'] || $line['currency'] === $currency) && $this->isSelectablePrice($line['price']))
+                    ->flatMap(fn (array $line) => array_fill(0, $line['quantity'], $line['price']))
+                    ->values()
+                    ->all();
             }
         }
 
-        $defaults = [
+        return [
             'currency' => $currency,
             'line_items' => $lineItems,
         ];
-
-        Log::info('Final invoice form defaults prepared.', $defaults);
-
-        return $defaults;
     }
 
     private function fetchInvoiceLineItems(string $invoiceId): array
     {
-        Log::info('Fetching invoice line items for duplication defaults.', [
-            'invoice_id' => $invoiceId,
-        ]);
-
         try {
             $lineItems = stripe()->invoices->allLines($invoiceId, [
                 'expand' => ['data.price', 'data.price.product'],
                 'limit' => 100,
             ]);
         } catch (ApiErrorException $exception) {
-            Log::error('Failed to fetch invoice line items for duplication defaults.', [
-                'invoice_id' => $invoiceId,
-                'exception' => $exception,
-            ]);
+            report($exception);
 
             return [];
         }
@@ -481,53 +367,24 @@ class InvoicesTable extends BaseTableWidget
             $lines = [];
         }
 
-        Log::info('Fetched invoice line items for duplication defaults.', [
-            'invoice_id' => $invoiceId,
-            'line_count' => count($lines),
-        ]);
-
         return $lines;
     }
 
-    private function resolveLineItemPrice(mixed $line, mixed $rawPrice): array
+    private function resolveLineItemPrice(array $line): ?string
     {
-        if ($line instanceof StripeObject) {
-            $line = $line->toArray();
-        }
-
-        if (! is_array($line)) {
-            return [null, null];
-        }
-
-        $candidates = [
-            ['value' => $rawPrice, 'source' => 'price'],
-            ['value' => data_get($line, 'price.id'), 'source' => 'price.id'],
-            ['value' => data_get($line, 'price_id'), 'source' => 'price_id'],
-            ['value' => data_get($line, 'pricing.price'), 'source' => 'pricing.price'],
-            ['value' => data_get($line, 'pricing.price.id'), 'source' => 'pricing.price.id'],
-            ['value' => data_get($line, 'pricing.price_details.price'), 'source' => 'pricing.price_details.price'],
-            ['value' => data_get($line, 'pricing.price_details.price.id'), 'source' => 'pricing.price_details.price.id'],
-            ['value' => data_get($line, 'pricing.price_details.price_data.id'), 'source' => 'pricing.price_details.price_data.id'],
-        ];
-
-        foreach ($candidates as $candidate) {
-            $value = $candidate['value'];
-            $source = $candidate['source'];
-
+        foreach ([
+            data_get($line, 'price.id'),
+            data_get($line, 'price'),
+            data_get($line, 'price_id'),
+            data_get($line, 'pricing.price_details.price'),
+            data_get($line, 'pricing.price_details.price.id'),
+        ] as $value) {
             if (is_string($value) && $value !== '') {
-                return [$value, $source];
-            }
-
-            if (is_array($value)) {
-                $id = data_get($value, 'id');
-
-                if (is_string($id) && $id !== '') {
-                    return [$id, $source . '.id'];
-                }
+                return $value;
             }
         }
 
-        return [null, null];
+        return null;
     }
 
     private function ensureStripeCustomer(): ?string
@@ -561,11 +418,7 @@ class InvoicesTable extends BaseTableWidget
                 ->contacts()
                 ->get($accountId, $contactId)['payload'] ?? [];
         } catch (ConnectionException | RequestException $exception) {
-            Log::error('Failed to fetch Chatwoot contact for Stripe customer creation.', [
-                'account_id' => $accountId,
-                'contact_id' => $contactId,
-                'exception' => $exception,
-            ]);
+            report($exception);
 
             Notification::make()
                 ->title('Failed to load Chatwoot contact')
@@ -589,12 +442,7 @@ class InvoicesTable extends BaseTableWidget
         try {
             $customer = stripe()->customers->create($payload);
         } catch (ApiErrorException $exception) {
-            Log::error('Failed to create Stripe customer from Chatwoot contact.', [
-                'account_id' => $accountId,
-                'contact_id' => $contactId,
-                'payload' => $payload,
-                'exception' => $exception,
-            ]);
+            report($exception);
 
             Notification::make()
                 ->title('Failed to create Stripe customer')
@@ -690,11 +538,6 @@ class InvoicesTable extends BaseTableWidget
                     ->fillForm(function () {
                         return $this->withSuppressedCurrencyReset(function () {
                             $invoice = $this->latestCustomerInvoice();
-
-                            Log::info('Filling form for latest invoice duplication.', [
-                                'has_invoice' => (bool) $invoice,
-                            ]);
-
                             return $this->getInvoiceFormDefaults($invoice);
                         });
                     })
@@ -727,10 +570,6 @@ class InvoicesTable extends BaseTableWidget
                             }
 
                             return $this->withSuppressedCurrencyReset(function () use ($record) {
-                                Log::info('Filling form for invoice duplication from table row.', [
-                                    'has_record' => is_array($record),
-                                ]);
-
                                 return $this->getInvoiceFormDefaults(is_array($record) ? $record : null);
                             });
                         })
