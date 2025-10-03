@@ -10,6 +10,7 @@ use App\Support\Dashboard\StripeContext;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\ToggleButtons;
+use Filament\Forms\Set;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Notifications\Notification;
@@ -98,11 +99,17 @@ class InvoicesTable extends BaseTableWidget
                 ->required()
                 ->inline()
                 ->live()
-                ->afterStateUpdated(function (?string $state, callable $set): void {
-                    $set('line_items', $state ? [null] : []);
+                ->afterStateUpdated(function (?string $state, Set $set): void {
+                    $set('line_items', []);
+
+                    if ($state) {
+                        $set('line_items', [null]);
+                    }
                 }),
             Repeater::make('line_items')
                 ->label('Line items')
+                ->default([])
+                ->required()
                 ->reorderable(false)
                 ->visible(fn (Get $get): bool => filled($get('currency')))
                 ->simple(
@@ -110,6 +117,10 @@ class InvoicesTable extends BaseTableWidget
                         ->label('Product')
                         ->native(false)
                         ->required()
+                        ->rules(['required'])
+                        ->validationMessages([
+                            'required' => 'Please select a product.',
+                        ])
                         ->searchable()
                         ->allowHtml()
                         ->options(fn (Get $get): array => $this->getPriceOptionsForCurrency($get('../../currency')))
