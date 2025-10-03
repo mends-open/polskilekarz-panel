@@ -46,17 +46,23 @@ class EnsureChatwootIframeParent
 
         $destination = $request->headers->get('Sec-Fetch-Dest');
 
-        if ($destination !== null) {
-            return ! in_array($destination, ['iframe', 'frame'], true);
+        if ($destination !== null && ! in_array($destination, ['iframe', 'frame'], true)) {
+            return true;
         }
 
         $referer = $request->headers->get('Referer', '');
 
-        if ($referer === '') {
-            return true;
+        if ($referer !== '') {
+            return ! str_starts_with($referer, $allowedParent);
         }
 
-        return ! str_starts_with($referer, $allowedParent);
+        $origin = $request->headers->get('Origin', '');
+
+        if ($origin !== '') {
+            return ! str_starts_with($origin, $allowedParent);
+        }
+
+        return true;
     }
 
     private function addFrameAncestorsHeader(Response $response, string $allowedParent): void

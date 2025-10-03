@@ -49,6 +49,7 @@ class EnsureChatwootIframeParentTest extends TestCase
         $request = Request::create('/filament', 'GET', [], [], [], [
             'HTTP_ACCEPT' => 'text/html',
             'HTTP_SEC_FETCH_DEST' => 'iframe',
+            'HTTP_REFERER' => 'https://allowed.test/dashboard',
         ]);
 
         $middleware = new EnsureChatwootIframeParent();
@@ -77,5 +78,41 @@ class EnsureChatwootIframeParentTest extends TestCase
             $this->assertSame(403, $exception->getStatusCode());
             $this->assertSame('The Filament panel must be loaded inside the Chatwoot Dashboard App iframe', $exception->getMessage());
         }
+    }
+
+    public function test_request_is_blocked_when_iframe_referer_is_not_allowed(): void
+    {
+        config()->set('filament.app.chatwoot_iframe_parent', 'https://allowed.test');
+
+        $request = Request::create('/filament', 'GET', [], [], [], [
+            'HTTP_ACCEPT' => 'text/html',
+            'HTTP_SEC_FETCH_DEST' => 'iframe',
+            'HTTP_REFERER' => 'https://malicious.test/app',
+        ]);
+
+        $middleware = new EnsureChatwootIframeParent();
+
+        $this->expectException(HttpException::class);
+        $this->expectExceptionMessage('The Filament panel must be loaded inside the Chatwoot Dashboard App iframe');
+
+        $middleware->handle($request, fn () => new Response('ok'));
+    }
+
+    public function test_request_is_allowed_when_origin_matches_and_referer_missing(): void
+    {
+        config()->set('filament.app.chatwoot_iframe_parent', 'https://allowed.test');
+
+        $request = Request::create('/filament', 'GET', [], [], [], [
+            'HTTP_ACCEPT' => 'text/html',
+            'HTTP_SEC_FETCH_DEST' => 'iframe',
+            'HTTP_ORIGIN' => 'https://allowed.test',
+        ]);
+
+        $middleware = new EnsureChatwootIframeParent();
+
+        $response = $middleware->handle($request, fn () => new Response('ok'));
+
+        $this->assertSame('ok', $response->getContent());
+        $this->assertSame('frame-ancestors https://allowed.test', $response->headers->get('Content-Security-Policy'));
     }
 }
