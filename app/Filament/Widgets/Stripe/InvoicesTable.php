@@ -90,7 +90,7 @@ class InvoicesTable extends BaseTableWidget
                 ->inline()
                 ->live()
                 ->afterStateUpdated(function ($state, Set $set): void {
-                    $set('line_items', $state ? [['price' => null]] : []);
+                    $set('line_items', $state ? [null] : []);
                 }),
             Repeater::make('line_items')
                 ->label('Line items')
@@ -104,11 +104,6 @@ class InvoicesTable extends BaseTableWidget
                         ->allowHtml()
                         ->options(fn (Get $get): array => $this->getPriceOptionsForCurrency($get('../../currency') ?? $get('currency')))
                         ->disabled(fn (Get $get): bool => blank($get('../../currency') ?? $get('currency')))
-                        ->afterStateHydrated(function (?string $state, Set $set): void {
-                            if (! $this->isSelectablePrice($state)) {
-                                $set('price', null);
-                            }
-                        })
                         ->placeholder(fn (Get $get): string => ($get('../../currency') ?? $get('currency')) ? 'Select a product' : 'Choose a currency first'),
                 ),
         ];
@@ -222,8 +217,18 @@ class InvoicesTable extends BaseTableWidget
     private function handleCreateInvoice(array $data): void
     {
         $priceIds = collect($data['line_items'] ?? [])
-            ->pluck('price')
-            ->filter()
+            ->map(function ($item) {
+                if (is_array($item)) {
+                    return $item['price'] ?? null;
+                }
+
+                if (is_string($item)) {
+                    return $item;
+                }
+
+                return null;
+            })
+            ->filter(fn (?string $priceId) => $this->isSelectablePrice($priceId))
             ->values()
             ->all();
 
