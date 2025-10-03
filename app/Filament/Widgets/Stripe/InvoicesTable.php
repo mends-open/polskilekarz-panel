@@ -360,14 +360,6 @@ class InvoicesTable extends BaseTableWidget
 
             $invoiceId = data_get($invoice, 'id');
 
-            if (is_string($invoiceId)) {
-                $fetchedInvoice = $this->fetchInvoiceWithLines($invoiceId);
-
-                if ($fetchedInvoice) {
-                    $invoice = $fetchedInvoice;
-                }
-            }
-
             $currencyOptions = $this->getCurrencyOptions();
             $currency = data_get($invoice, 'currency');
             $currency = is_string($currency) ? Str::lower($currency) : null;
@@ -380,7 +372,17 @@ class InvoicesTable extends BaseTableWidget
             }
 
             if ($currency) {
-                $rawLines = collect(data_get($invoice, 'lines.data', []));
+                $rawLines = collect();
+
+                if (is_string($invoiceId)) {
+                    $rawLines = collect($this->fetchInvoiceLineItems($invoiceId));
+                }
+
+                if ($rawLines->isEmpty()) {
+                    Log::debug('Falling back to embedded invoice lines for duplication defaults.');
+                    $rawLines = collect(data_get($invoice, 'lines.data', []));
+                }
+
                 $preparedItems = [];
 
                 foreach ($rawLines as $line) {
@@ -459,33 +461,40 @@ class InvoicesTable extends BaseTableWidget
         return $defaults;
     }
 
-    private function fetchInvoiceWithLines(string $invoiceId): ?array
+    private function fetchInvoiceLineItems(string $invoiceId): array
     {
-        Log::info('Fetching invoice with expanded lines for duplication defaults.', [
+        Log::info('Fetching invoice line items for duplication defaults.', [
             'invoice_id' => $invoiceId,
         ]);
 
         try {
-            $invoice = stripe()->invoices->retrieve($invoiceId, [
-                'expand' => ['lines.data.price', 'lines.data.price.product'],
+            $lineItems = stripe()->invoices->listLineItems($invoiceId, [
+                'expand' => ['data.price', 'data.price.product'],
+                'limit' => 100,
             ]);
         } catch (ApiErrorException $exception) {
-            Log::error('Failed to fetch invoice for duplication defaults.', [
+            Log::error('Failed to fetch invoice line items for duplication defaults.', [
                 'invoice_id' => $invoiceId,
                 'exception' => $exception,
             ]);
 
-            return null;
+            return [];
         }
 
-        $normalized = $this->normalizeStripeObject($invoice);
+        $normalized = $this->normalizeStripeObject($lineItems);
 
-        Log::info('Fetched invoice for duplication defaults.', [
+        $lines = data_get($normalized, 'data', []);
+
+        if (! is_array($lines)) {
+            $lines = [];
+        }
+
+        Log::info('Fetched invoice line items for duplication defaults.', [
             'invoice_id' => $invoiceId,
-            'line_count' => count(data_get($normalized, 'lines.data', [])),
+            'line_count' => count($lines),
         ]);
 
-        return $normalized;
+        return $lines;
     }
 
     private function ensureStripeCustomer(): ?string
