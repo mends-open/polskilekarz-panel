@@ -98,20 +98,26 @@ class InvoicesTable extends BaseTableWidget
                 ->required()
                 ->inline()
                 ->live()
-                ->afterStateUpdated(function ($state, Set $set): void {
+                ->afterStateUpdated(function ($state, Set $set, Get $get): void {
                     if (blank($state)) {
                         $set('line_items', []);
+
                         return;
                     }
-                    $set('line_items', [['price' => null]]);
+
+                    $currentLineItems = $get('line_items');
+
+                    if ($currentLineItems === [] || $currentLineItems === null) {
+                        $set('line_items', [null]);
+                    }
                 }),
             Repeater::make('line_items')
                 ->live()
                 ->label('Line items')
                 ->minItems(1)
                 ->reorderable(false)
-                ->hidden(fn (Get $get): bool => blank($get('../../currency') ?? $get('currency')))
-                ->schema([
+                ->hidden(fn (Get $get): bool => blank($get('currency')))
+                ->simple(
                     Select::make('price')
                         ->label('Product')
                         ->native(false)
@@ -119,10 +125,10 @@ class InvoicesTable extends BaseTableWidget
                         ->live()
                         ->searchable()
                         ->allowHtml()
-                        ->options(fn (Get $get): array => $this->getPriceOptionsForCurrency($get('../../currency') ?? $get('currency')))
-                        ->disabled(fn (Get $get): bool => blank($get('../../currency') ?? $get('currency')))
-                        ->placeholder(fn (Get $get): string => ($get('../../currency') ?? $get('currency')) ? 'Select a product' : 'Choose a currency first'),
-                ]),
+                        ->options(fn (Get $get): array => $this->getPriceOptionsForCurrency($get('../../currency') ?? $get('../currency') ?? $get('currency')))
+                        ->disabled(fn (Get $get): bool => blank($get('../../currency') ?? $get('../currency') ?? $get('currency')))
+                        ->placeholder(fn (Get $get): string => ($get('../../currency') ?? $get('../currency') ?? $get('currency')) ? 'Select a product' : 'Choose a currency first'),
+                ),
         ];
     }
 
@@ -604,10 +610,10 @@ class InvoicesTable extends BaseTableWidget
             return $state;
         }
 
-        $lineItems = $this->extractSelectablePriceLineItems($invoice);
+        $lineItems = $this->extractSelectablePriceIds($invoice);
 
         if ($lineItems === []) {
-            $lineItems = [['price' => null]];
+            $lineItems = [null];
         }
 
         $state['currency'] = $currency;
@@ -637,14 +643,12 @@ class InvoicesTable extends BaseTableWidget
         return array_key_exists($currency, $this->getCurrencyOptions()) ? $currency : null;
     }
 
-    private function extractSelectablePriceLineItems(array $invoice): array
+    private function extractSelectablePriceIds(array $invoice): array
     {
-        $selectablePriceIds = array_flip(
-            $this->getStripePriceCollection()
-                ->pluck('id')
-                ->filter()
-                ->all()
-        );
+        $selectablePriceIds = $this->getStripePriceCollection()
+            ->pluck('id')
+            ->filter()
+            ->all();
 
         if ($selectablePriceIds === []) {
             return [];
@@ -658,11 +662,11 @@ class InvoicesTable extends BaseTableWidget
 
                 $priceId = data_get($line, 'price.id') ?? data_get($line, 'price');
 
-                if (! is_string($priceId) || $priceId === '' || ! array_key_exists($priceId, $selectablePriceIds)) {
+                if (! is_string($priceId) || $priceId === '' || ! in_array($priceId, $selectablePriceIds, true)) {
                     return null;
                 }
 
-                return ['price' => $priceId];
+                return $priceId;
             })
             ->filter()
             ->values()
