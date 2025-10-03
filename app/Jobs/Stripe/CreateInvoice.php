@@ -43,6 +43,7 @@ class CreateInvoice implements ShouldQueue
             'customer' => $this->customerId,
             'pending_invoice_items_behavior' => 'exclude',
             'collection_method' => 'send_invoice',
+            'days_until_due' => 0,
             'auto_advance' => true,
         ]);
 
@@ -50,7 +51,9 @@ class CreateInvoice implements ShouldQueue
             $stripe->invoiceItems->create([
                 'customer' => $this->customerId,
                 'invoice' => $invoice->id,
-                'price' => $priceId,
+                'pricing' => [
+                    'price' => $priceId
+                ],
             ]);
         }
 
