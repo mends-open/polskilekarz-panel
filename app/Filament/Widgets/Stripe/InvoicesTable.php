@@ -7,17 +7,15 @@ use App\Jobs\Chatwoot\CreateInvoiceShortLink;
 use App\Jobs\Stripe\CreateInvoice;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use App\Support\Dashboard\StripeContext;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\ToggleButtons;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Notifications\Notification;
-use Filament\Schemas\Components\Text;
-use Filament\Schemas\Schema;
-use Filament\Support\Enums\TextSize;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\Layout\Panel;
 use Filament\Tables\Columns\Layout\Split;
@@ -46,7 +44,9 @@ class InvoicesTable extends BaseTableWidget
 
     private ?array $customerInvoicesCache = null;
 
-    private bool $suppressCurrencyReset = false;
+    private ?Collection $stripePriceCollectionCache = null;
+
+    private ?Collection $stripeProductCollectionCache = null;
 
     public function isReady(): bool
     {
@@ -92,102 +92,107 @@ class InvoicesTable extends BaseTableWidget
     private function getCreateInvoiceForm(): array
     {
         return [
-            ToggleButtons::make('currency')
-                ->label('Currency')
-                ->options(fn (): array => $this->getCurrencyOptions())
-                ->required()
-                ->inline()
-                ->live()
-                ->afterStateUpdated(function (?string $state, Set $set, ?string $old): void {
-                    if ($this->isCurrencyResetSuppressed() || $state === $old) {
-                        return;
-                    }
-                    $set('line_items', blank($state) ? [] : [null]);
-                }),
             Repeater::make('line_items')
-                ->label('Line items')
+                ->label('Products')
                 ->reorderable(false)
-                ->hidden(fn (Get $get): bool => blank($get('../../currency') ?? $get('currency')))
-                ->simple(
-                    Select::make('price')
+                ->required()
+                ->rules(['array', 'min:1'])
+                ->minItems(1)
+                ->default([$this->blankLineItem()])
+                ->validationAttribute('products')
+                ->table([
+                    TableColumn::make('Product'),
+                    TableColumn::make('Price'),
+                    TableColumn::make('Amount'),
+                ])
+                ->schema([
+                    Select::make('product')
                         ->label('Product')
+                        ->options(fn (): array => $this->getProductOptions())
+                        ->searchable()
+                        ->live()
+                        ->native(false)
+                        ->afterStateUpdated(function (Set $set, Get $get): void {
+                            $set('price', null, shouldCallUpdatedHooks: false);
+                            $this->guardLineItemsCurrency($set, $get);
+                        })
+                        ->placeholder('Select a product'),
+                    Select::make('price')
+                        ->label('Price')
                         ->native(false)
                         ->searchable()
-                        ->allowHtml()
-                        ->options(fn (Get $get): array => $this->getPriceOptionsForCurrency($get('../../currency') ?? $get('currency')))
-                        ->disabled(fn (Get $get): bool => blank($get('../../currency') ?? $get('currency')))
-                        ->placeholder(fn (Get $get): string => ($get('../../currency') ?? $get('currency')) ? 'Select a product' : 'Choose a currency first'),
-                )
-                ->default([]),
+                        ->live()
+                        ->options(function (Get $get): array {
+                            $lineItems = $this->resolveLineItemsState($get);
+
+                            return $this->getPriceOptionsForRow(
+                                $lineItems,
+                                is_string($productId = $get('product')) ? $productId : null,
+                                is_string($currentValue = $get('price')) ? $currentValue : null,
+                            );
+                        })
+                        ->disabled(fn (Get $get): bool => ! is_string($get('product')) || $get('product') === '')
+                        ->afterStateUpdated(fn (Set $set, Get $get) => $this->guardLineItemsCurrency($set, $get))
+                        ->placeholder('Select a price'),
+                    Placeholder::make('amount')
+                        ->label('Amount')
+                        ->content(fn (Get $get): string => $this->formatPriceAmountForPriceId(
+                            is_string($priceId = $get('price')) ? $priceId : null,
+                        )),
+                ]),
         ];
     }
 
-    private function isCurrencyResetSuppressed(): bool
+    private function blankLineItem(): array
     {
-        return $this->suppressCurrencyReset;
+        return [
+            'product' => null,
+            'price' => null,
+        ];
     }
 
-    private function withSuppressedCurrencyReset(callable $callback): mixed
+    private function getProductOptions(): array
     {
-        $previous = $this->suppressCurrencyReset;
-        $this->suppressCurrencyReset = true;
-
-        try {
-            return $callback();
-        } finally {
-            $this->suppressCurrencyReset = $previous;
-        }
-    }
-
-    private function getCurrencyOptions(): array
-    {
-        return $this->getStripePriceCollection()
-            ->pluck('currency')
-            ->filter()
-            ->unique()
-            ->sort()
-            ->mapWithKeys(fn (string $currency) => [$currency => Str::upper($currency)])
+        return $this->stripeProductCollection()
+            ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
+            ->mapWithKeys(fn (array $product, string $productId): array => [
+                $productId => $product['name'],
+            ])
             ->all();
     }
 
-    private function getPriceOptionsForCurrency(?string $currency): array
+    private function getPriceOptionsForRow(array $lineItems, ?string $productId, ?string $currentPriceId): array
     {
-        if (! $currency) {
-            return [];
+        $lockedCurrency = $this->lockedCurrency($lineItems, $currentPriceId);
+
+        $products = $this->stripeProductCollection();
+
+        if ($productId) {
+            $product = $products->get($productId);
+
+            if (! $product) {
+                return [];
+            }
+
+            $prices = $product['prices'] instanceof Collection
+                ? $product['prices']
+                : collect($product['prices']);
+        } else {
+            $prices = $this->stripePriceCollection()->values();
         }
 
-        $currency = Str::lower($currency);
+        return $prices
+            ->filter(function (array $price) use ($lockedCurrency): bool {
+                if (! $lockedCurrency) {
+                    return true;
+                }
 
-        return $this->getStripePriceCollection()
-            ->filter(fn (array $price) => Str::lower($price['currency'] ?? '') === $currency)
-            ->mapWithKeys(function (array $price): array {
-                return [
-                    $price['id'] => $this->formatPriceOptionLabel($price),
-                ];
+                return $this->priceCurrency($price['id']) === $lockedCurrency;
             })
+            ->mapWithKeys(fn (array $price): array => [
+                $price['id'] => $this->formatPriceOptionLabel($price),
+            ])
             ->all();
-    }
-
-    private function getStripePriceCollection(): Collection
-    {
-        return collect($this->stripePrices())
-            ->filter(fn (array $price): bool => (bool) data_get($price, 'product.active', true));
-    }
-
-    private function isSelectablePrice(?string $priceId): bool
-    {
-        if (! $priceId) {
-            return false;
-        }
-
-        $price = $this->getStripePriceCollection()
-            ->firstWhere('id', $priceId);
-
-        if (! $price) {
-            return false;
-        }
-
-        return (bool) data_get($price, 'product.active', true);
     }
 
     private function formatPriceOptionLabel(array $price): string
@@ -195,27 +200,150 @@ class InvoicesTable extends BaseTableWidget
         $description = $this->resolvePriceDescription($price);
         $amount = $this->formatPriceAmount($price);
 
-        $schema = Schema::make($this);
+        if ($description === '') {
+            return $amount;
+        }
 
-        $descriptionComponent = Text::make($description)
-            ->container($schema)
-            ->grow();
+        return sprintf('%s — %s', $description, $amount);
+    }
 
-        $amountComponent = Text::make($amount)
-            ->container($schema)
-            ->badge()
-            ->color('primary');
+    private function stripePriceCollection(): Collection
+    {
+        if ($this->stripePriceCollectionCache instanceof Collection) {
+            return $this->stripePriceCollectionCache;
+        }
 
-        return $descriptionComponent->toHtml() . $amountComponent->toHtml();
+        return $this->stripePriceCollectionCache = collect($this->stripePrices())
+            ->filter(fn (array $price): bool => (bool) data_get($price, 'active', true))
+            ->filter(fn (array $price): bool => (bool) data_get($price, 'product.active', true))
+            ->filter(fn (array $price): bool => is_string(data_get($price, 'id')) && data_get($price, 'id') !== '')
+            ->map(function (array $price): array {
+                $price['currency'] = Str::lower((string) data_get($price, 'currency'));
+                $price['product_id'] = $this->resolveProductId($price);
+
+                return $price;
+            })
+            ->keyBy('id');
+    }
+
+    private function stripeProductCollection(): Collection
+    {
+        if ($this->stripeProductCollectionCache instanceof Collection) {
+            return $this->stripeProductCollectionCache;
+        }
+
+        return $this->stripeProductCollectionCache = $this->stripePriceCollection()
+            ->groupBy(fn (array $price): ?string => $price['product_id'] ?? null)
+            ->filter(fn (Collection $prices, ?string $productId): bool => is_string($productId) && $productId !== '')
+            ->mapWithKeys(function (Collection $prices, string $productId): array {
+                $first = $prices->first();
+
+                return [
+                    $productId => [
+                        'id' => $productId,
+                        'name' => $this->resolveProductName(is_array($first) ? $first : []),
+                        'prices' => $prices->values(),
+                    ],
+                ];
+            });
+    }
+
+    private function resolvePrice(?string $priceId): ?array
+    {
+        if (! is_string($priceId) || $priceId === '') {
+            return null;
+        }
+
+        return $this->stripePriceCollection()->get($priceId);
+    }
+
+    private function priceCurrency(?string $priceId): ?string
+    {
+        $price = $this->resolvePrice($priceId);
+
+        if (! $price) {
+            return null;
+        }
+
+        $currency = data_get($price, 'currency');
+
+        return is_string($currency) && $currency !== ''
+            ? Str::lower($currency)
+            : null;
+    }
+
+    private function resolvePriceProductId(?string $priceId): ?string
+    {
+        $price = $this->resolvePrice($priceId);
+
+        if (! $price) {
+            return null;
+        }
+
+        return $this->resolveProductId($price);
+    }
+
+    private function resolveProductId(array $price): ?string
+    {
+        foreach ([
+            'product.id',
+            'product',
+            'product_id',
+        ] as $key) {
+            $value = data_get($price, $key);
+
+            if (is_string($value) && $value !== '') {
+                return $value;
+            }
+        }
+
+        return null;
+    }
+
+    private function resolveProductName(array $price): string
+    {
+        foreach ([
+            data_get($price, 'product.name'),
+            data_get($price, 'nickname'),
+            data_get($price, 'product.id'),
+            data_get($price, 'id'),
+        ] as $value) {
+            if (is_string($value) && $value !== '') {
+                return $value;
+            }
+        }
+
+        return 'Product';
     }
 
     private function resolvePriceDescription(array $price): string
     {
-        $description = data_get($price, 'product.name')
-            ?? data_get($price, 'nickname')
-            ?? data_get($price, 'id');
+        foreach ([
+            data_get($price, 'nickname'),
+            data_get($price, 'product.name'),
+            data_get($price, 'id'),
+        ] as $value) {
+            if (is_string($value) && $value !== '') {
+                return $value;
+            }
+        }
 
-        return (string) $description;
+        return '';
+    }
+
+    private function formatPriceAmountForPriceId(?string $priceId): string
+    {
+        if (! $priceId) {
+            return '—';
+        }
+
+        $price = $this->resolvePrice($priceId);
+
+        if (! $price) {
+            return '—';
+        }
+
+        return $this->formatPriceAmount($price);
     }
 
     private function formatPriceAmount(array $price): string
@@ -236,19 +364,162 @@ class InvoicesTable extends BaseTableWidget
         ], true);
     }
 
-    private function handleCreateInvoice(array $data): void
+    private function sanitizeLineItemsForState(array $lineItems): array
     {
-        $priceIds = collect($data['line_items'] ?? [])
-            ->map(function ($item) {
-                if (is_array($item)) {
-                    return $item['price'] ?? null;
+        return collect($lineItems)
+            ->map(function ($item): array {
+                $product = is_array($item) ? data_get($item, 'product') : null;
+                $price = is_array($item) ? data_get($item, 'price') : null;
+
+                $product = is_string($product) && $product !== '' ? $product : null;
+                $price = is_string($price) && $price !== '' ? $price : null;
+
+                if ($price) {
+                    $resolvedProduct = $this->resolvePriceProductId($price);
+
+                    if ($resolvedProduct) {
+                        $product = $resolvedProduct;
+                    }
                 }
 
-                return is_string($item) ? $item : null;
+                return [
+                    'product' => $product,
+                    'price' => $price,
+                ];
             })
-            ->filter(fn (?string $priceId) => $this->isSelectablePrice($priceId))
             ->values()
             ->all();
+    }
+
+    private function lockedCurrency(array $lineItems, ?string $ignorePriceId = null): ?string
+    {
+        foreach ($lineItems as $item) {
+            $priceId = is_array($item) ? data_get($item, 'price') : null;
+
+            if (! is_string($priceId) || $priceId === '' || $priceId === $ignorePriceId) {
+                continue;
+            }
+
+            $currency = $this->priceCurrency($priceId);
+
+            if ($currency) {
+                return $currency;
+            }
+        }
+
+        return null;
+    }
+
+    private function enforceCurrencyLock(array $lineItems): array
+    {
+        $lockedCurrency = $this->lockedCurrency($lineItems);
+
+        if (! $lockedCurrency) {
+            return $lineItems;
+        }
+
+        return collect($lineItems)
+            ->map(function (array $item) use ($lockedCurrency): array {
+                $priceId = data_get($item, 'price');
+
+                if (is_string($priceId) && $priceId !== '' && $this->priceCurrency($priceId) !== $lockedCurrency) {
+                    $item['price'] = null;
+                }
+
+                return $item;
+            })
+            ->values()
+            ->all();
+    }
+
+    private function extractPriceIds(array $lineItems): array
+    {
+        return collect($lineItems)
+            ->map(function ($item): ?string {
+                if (! is_array($item)) {
+                    return null;
+                }
+
+                $priceId = data_get($item, 'price');
+
+                return is_string($priceId) && $priceId !== '' ? $priceId : null;
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    private function determineCurrencyFromPriceIds(array $priceIds): ?string
+    {
+        $currencies = collect($priceIds)
+            ->map(fn (string $priceId) => $this->priceCurrency($priceId))
+            ->filter()
+            ->unique();
+
+        if ($currencies->count() > 1) {
+            return null;
+        }
+
+        return $currencies->first() ?: null;
+    }
+
+    private function resolveLineItemsState(Get $get): array
+    {
+        $lineItems = $get('../../line_items') ?? $get('line_items');
+
+        $lineItems = is_array($lineItems) ? $lineItems : [];
+
+        return $this->sanitizeLineItemsForState($lineItems);
+    }
+
+    private function updateLineItemsState(Set $set, array $lineItems): void
+    {
+        $set('../../line_items', $lineItems, shouldCallUpdatedHooks: false);
+        $set('line_items', $lineItems, shouldCallUpdatedHooks: false);
+    }
+
+    private function guardLineItemsCurrency(Set $set, Get $get): void
+    {
+        $lineItems = $get('../../line_items') ?? $get('line_items');
+        $lineItems = is_array($lineItems) ? $lineItems : [];
+
+        $sanitized = $this->sanitizeLineItemsForState($lineItems);
+        $normalized = $this->enforceCurrencyLock($sanitized);
+
+        if ($lineItems !== $normalized) {
+            $this->updateLineItemsState($set, $normalized);
+        }
+    }
+
+    private function prepareInvoiceFormData(array $data): array
+    {
+        $lineItems = is_array($data['line_items'] ?? null) ? $data['line_items'] : [];
+
+        $data['line_items'] = $this->sanitizeLineItemsForState($lineItems);
+
+        if ($data['line_items'] === []) {
+            $data['line_items'][] = $this->blankLineItem();
+        }
+
+        return $data;
+    }
+
+    private function configureInvoiceFormAction(Action $action): Action
+    {
+        return $action
+            ->modalWidth('7xl')
+            ->extraModalWindowAttributes(['class' => 'sm:min-h-[70vh] sm:max-h-[90vh]'])
+            ->modalSubmitActionLabel('Create invoice')
+            ->form($this->getCreateInvoiceForm())
+            ->mutateFormDataUsing(fn (array $data): array => $this->prepareInvoiceFormData($data))
+            ->action(fn (array $data) => $this->handleCreateInvoice($data));
+    }
+
+    private function handleCreateInvoice(array $data): void
+    {
+        $data = $this->prepareInvoiceFormData($data);
+
+        $priceIds = $this->extractPriceIds($data['line_items'] ?? []);
 
         if ($priceIds === []) {
             Notification::make()
@@ -260,13 +531,23 @@ class InvoicesTable extends BaseTableWidget
             return;
         }
 
+        $currency = $this->determineCurrencyFromPriceIds($priceIds);
+
+        if ($currency === null) {
+            Notification::make()
+                ->title('Mixed currencies selected')
+                ->body('All selected products must use the same currency. Please adjust your selection and try again.')
+                ->danger()
+                ->send();
+
+            return;
+        }
+
         $customerId = $this->ensureStripeCustomer();
 
         if (! $customerId) {
             return;
         }
-
-        $currency = $data['currency'] ?? null;
 
         CreateInvoice::dispatch(
             customerId: $customerId,
@@ -286,53 +567,48 @@ class InvoicesTable extends BaseTableWidget
 
     private function getInvoiceFormDefaults(?array $invoice): array
     {
-        $currency = null;
         $lineItems = [];
 
         if ($invoice) {
-            $currency = data_get($invoice, 'currency');
-            $currency = is_string($currency) ? Str::lower($currency) : null;
+            $invoiceId = data_get($invoice, 'id');
+            $lines = collect();
 
-            $currencyOptions = $this->getCurrencyOptions();
-
-            if (! $currency || ! array_key_exists($currency, $currencyOptions)) {
-                $currency = null;
+            if (is_string($invoiceId)) {
+                $lines = collect($this->fetchInvoiceLineItems($invoiceId));
             }
 
-            if ($currency) {
-                $invoiceId = data_get($invoice, 'id');
-                $lines = collect();
-
-                if (is_string($invoiceId)) {
-                    $lines = collect($this->fetchInvoiceLineItems($invoiceId));
-                }
-
-                if ($lines->isEmpty()) {
-                    $lines = collect(data_get($invoice, 'lines.data', []));
-                }
-
-                $lineItems = $lines
-                    ->map(fn ($line) => $line instanceof StripeObject ? $line->toArray() : (array) $line)
-                    ->map(function (array $line) use ($currency) {
-                        $priceId = $this->resolveLineItemPrice($line);
-                        $lineCurrency = data_get($line, 'price.currency') ?? data_get($line, 'currency');
-                        $lineCurrency = $lineCurrency ? Str::lower((string) $lineCurrency) : null;
-
-                        return [
-                            'price' => $priceId,
-                            'currency' => $lineCurrency,
-                            'quantity' => max(1, (int) data_get($line, 'quantity', 1)),
-                        ];
-                    })
-                    ->filter(fn (array $line) => $line['price'] && (! $line['currency'] || $line['currency'] === $currency) && $this->isSelectablePrice($line['price']))
-                    ->flatMap(fn (array $line) => array_fill(0, $line['quantity'], $line['price']))
-                    ->values()
-                    ->all();
+            if ($lines->isEmpty()) {
+                $lines = collect(data_get($invoice, 'lines.data', []));
             }
+
+            $lineItems = $lines
+                ->map(fn ($line) => $line instanceof StripeObject ? $line->toArray() : (array) $line)
+                ->map(function (array $line) {
+                    $priceId = $this->resolveLineItemPrice($line);
+
+                    return [
+                        'price' => $priceId,
+                        'quantity' => max(1, (int) data_get($line, 'quantity', 1)),
+                    ];
+                })
+                ->filter(fn (array $line) => is_string($line['price']) && $line['price'] !== '')
+                ->flatMap(fn (array $line) => array_fill(0, $line['quantity'], $line['price']))
+                ->values()
+                ->all();
+        }
+
+        $lineItems = collect($lineItems)
+            ->map(fn (string $priceId) => ['price' => $priceId])
+            ->values()
+            ->all();
+
+        $lineItems = $this->sanitizeLineItemsForState($lineItems);
+
+        if ($lineItems === []) {
+            $lineItems[] = $this->blankLineItem();
         }
 
         return [
-            'currency' => $currency,
             'line_items' => $lineItems,
         ];
     }
@@ -508,31 +784,28 @@ class InvoicesTable extends BaseTableWidget
             ])
             ->filters([])
             ->headerActions([
-                Action::make('create')
-                    ->icon(Heroicon::OutlinedDocumentPlus)
-                    ->color('success')
-                    ->outlined()
-                    ->modalIcon(Heroicon::OutlinedDocumentPlus)
-                    ->modalHeading('Create invoice')
-                    ->modalSubmitActionLabel('Create invoice')
-                    ->form($this->getCreateInvoiceForm())
-                    ->action(fn (array $data) => $this->handleCreateInvoice($data)),
-                Action::make('duplicateLatest')
-                    ->icon(Heroicon::OutlinedDocumentDuplicate)
-                    ->outlined()
-                    ->color(fn () => $this->hasCustomerInvoices() ? 'primary' : 'gray')
-                    ->disabled(fn () => ! $this->hasCustomerInvoices())
-                    ->modalIcon(Heroicon::OutlinedDocumentDuplicate)
-                    ->modalHeading('Duplicate latest invoice')
-                    ->modalSubmitActionLabel('Create invoice')
-                    ->form($this->getCreateInvoiceForm())
+                $this->configureInvoiceFormAction(
+                    Action::make('create')
+                        ->icon(Heroicon::OutlinedDocumentPlus)
+                        ->color('success')
+                        ->outlined()
+                        ->modalIcon(Heroicon::OutlinedDocumentPlus)
+                        ->modalHeading('Create invoice')
+                ),
+                $this->configureInvoiceFormAction(
+                    Action::make('duplicateLatest')
+                        ->icon(Heroicon::OutlinedDocumentDuplicate)
+                        ->outlined()
+                        ->color(fn () => $this->hasCustomerInvoices() ? 'primary' : 'gray')
+                        ->disabled(fn () => ! $this->hasCustomerInvoices())
+                        ->modalIcon(Heroicon::OutlinedDocumentDuplicate)
+                        ->modalHeading('Duplicate latest invoice')
+                )
                     ->fillForm(function () {
-                        return $this->withSuppressedCurrencyReset(function () {
-                            $invoice = $this->latestCustomerInvoice();
-                            return $this->getInvoiceFormDefaults($invoice);
-                        });
-                    })
-                    ->action(fn (array $data) => $this->handleCreateInvoice($data)),
+                        $invoice = $this->latestCustomerInvoice();
+
+                        return $this->getInvoiceFormDefaults($invoice);
+                    }),
                 Action::make('sendLatest')
                     ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
                     ->outlined()
@@ -551,20 +824,18 @@ class InvoicesTable extends BaseTableWidget
             ])
             ->recordActions([
                 ActionGroup::make([
-                    Action::make('duplicateInvoice')
-                        ->label('Duplicate')
-                        ->icon(Heroicon::OutlinedDocumentDuplicate)
-                        ->form($this->getCreateInvoiceForm())
+                    $this->configureInvoiceFormAction(
+                        Action::make('duplicateInvoice')
+                            ->label('Duplicate')
+                            ->icon(Heroicon::OutlinedDocumentDuplicate)
+                    )
                         ->fillForm(function ($record): array {
                             if ($record instanceof StripeObject) {
                                 $record = $this->normalizeStripeObject($record);
                             }
 
-                            return $this->withSuppressedCurrencyReset(function () use ($record) {
-                                return $this->getInvoiceFormDefaults(is_array($record) ? $record : null);
-                            });
-                        })
-                        ->action(fn (array $data) => $this->handleCreateInvoice($data)),
+                            return $this->getInvoiceFormDefaults(is_array($record) ? $record : null);
+                        }),
                     Action::make('sendInvoiceShortUrl')
                         ->action(fn ($record) => $this->sendShortUrl($record['hosted_invoice_url']))
                         ->label('Send')
