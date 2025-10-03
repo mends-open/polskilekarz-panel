@@ -125,9 +125,9 @@ class InvoicesTable extends BaseTableWidget
                         ->live()
                         ->searchable()
                         ->allowHtml()
-                        ->options(fn (Get $get): array => $this->getPriceOptionsForCurrency($get('../../currency') ?? $get('../currency') ?? $get('currency')))
-                        ->disabled(fn (Get $get): bool => blank($get('../../currency') ?? $get('../currency') ?? $get('currency')))
-                        ->placeholder(fn (Get $get): string => ($get('../../currency') ?? $get('../currency') ?? $get('currency')) ? 'Select a product' : 'Choose a currency first'),
+                        ->options(fn (Get $get): array => $this->getPriceOptionsForCurrency($get('./currency')))
+                        ->disabled(fn (Get $get): bool => blank($get('./currency')))
+                        ->placeholder(fn (Get $get): string => $get('./currency') ? 'Select a product' : 'Choose a currency first'),
                 ),
         ];
     }
