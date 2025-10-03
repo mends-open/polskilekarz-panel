@@ -80,6 +80,28 @@ class EnsureChatwootIframeParentTest extends TestCase
         $this->assertSame('frame-ancestors https://allowed.test/', $response->headers->get('Content-Security-Policy'));
     }
 
+    public function test_request_is_allowed_when_allowed_parent_list_contains_match(): void
+    {
+        config()->set('filament.app.chatwoot_iframe_parent', "https://allowed.test\nhttps://secondary.test");
+
+        $request = Request::create('/filament', 'GET', [], [], [], [
+            'HTTP_ACCEPT' => 'text/html',
+            'HTTP_SEC_FETCH_DEST' => 'iframe',
+            'HTTP_SEC_FETCH_SITE' => 'cross-site',
+            'HTTP_REFERER' => 'https://secondary.test/dashboard',
+        ]);
+
+        $middleware = new EnsureChatwootIframeParent();
+
+        $response = $middleware->handle($request, fn () => new Response('ok'));
+
+        $this->assertSame('ok', $response->getContent());
+        $this->assertSame(
+            'frame-ancestors https://allowed.test https://secondary.test',
+            $response->headers->get('Content-Security-Policy'),
+        );
+    }
+
     public function test_request_is_blocked_when_not_loaded_inside_iframe(): void
     {
         config()->set('filament.app.chatwoot_iframe_parent', 'https://allowed.test');
@@ -122,6 +144,46 @@ class EnsureChatwootIframeParentTest extends TestCase
         );
 
         $middleware->handle($request, fn () => new Response('ok'));
+    }
+
+    public function test_request_is_blocked_when_referer_only_matches_prefix(): void
+    {
+        config()->set('filament.app.chatwoot_iframe_parent', 'https://allowed.test');
+
+        $request = Request::create('/filament', 'GET', [], [], [], [
+            'HTTP_ACCEPT' => 'text/html',
+            'HTTP_SEC_FETCH_DEST' => 'iframe',
+            'HTTP_SEC_FETCH_SITE' => 'cross-site',
+            'HTTP_REFERER' => 'https://allowed.test.attacker/app',
+        ]);
+
+        $middleware = new EnsureChatwootIframeParent();
+
+        $this->expectException(HttpException::class);
+        $this->expectExceptionMessage(
+            'The Filament panel must be loaded inside the Chatwoot Dashboard App iframe after / but inside iframe',
+        );
+
+        $middleware->handle($request, fn () => new Response('ok'));
+    }
+
+    public function test_request_is_allowed_when_referer_host_differs_by_case(): void
+    {
+        config()->set('filament.app.chatwoot_iframe_parent', 'https://allowed.test');
+
+        $request = Request::create('/filament', 'GET', [], [], [], [
+            'HTTP_ACCEPT' => 'text/html',
+            'HTTP_SEC_FETCH_DEST' => 'iframe',
+            'HTTP_SEC_FETCH_SITE' => 'cross-site',
+            'HTTP_REFERER' => 'https://Allowed.Test/dashboard',
+        ]);
+
+        $middleware = new EnsureChatwootIframeParent();
+
+        $response = $middleware->handle($request, fn () => new Response('ok'));
+
+        $this->assertSame('ok', $response->getContent());
+        $this->assertSame('frame-ancestors https://allowed.test', $response->headers->get('Content-Security-Policy'));
     }
 
     public function test_request_is_allowed_when_origin_matches_and_referer_missing(): void
