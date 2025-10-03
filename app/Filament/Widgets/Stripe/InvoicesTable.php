@@ -46,6 +46,8 @@ class InvoicesTable extends BaseTableWidget
     protected static ?string $heading = 'Invoices';
 
     private ?array $customerInvoicesCache = null;
+
+    private ?string $invoiceFormCurrency = null;
     public function isReady(): bool
     {
         return $this->dashboardContextIsReady();
@@ -58,6 +60,7 @@ class InvoicesTable extends BaseTableWidget
         $this->resetErrorBag();
         $this->resetValidation();
         $this->clearCustomerInvoicesCache();
+        $this->invoiceFormCurrency = null;
     }
 
     private function refreshTable(): void
@@ -98,25 +101,33 @@ class InvoicesTable extends BaseTableWidget
                 ->required()
                 ->inline()
                 ->live()
+                ->afterStateHydrated(function ($state): void {
+                    $this->invoiceFormCurrency = $this->normalizeCurrency($state);
+                })
                 ->afterStateUpdated(function ($state, Set $set, Get $get): void {
-                    if (blank($state)) {
-                        $set('line_items', []);
+                    $currency = $this->normalizeCurrency($state);
+                    $this->invoiceFormCurrency = $currency;
+
+                    if (blank($currency)) {
+                        $set('line_items', [null]);
 
                         return;
                     }
 
-                    $currentLineItems = $get('line_items');
+                    $lineItems = $this->filterLineItemsForCurrency($get('line_items'), $currency);
 
-                    if ($currentLineItems === [] || $currentLineItems === null) {
-                        $set('line_items', [null]);
+                    if ($lineItems === []) {
+                        $lineItems = [null];
                     }
+
+                    $set('line_items', $lineItems);
                 }),
             Repeater::make('line_items')
                 ->live()
                 ->label('Line items')
                 ->minItems(1)
                 ->reorderable(false)
-                ->hidden(fn (Get $get): bool => blank($get('currency')))
+                ->hidden(fn (): bool => blank($this->invoiceFormCurrency))
                 ->simple(
                     Select::make('price')
                         ->label('Product')
@@ -125,9 +136,9 @@ class InvoicesTable extends BaseTableWidget
                         ->live()
                         ->searchable()
                         ->allowHtml()
-                        ->options(fn (Get $get): array => $this->getPriceOptionsForCurrency($get('currency', isAbsolute: true)))
-                        ->disabled(fn (Get $get): bool => blank($get('currency', isAbsolute: true)))
-                        ->placeholder(fn (Get $get): string => $get('currency', isAbsolute: true) ? 'Select a product' : 'Choose a currency first'),
+                        ->options(fn (): array => $this->getPriceOptionsForCurrency($this->invoiceFormCurrency))
+                        ->disabled(fn (): bool => blank($this->invoiceFormCurrency))
+                        ->placeholder(fn (): string => $this->invoiceFormCurrency ? 'Select a product' : 'Choose a currency first'),
                 ),
         ];
     }
@@ -173,7 +184,7 @@ class InvoicesTable extends BaseTableWidget
             return false;
         }
 
-        $price = collect($this->stripePrices())
+        $price = $this->getStripePriceCollection()
             ->firstWhere('id', $priceId);
 
         if (! $price) {
@@ -601,12 +612,16 @@ class InvoicesTable extends BaseTableWidget
         $state = $this->defaultInvoiceFormState();
 
         if (! $invoice) {
+            $this->invoiceFormCurrency = null;
+
             return $state;
         }
 
         $currency = $this->resolveInvoiceCurrency($invoice);
 
         if (! $currency) {
+            $this->invoiceFormCurrency = null;
+
             return $state;
         }
 
@@ -619,6 +634,8 @@ class InvoicesTable extends BaseTableWidget
         $state['currency'] = $currency;
         $state['line_items'] = $lineItems;
 
+        $this->invoiceFormCurrency = $this->normalizeCurrency($currency);
+
         return $state;
     }
 
@@ -626,7 +643,7 @@ class InvoicesTable extends BaseTableWidget
     {
         return [
             'currency' => null,
-            'line_items' => [],
+            'line_items' => [null],
         ];
     }
 
@@ -641,6 +658,70 @@ class InvoicesTable extends BaseTableWidget
         $currency = Str::lower((string) $currency);
 
         return array_key_exists($currency, $this->getCurrencyOptions()) ? $currency : null;
+    }
+
+    private function normalizeCurrency(?string $currency): ?string
+    {
+        if (! is_string($currency) || $currency === '') {
+            return null;
+        }
+
+        return Str::lower($currency);
+    }
+
+    private function filterLineItemsForCurrency(mixed $lineItems, ?string $currency): array
+    {
+        $normalized = $this->normalizeLineItemsState($lineItems);
+
+        if (! $currency) {
+            return $normalized;
+        }
+
+        return collect($normalized)
+            ->filter(fn ($priceId) => $priceId === null || $this->isSelectablePriceForCurrency($priceId, $currency))
+            ->values()
+            ->all();
+    }
+
+    private function normalizeLineItemsState(mixed $lineItems): array
+    {
+        return collect($lineItems ?? [])
+            ->map(function ($item) {
+                if (is_array($item)) {
+                    if (array_key_exists('price', $item)) {
+                        $value = $item['price'];
+                    } elseif (count($item) === 1) {
+                        $value = reset($item);
+                    } else {
+                        $value = null;
+                    }
+
+                    return is_string($value) && $value !== '' ? $value : null;
+                }
+
+                if (is_string($item)) {
+                    return $item !== '' ? $item : null;
+                }
+
+                return null;
+            })
+            ->all();
+    }
+
+    private function isSelectablePriceForCurrency(?string $priceId, ?string $currency): bool
+    {
+        if (! $priceId || ! $currency) {
+            return false;
+        }
+
+        $price = collect($this->stripePrices())
+            ->firstWhere('id', $priceId);
+
+        if (! $price) {
+            return false;
+        }
+
+        return Str::lower((string) data_get($price, 'currency')) === Str::lower($currency);
     }
 
     private function extractSelectablePriceIds(array $invoice): array
