@@ -61,6 +61,25 @@ class EnsureChatwootIframeParentTest extends TestCase
         $this->assertSame('frame-ancestors https://allowed.test', $response->headers->get('Content-Security-Policy'));
     }
 
+    public function test_request_is_allowed_when_allowed_parent_has_trailing_slash(): void
+    {
+        config()->set('filament.app.chatwoot_iframe_parent', 'https://allowed.test/');
+
+        $request = Request::create('/filament', 'GET', [], [], [], [
+            'HTTP_ACCEPT' => 'text/html',
+            'HTTP_SEC_FETCH_DEST' => 'iframe',
+            'HTTP_SEC_FETCH_SITE' => 'cross-site',
+            'HTTP_REFERER' => 'https://allowed.test',
+        ]);
+
+        $middleware = new EnsureChatwootIframeParent();
+
+        $response = $middleware->handle($request, fn () => new Response('ok'));
+
+        $this->assertSame('ok', $response->getContent());
+        $this->assertSame('frame-ancestors https://allowed.test/', $response->headers->get('Content-Security-Policy'));
+    }
+
     public function test_request_is_blocked_when_not_loaded_inside_iframe(): void
     {
         config()->set('filament.app.chatwoot_iframe_parent', 'https://allowed.test');

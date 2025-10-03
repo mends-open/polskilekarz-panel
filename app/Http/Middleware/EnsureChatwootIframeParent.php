@@ -74,13 +74,29 @@ class EnsureChatwootIframeParent
     {
         $referer = $request->headers->get('Referer');
 
-        if (is_string($referer) && str_starts_with($referer, $allowedParent)) {
+        if (is_string($referer) && $this->candidateMatchesAllowedParent($referer, $allowedParent)) {
             return true;
         }
 
         $origin = $request->headers->get('Origin');
 
-        return is_string($origin) && str_starts_with($origin, $allowedParent);
+        return is_string($origin) && $this->candidateMatchesAllowedParent($origin, $allowedParent);
+    }
+
+    private function candidateMatchesAllowedParent(string $candidate, string $allowedParent): bool
+    {
+        $allowedPrefixes = array_values(array_unique(array_filter([
+            $allowedParent,
+            rtrim($allowedParent, '/'),
+        ])));
+
+        foreach ($allowedPrefixes as $prefix) {
+            if ($prefix !== '' && str_starts_with($candidate, $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function matchesApplicationOrigin(Request $request): bool
