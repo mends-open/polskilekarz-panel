@@ -13,6 +13,9 @@ use Filament\Forms\Components\ToggleButtons;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Notifications\Notification;
+use Filament\Schemas\Components\Text;
+use Filament\Schemas\Schema;
+use Filament\Support\Enums\TextSize;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\Layout\Panel;
 use Filament\Tables\Columns\Layout\Split;
@@ -84,13 +87,15 @@ class InvoicesTable extends BaseTableWidget
                 ->label('Currency')
                 ->options(fn (): array => $this->getCurrencyOptions())
                 ->required()
+                ->inline()
                 ->live()
-                ->afterStateUpdated(function (ToggleButtons $component, $state, Set $set): void {
-                    $set('line_items', []);
+                ->afterStateUpdated(function ($state, Set $set): void {
+                    $set('line_items', $state ? [['price' => null]] : []);
                 }),
             Repeater::make('line_items')
                 ->label('Line items')
                 ->minItems(1)
+                ->hidden(fn (Get $get): bool => blank($get('../../currency') ?? $get('currency')))
                 ->simple(
                     Select::make('price')
                         ->label('Product')
@@ -143,12 +148,26 @@ class InvoicesTable extends BaseTableWidget
         $description = $this->resolvePriceDescription($price);
         $amount = $this->formatPriceAmount($price);
 
-        return <<<HTML
-            <span class="flex w-full items-center justify-between gap-3">
-                <span class="flex-1 text-left">{$description}</span>
-                <span class="fi-badge fi-badge-color-primary fi-badge-size-sm">{$amount}</span>
-            </span>
-        HTML;
+        $schema = Schema::make($this);
+
+        $descriptionComponent = Text::make($description)
+            ->container($schema)
+            ->grow()
+            ->extraAttributes(['class' => 'text-left']);
+
+        $amountComponent = Text::make($amount)
+            ->container($schema)
+            ->badge()
+            ->color('primary')
+            ->size(TextSize::Small)
+            ->extraAttributes(['class' => 'whitespace-nowrap']);
+
+        return sprintf(
+            "<span class='%s'>%s%s</span>",
+            'flex w-full items-center justify-between gap-3',
+            $descriptionComponent->toHtml(),
+            $amountComponent->toHtml(),
+        );
     }
 
     private function resolvePriceDescription(array $price): string
@@ -157,7 +176,7 @@ class InvoicesTable extends BaseTableWidget
             ?? data_get($price, 'nickname')
             ?? data_get($price, 'id');
 
-        return e($description);
+        return (string) $description;
     }
 
     private function formatPriceAmount(array $price): string
