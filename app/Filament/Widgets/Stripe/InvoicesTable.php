@@ -47,6 +47,8 @@ class InvoicesTable extends BaseTableWidget
 
     private ?array $customerInvoicesCache = null;
 
+    private bool $skipNextCurrencyReset = false;
+
     public function isReady(): bool
     {
         return $this->dashboardContextIsReady();
@@ -69,6 +71,11 @@ class InvoicesTable extends BaseTableWidget
     private function clearCustomerInvoicesCache(): void
     {
         $this->customerInvoicesCache = null;
+    }
+
+    private function prepareForPrefilledCurrency(): void
+    {
+        $this->skipNextCurrencyReset = true;
     }
 
     #[Computed(persist: true)]
@@ -99,7 +106,17 @@ class InvoicesTable extends BaseTableWidget
                 ->required()
                 ->inline()
                 ->live()
-                ->afterStateUpdated(function (?string $state, Set $set): void {
+                ->afterStateUpdated(function (?string $state, Set $set, ?string $old): void {
+                    if ($this->skipNextCurrencyReset) {
+                        $this->skipNextCurrencyReset = false;
+
+                        return;
+                    }
+
+                    if ($state === $old) {
+                        return;
+                    }
+
                     $set('line_items', []);
                 }),
             Repeater::make('line_items')
@@ -470,7 +487,11 @@ class InvoicesTable extends BaseTableWidget
                     ->modalHeading('Duplicate latest invoice')
                     ->modalSubmitActionLabel('Create invoice')
                     ->form($this->getCreateInvoiceForm())
-                    ->fillForm(fn () => $this->getInvoiceFormDefaults($this->latestCustomerInvoice()))
+                    ->fillForm(function () {
+                        $this->prepareForPrefilledCurrency();
+
+                        return $this->getInvoiceFormDefaults($this->latestCustomerInvoice());
+                    })
                     ->action(fn (array $data) => $this->handleCreateInvoice($data)),
                 Action::make('sendLatest')
                     ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
@@ -498,6 +519,8 @@ class InvoicesTable extends BaseTableWidget
                             if ($record instanceof StripeObject) {
                                 $record = $this->normalizeStripeObject($record);
                             }
+
+                            $this->prepareForPrefilledCurrency();
 
                             return $this->getInvoiceFormDefaults(is_array($record) ? $record : null);
                         })
