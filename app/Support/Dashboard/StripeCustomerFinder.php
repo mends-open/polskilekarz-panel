@@ -2,33 +2,18 @@
 
 namespace App\Support\Dashboard;
 
-use App\Jobs\Stripe\SyncChatwootContactIdentifier;
 use App\Support\Chatwoot\ContactIdentifierSynchronizer;
 
 readonly class StripeCustomerFinder
 {
     public function __construct(private ContactIdentifierSynchronizer $synchronizer) {}
 
-    public function forChatwootContact(?int $contactId, ?int $accountId): StripeContext
+    public function findFallback(?int $accountId, ?int $contactId): ?string
     {
-        if ($contactId === null || $accountId === null) {
-            return StripeContext::empty();
+        if ($accountId === null || $contactId === null) {
+            return null;
         }
 
-        $customerId = $this->synchronizer->sync($accountId, $contactId);
-
-        if ($customerId !== null) {
-            return new StripeContext($customerId);
-        }
-
-        $fallbackId = $this->synchronizer->findCustomerId($accountId, $contactId);
-
-        if ($fallbackId !== null) {
-            SyncChatwootContactIdentifier::dispatch($accountId, $contactId);
-
-            return new StripeContext($fallbackId);
-        }
-
-        return StripeContext::empty();
+        return $this->synchronizer->findCustomerId($accountId, $contactId);
     }
 }

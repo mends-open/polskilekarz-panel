@@ -17,8 +17,14 @@ class ContactIdentifierSynchronizer
         private readonly ChatwootClient $chatwoot,
     ) {}
 
-    public function sync(int $accountId, int $contactId): ?string
+    public function sync(int $accountId, int $contactId, ?string $knownCustomerId = null): ?string
     {
+        if ($knownCustomerId !== null) {
+            $this->updateContactIdentifier($accountId, $contactId, $knownCustomerId);
+
+            return $knownCustomerId;
+        }
+
         $contact = $this->getContact($accountId, $contactId);
 
         if ($contact === null) {

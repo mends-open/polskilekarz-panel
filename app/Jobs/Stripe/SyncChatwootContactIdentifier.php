@@ -16,10 +16,11 @@ class SyncChatwootContactIdentifier implements ShouldQueue
     public function __construct(
         public readonly int $accountId,
         public readonly int $contactId,
+        public readonly ?string $customerId = null,
     ) {}
 
     public function handle(ContactIdentifierSynchronizer $synchronizer): void
     {
-        $synchronizer->sync($this->accountId, $this->contactId);
+        $synchronizer->sync($this->accountId, $this->contactId, $this->customerId);
     }
 }
