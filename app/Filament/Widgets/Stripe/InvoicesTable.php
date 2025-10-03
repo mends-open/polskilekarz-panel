@@ -8,6 +8,7 @@ use App\Jobs\Stripe\CreateInvoice;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use App\Support\Dashboard\StripeContext;
 use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TableRepeater;
 use Filament\Schemas\Components\Utilities\Get;
@@ -99,6 +100,14 @@ class InvoicesTable extends BaseTableWidget
                 ->minItems(1)
                 ->default([$this->blankLineItem()])
                 ->validationAttribute('products')
+                ->table([
+                    TableColumn::make('product')
+                        ->label('Product'),
+                    TableColumn::make('price')
+                        ->label('Price'),
+                    TableColumn::make('amount')
+                        ->label('Amount'),
+                ])
                 ->schema([
                     Select::make('product')
                         ->label('Product')
