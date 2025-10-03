@@ -111,7 +111,7 @@ class InvoicesTable extends BaseTableWidget
                 ->minItems(1)
                 ->reorderable(false)
                 ->hidden(fn (Get $get): bool => blank($get('../../currency') ?? $get('currency')))
-                ->simple(
+                ->schema([
                     Select::make('price')
                         ->label('Product')
                         ->native(false)
@@ -122,7 +122,7 @@ class InvoicesTable extends BaseTableWidget
                         ->options(fn (Get $get): array => $this->getPriceOptionsForCurrency($get('../../currency') ?? $get('currency')))
                         ->disabled(fn (Get $get): bool => blank($get('../../currency') ?? $get('currency')))
                         ->placeholder(fn (Get $get): string => ($get('../../currency') ?? $get('currency')) ? 'Select a product' : 'Choose a currency first'),
-                ),
+                ]),
         ];
     }
 
