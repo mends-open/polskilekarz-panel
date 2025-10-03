@@ -90,6 +90,9 @@ class InvoicesTable extends BaseTableWidget
             Repeater::make('line_items')
                 ->label('Products')
                 ->reorderable(false)
+                ->required()
+                ->rules(['array', 'min:1'])
+                ->validationAttribute('products')
                 ->simple(
                     Select::make('price')
                         ->label('Product')
@@ -118,23 +121,18 @@ class InvoicesTable extends BaseTableWidget
 
     private function getPriceOptionsForLineItems(array $lineItems, ?string $currentValue): array
     {
-        $firstValue = null;
+        $selectedPriceIds = collect($lineItems)
+            ->filter(fn ($value): bool => is_string($value) && $value !== '');
 
-        foreach ($lineItems as $value) {
-            if (! is_string($value) || $value === '') {
-                continue;
-            }
-
-            $firstValue = $value;
-
-            break;
-        }
-
-        if (! $firstValue || $currentValue === $firstValue) {
+        if ($selectedPriceIds->isEmpty()) {
             return $this->getPriceOptions(null);
         }
 
-        $currency = $this->getCurrencyForPriceId($firstValue);
+        if ($selectedPriceIds->count() === 1 && $selectedPriceIds->first() === $currentValue) {
+            return $this->getPriceOptions(null);
+        }
+
+        $currency = $this->getCurrencyForPriceId($selectedPriceIds->first());
 
         return $this->getPriceOptions($currency);
     }
@@ -258,19 +256,7 @@ class InvoicesTable extends BaseTableWidget
             ->filter(fn (?string $priceId) => $this->isSelectablePrice($priceId))
             ->values();
 
-        $originalCount = $priceIds->count();
-
-        $currency = $this->getCurrencyForPriceId($priceIds->first());
-
-        if ($currency) {
-            $priceIds = $priceIds
-                ->filter(fn (string $priceId) => $this->getCurrencyForPriceId($priceId) === $currency)
-                ->values();
-        }
-
-        $filteredCount = $priceIds->count();
-
-        if ($filteredCount === 0) {
+        if ($priceIds->isEmpty()) {
             Notification::make()
                 ->title('No products selected')
                 ->body('Please select at least one product to include on the invoice.')
@@ -280,12 +266,30 @@ class InvoicesTable extends BaseTableWidget
             return;
         }
 
-        if ($filteredCount !== $originalCount) {
-            Notification::make()
-                ->title('Removed incompatible products')
-                ->body('Products using a different currency were removed from the invoice.')
-                ->warning()
-                ->send();
+        $currency = null;
+
+        foreach ($priceIds as $priceId) {
+            $priceCurrency = $this->getCurrencyForPriceId($priceId);
+
+            if (! $priceCurrency) {
+                continue;
+            }
+
+            if ($currency === null) {
+                $currency = $priceCurrency;
+
+                continue;
+            }
+
+            if ($priceCurrency !== $currency) {
+                Notification::make()
+                    ->title('Mixed currencies selected')
+                    ->body('All selected products must use the same currency. Please adjust your selection and try again.')
+                    ->danger()
+                    ->send();
+
+                return;
+            }
         }
 
         $priceIds = $priceIds->all();
