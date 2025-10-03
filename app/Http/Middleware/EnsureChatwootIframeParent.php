@@ -47,14 +47,18 @@ class EnsureChatwootIframeParent
             return false;
         }
 
+        if ($this->matchesAllowedParent($request, $allowedParent)) {
+            return false;
+        }
+
+        if ($this->matchesApplicationOrigin($request)) {
+            return false;
+        }
+
         $destination = $request->headers->get('Sec-Fetch-Dest');
 
         if (in_array($destination, ['iframe', 'frame'], true)) {
-            return ! $this->matchesAllowedParent($request, $allowedParent);
-        }
-
-        if ($this->matchesAllowedParent($request, $allowedParent)) {
-            return false;
+            return true;
         }
 
         $site = $request->headers->get('Sec-Fetch-Site');
@@ -77,6 +81,21 @@ class EnsureChatwootIframeParent
         $origin = $request->headers->get('Origin');
 
         return is_string($origin) && str_starts_with($origin, $allowedParent);
+    }
+
+    private function matchesApplicationOrigin(Request $request): bool
+    {
+        $origin = $request->headers->get('Origin');
+        $referer = $request->headers->get('Referer');
+        $applicationOrigin = $request->getSchemeAndHttpHost();
+
+        foreach ([$origin, $referer] as $candidate) {
+            if (is_string($candidate) && str_starts_with($candidate, $applicationOrigin)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function addFrameAncestorsHeader(Response $response, string $allowedParent): void

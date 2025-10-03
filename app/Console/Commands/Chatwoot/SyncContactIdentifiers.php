@@ -77,7 +77,7 @@ class SyncContactIdentifiers extends Command
     {
         try {
             return \chatwoot()
-                ->application()
+                ->impersonateFallback($accountId)
                 ->contacts()
                 ->list($accountId, ['page' => $page]);
         } catch (Throwable $exception) {

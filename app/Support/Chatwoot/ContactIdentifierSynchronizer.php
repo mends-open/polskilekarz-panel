@@ -2,6 +2,7 @@
 
 namespace App\Support\Chatwoot;
 
+use App\Services\Chatwoot\Application;
 use App\Services\Chatwoot\ChatwootClient;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
@@ -78,9 +79,14 @@ class ContactIdentifierSynchronizer
 
     private function getContact(int $accountId, int $contactId): ?array
     {
+        $application = $this->applicationForAccount($accountId, $contactId);
+
+        if ($application === null) {
+            return null;
+        }
+
         try {
-            $response = $this->chatwoot
-                ->application()
+            $response = $application
                 ->contacts()
                 ->get($accountId, $contactId);
         } catch (Throwable $exception) {
@@ -160,9 +166,14 @@ class ContactIdentifierSynchronizer
 
     private function updateContactIdentifier(int $accountId, int $contactId, string $customerId): void
     {
+        $application = $this->applicationForAccount($accountId, $contactId);
+
+        if ($application === null) {
+            return;
+        }
+
         try {
-            $this->chatwoot
-                ->application()
+            $application
                 ->contacts()
                 ->update($accountId, $contactId, [
                     'identifier' => $customerId,
@@ -174,6 +185,21 @@ class ContactIdentifierSynchronizer
                 'customer_id' => $customerId,
                 'exception' => $exception->getMessage(),
             ]);
+        }
+    }
+
+    private function applicationForAccount(int $accountId, int $contactId): ?Application
+    {
+        try {
+            return $this->chatwoot->impersonateFallback($accountId);
+        } catch (Throwable $exception) {
+            Log::warning('Failed to impersonate Chatwoot fallback user for identifier sync.', [
+                'account_id' => $accountId,
+                'contact_id' => $contactId,
+                'exception' => $exception->getMessage(),
+            ]);
+
+            return null;
         }
     }
 }
