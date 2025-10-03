@@ -104,6 +104,11 @@ class InvoicesTable extends BaseTableWidget
                         ->allowHtml()
                         ->options(fn (Get $get): array => $this->getPriceOptionsForCurrency($get('../../currency') ?? $get('currency')))
                         ->disabled(fn (Get $get): bool => blank($get('../../currency') ?? $get('currency')))
+                        ->afterStateHydrated(function (?string $state, Set $set): void {
+                            if (! $this->isSelectablePrice($state)) {
+                                $set('price', null);
+                            }
+                        })
                         ->placeholder(fn (Get $get): string => ($get('../../currency') ?? $get('currency')) ? 'Select a product' : 'Choose a currency first'),
                 ),
         ];
@@ -140,7 +145,24 @@ class InvoicesTable extends BaseTableWidget
 
     private function getStripePriceCollection(): Collection
     {
-        return collect($this->stripePrices());
+        return collect($this->stripePrices())
+            ->filter(fn (array $price): bool => (bool) data_get($price, 'product.active', true));
+    }
+
+    private function isSelectablePrice(?string $priceId): bool
+    {
+        if (! $priceId) {
+            return false;
+        }
+
+        $price = collect($this->stripePrices())
+            ->firstWhere('id', $priceId);
+
+        if (! $price) {
+            return false;
+        }
+
+        return (bool) data_get($price, 'product.active', true);
     }
 
     private function formatPriceOptionLabel(array $price): string
