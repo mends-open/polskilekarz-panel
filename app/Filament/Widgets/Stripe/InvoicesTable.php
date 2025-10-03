@@ -333,6 +333,16 @@ class InvoicesTable extends BaseTableWidget
                 'invoice_id' => data_get($invoice, 'id'),
             ]);
 
+            $invoiceId = data_get($invoice, 'id');
+
+            if (is_string($invoiceId)) {
+                $fetchedInvoice = $this->fetchInvoiceWithLines($invoiceId);
+
+                if ($fetchedInvoice) {
+                    $invoice = $fetchedInvoice;
+                }
+            }
+
             $currencyOptions = $this->getCurrencyOptions();
             $currency = data_get($invoice, 'currency');
             $currency = is_string($currency) ? Str::lower($currency) : null;
@@ -409,6 +419,28 @@ class InvoicesTable extends BaseTableWidget
         Log::info('Final invoice form defaults prepared.', $defaults);
 
         return $defaults;
+    }
+
+    private function fetchInvoiceWithLines(string $invoiceId): ?array
+    {
+        Log::info('Fetching invoice with expanded lines for duplication defaults.', [
+            'invoice_id' => $invoiceId,
+        ]);
+
+        try {
+            $invoice = stripe()->invoices->retrieve($invoiceId, [
+                'expand' => ['lines.data.price.product'],
+            ]);
+        } catch (ApiErrorException $exception) {
+            Log::error('Failed to fetch invoice for duplication defaults.', [
+                'invoice_id' => $invoiceId,
+                'exception' => $exception,
+            ]);
+
+            return null;
+        }
+
+        return $this->normalizeStripeObject($invoice);
     }
 
     private function ensureStripeCustomer(): ?string
