@@ -387,17 +387,7 @@ class InvoicesTable extends BaseTableWidget
 
                 foreach ($rawLines as $line) {
                     $rawPrice = data_get($line, 'price');
-                    $priceId = null;
-
-                    if (is_string($rawPrice)) {
-                        $priceId = $rawPrice;
-                    } elseif (is_array($rawPrice)) {
-                        $priceId = data_get($rawPrice, 'id');
-                    }
-
-                    $priceId ??= data_get($line, 'price.id');
-                    $priceId ??= data_get($line, 'price_id');
-                    $priceId = is_string($priceId) ? $priceId : null;
+                    [$priceId, $priceSource] = $this->resolveLineItemPrice($line, $rawPrice);
 
                     $lineCurrency = data_get($line, 'price.currency') ?? data_get($line, 'currency');
                     $lineCurrency = $lineCurrency ? Str::lower((string) $lineCurrency) : null;
@@ -405,6 +395,8 @@ class InvoicesTable extends BaseTableWidget
                     Log::debug('Inspecting invoice line for duplication defaults.', [
                         'raw_price' => $rawPrice,
                         'resolved_price_id' => $priceId,
+                        'price_source' => $priceSource,
+                        'pricing_price_details_price' => data_get($line, 'pricing.price_details.price'),
                         'line_currency' => $lineCurrency,
                         'quantity' => data_get($line, 'quantity'),
                     ]);
@@ -495,6 +487,47 @@ class InvoicesTable extends BaseTableWidget
         ]);
 
         return $lines;
+    }
+
+    private function resolveLineItemPrice(mixed $line, mixed $rawPrice): array
+    {
+        if ($line instanceof StripeObject) {
+            $line = $line->toArray();
+        }
+
+        if (! is_array($line)) {
+            return [null, null];
+        }
+
+        $candidates = [
+            ['value' => $rawPrice, 'source' => 'price'],
+            ['value' => data_get($line, 'price.id'), 'source' => 'price.id'],
+            ['value' => data_get($line, 'price_id'), 'source' => 'price_id'],
+            ['value' => data_get($line, 'pricing.price'), 'source' => 'pricing.price'],
+            ['value' => data_get($line, 'pricing.price.id'), 'source' => 'pricing.price.id'],
+            ['value' => data_get($line, 'pricing.price_details.price'), 'source' => 'pricing.price_details.price'],
+            ['value' => data_get($line, 'pricing.price_details.price.id'), 'source' => 'pricing.price_details.price.id'],
+            ['value' => data_get($line, 'pricing.price_details.price_data.id'), 'source' => 'pricing.price_details.price_data.id'],
+        ];
+
+        foreach ($candidates as $candidate) {
+            $value = $candidate['value'];
+            $source = $candidate['source'];
+
+            if (is_string($value) && $value !== '') {
+                return [$value, $source];
+            }
+
+            if (is_array($value)) {
+                $id = data_get($value, 'id');
+
+                if (is_string($id) && $id !== '') {
+                    return [$id, $source . '.id'];
+                }
+            }
+        }
+
+        return [null, null];
     }
 
     private function ensureStripeCustomer(): ?string
