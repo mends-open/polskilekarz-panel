@@ -36,7 +36,7 @@ class EnsureChatwootIframeParentTest extends TestCase
         $request = Request::create('/filament', 'GET');
 
         $middleware = new EnsureChatwootIframeParent();
-        
+
         $this->expectException(HttpException::class);
         $this->expectExceptionMessage('The Filament panel requires the CHATWOOT_DASHBOARD_PARENT_URL environment variable to be configured.');
         $middleware->handle($request, fn () => new Response('ok'));
@@ -49,6 +49,7 @@ class EnsureChatwootIframeParentTest extends TestCase
         $request = Request::create('/filament', 'GET', [], [], [], [
             'HTTP_ACCEPT' => 'text/html',
             'HTTP_SEC_FETCH_DEST' => 'iframe',
+            'HTTP_SEC_FETCH_SITE' => 'cross-site',
             'HTTP_REFERER' => 'https://allowed.test/dashboard',
         ]);
 
@@ -76,7 +77,10 @@ class EnsureChatwootIframeParentTest extends TestCase
             $this->fail('Expected HttpException was not thrown.');
         } catch (HttpException $exception) {
             $this->assertSame(403, $exception->getStatusCode());
-            $this->assertSame('The Filament panel must be loaded inside the Chatwoot Dashboard App iframe', $exception->getMessage());
+            $this->assertSame(
+                'The Filament panel must be loaded inside the Chatwoot Dashboard App iframe after / but inside iframe',
+                $exception->getMessage(),
+            );
         }
     }
 
@@ -87,13 +91,16 @@ class EnsureChatwootIframeParentTest extends TestCase
         $request = Request::create('/filament', 'GET', [], [], [], [
             'HTTP_ACCEPT' => 'text/html',
             'HTTP_SEC_FETCH_DEST' => 'iframe',
+            'HTTP_SEC_FETCH_SITE' => 'cross-site',
             'HTTP_REFERER' => 'https://malicious.test/app',
         ]);
 
         $middleware = new EnsureChatwootIframeParent();
 
         $this->expectException(HttpException::class);
-        $this->expectExceptionMessage('The Filament panel must be loaded inside the Chatwoot Dashboard App iframe');
+        $this->expectExceptionMessage(
+            'The Filament panel must be loaded inside the Chatwoot Dashboard App iframe after / but inside iframe',
+        );
 
         $middleware->handle($request, fn () => new Response('ok'));
     }
@@ -105,7 +112,45 @@ class EnsureChatwootIframeParentTest extends TestCase
         $request = Request::create('/filament', 'GET', [], [], [], [
             'HTTP_ACCEPT' => 'text/html',
             'HTTP_SEC_FETCH_DEST' => 'iframe',
+            'HTTP_SEC_FETCH_SITE' => 'cross-site',
             'HTTP_ORIGIN' => 'https://allowed.test',
+        ]);
+
+        $middleware = new EnsureChatwootIframeParent();
+
+        $response = $middleware->handle($request, fn () => new Response('ok'));
+
+        $this->assertSame('ok', $response->getContent());
+        $this->assertSame('frame-ancestors https://allowed.test', $response->headers->get('Content-Security-Policy'));
+    }
+
+    public function test_request_is_allowed_for_same_origin_navigation(): void
+    {
+        config()->set('filament.app.chatwoot_iframe_parent', 'https://allowed.test');
+
+        $request = Request::create('/filament', 'GET', [], [], [], [
+            'HTTP_ACCEPT' => 'text/html',
+            'HTTP_SEC_FETCH_DEST' => 'document',
+            'HTTP_SEC_FETCH_SITE' => 'same-origin',
+        ]);
+
+        $middleware = new EnsureChatwootIframeParent();
+
+        $response = $middleware->handle($request, fn () => new Response('ok'));
+
+        $this->assertSame('ok', $response->getContent());
+        $this->assertSame('frame-ancestors https://allowed.test', $response->headers->get('Content-Security-Policy'));
+    }
+
+    public function test_request_is_allowed_for_in_frame_navigation(): void
+    {
+        config()->set('filament.app.chatwoot_iframe_parent', 'https://allowed.test');
+
+        $request = Request::create('/filament', 'GET', [], [], [], [
+            'HTTP_ACCEPT' => 'text/html',
+            'HTTP_SEC_FETCH_DEST' => 'document',
+            'HTTP_SEC_FETCH_SITE' => 'cross-site',
+            'HTTP_REFERER' => 'http://localhost/filament/dashboard',
         ]);
 
         $middleware = new EnsureChatwootIframeParent();

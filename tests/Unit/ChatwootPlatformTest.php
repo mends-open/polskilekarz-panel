@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Services\Chatwoot\Application;
+use App\Services\Chatwoot\ChatwootClient;
 use App\Services\Chatwoot\Platform;
 use Illuminate\Config\Repository;
 use Illuminate\Container\Container;
@@ -130,7 +131,7 @@ it('throws when the user payload does not contain an access token and no fallbac
         ->toThrow(\RuntimeException::class, 'application access token');
 });
 
-it('falls back to the configured access token when the user payload does not include one', function () {
+it('impersonates the configured fallback user when requesting an application instance', function () {
     $originalContainer = Container::getInstance();
     $container = new Container;
     Container::setInstance($container);
@@ -141,7 +142,7 @@ it('falls back to the configured access token when the user payload does not inc
                 'chatwoot' => [
                     'endpoint' => 'https://chatwoot.test',
                     'platform_access_token' => 'platform-token',
-                    'fallback_access_token' => 'fallback-token',
+                    'fallback_user_id' => 9,
                 ],
             ],
         ]));
@@ -149,33 +150,33 @@ it('falls back to the configured access token when the user payload does not inc
         $http = new Factory;
 
         $http->fake(function (Request $request) {
-            if ($request->url() === 'https://chatwoot.test/platform/api/v1/users/2') {
+            if ($request->url() === 'https://chatwoot.test/platform/api/v1/users/9') {
+                expect($request->method())->toBe('GET');
                 expect($request->hasHeader('api_access_token', 'platform-token'))->toBeTrue();
 
                 return Factory::response([
-                    'id' => 2,
+                    'id' => 9,
                     'accounts' => [
                         ['id' => 1],
                     ],
+                    'access_token' => 'fallback-token',
                 ], 200);
             }
 
-            expect($request->url())->toBe('https://chatwoot.test/api/v1/accounts/1/conversations/3/messages');
+            expect($request->url())->toBe('https://chatwoot.test/api/v1/accounts/1/contacts');
+            expect($request->method())->toBe('GET');
             expect($request->hasHeader('api_access_token', 'fallback-token'))->toBeTrue();
 
-            return Factory::response(['id' => 10], 201);
+            return Factory::response(['payload' => []], 200);
         });
 
-        $platform = new Platform($http);
+        $client = new ChatwootClient($http);
 
-        $application = $platform->impersonate(2, 1);
+        $application = $client->impersonateFallback(1);
 
-        $response = $application->messages()->create(1, 3, [
-            'content' => 'Hello',
-            'message_type' => 'outgoing',
-        ]);
+        $response = $application->contacts()->list(1);
 
-        expect($response)->toBe(['id' => 10]);
+        expect($response)->toBe(['payload' => []]);
         expect($http->recorded())->toHaveCount(2);
     } finally {
         Container::setInstance($originalContainer);

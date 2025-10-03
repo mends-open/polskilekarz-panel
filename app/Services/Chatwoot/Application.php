@@ -67,12 +67,6 @@ class Application extends Service
             return $authToken;
         }
 
-        $fallback = (string) ($this->config['fallback_access_token'] ?? '');
-
-        if ($fallback === '') {
-            throw new RuntimeException('Chatwoot application access token is not configured.');
-        }
-
-        return $fallback;
+        throw new RuntimeException('Chatwoot application access token is not configured.');
     }
 }

@@ -2,10 +2,12 @@
 
 namespace App\Livewire;
 
+use App\Jobs\Stripe\SyncChatwootContactIdentifier;
 use App\Support\Dashboard\ChatwootContext;
 use App\Support\Dashboard\DashboardContext;
 use App\Support\Dashboard\StripeContext;
 use App\Support\Dashboard\StripeCustomerFinder;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use JsonException;
@@ -58,10 +60,12 @@ class ChatwootContextListener extends Component
 
         Log::info('chatwoot context set', $chatwootContext->toArray());
 
-        $this->synchroniseStripeContext($chatwootContext);
+        $identifier = $this->normaliseIdentifier(Arr::get($payload, 'contact.identifier'));
+
+        $this->synchroniseStripeContext($chatwootContext, $identifier);
     }
 
-    protected function synchroniseStripeContext(ChatwootContext $chatwootContext): void
+    protected function synchroniseStripeContext(ChatwootContext $chatwootContext, ?string $identifier): void
     {
         if (! $chatwootContext->hasContact()) {
             $this->dashboardContext->storeStripe(StripeContext::empty());
@@ -71,12 +75,37 @@ class ChatwootContextListener extends Component
             return;
         }
 
-        $stripeContext = $this->stripeCustomerFinder->forChatwootContact($chatwootContext->contactId);
+        $this->dashboardContext->storeStripe(new StripeContext($identifier));
 
-        $this->dashboardContext->storeStripe($stripeContext);
+        $customerId = $identifier;
+
+        if ($customerId === null) {
+            $customerId = $this->stripeCustomerFinder->findFallback($chatwootContext->contactId);
+
+            if ($customerId !== null) {
+                $this->dashboardContext->storeStripe(new StripeContext($customerId));
+
+                SyncChatwootContactIdentifier::dispatch(
+                    $chatwootContext->accountId,
+                    $chatwootContext->contactId,
+                    $customerId,
+                );
+            }
+        }
+
         $this->dashboardContext->markReady();
-
         $this->dispatch('reset');
+    }
+
+    private function normaliseIdentifier(mixed $identifier): ?string
+    {
+        if (! is_string($identifier)) {
+            return null;
+        }
+
+        $identifier = trim($identifier);
+
+        return $identifier === '' ? null : $identifier;
     }
 
     public static function getContext(): array

@@ -13,7 +13,13 @@ class StripeServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(StripeClient::class, function ($app) {
-            return new StripeClient(config('services.stripe.api_key'));
+            $apiKey = (string) config('services.stripe.api_key');
+
+            if ($apiKey === '') {
+                return new StripeClient([]);
+            }
+
+            return new StripeClient($apiKey);
         });
 
     }

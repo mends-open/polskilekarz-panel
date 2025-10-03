@@ -21,7 +21,10 @@ class EnsureChatwootIframeParent
         }
 
         if ($this->shouldBlockRequest($request, $allowedParent)) {
-            throw new HttpException(403, 'The Filament panel must be loaded inside the Chatwoot Dashboard App iframe');
+            throw new HttpException(
+                403,
+                'The Filament panel must be loaded inside the Chatwoot Dashboard App iframe after / but inside iframe',
+            );
         }
 
         /** @var Response $response */
@@ -44,25 +47,55 @@ class EnsureChatwootIframeParent
             return false;
         }
 
+        if ($this->matchesAllowedParent($request, $allowedParent)) {
+            return false;
+        }
+
+        if ($this->matchesApplicationOrigin($request)) {
+            return false;
+        }
+
         $destination = $request->headers->get('Sec-Fetch-Dest');
 
-        if ($destination !== null && ! in_array($destination, ['iframe', 'frame'], true)) {
+        if (in_array($destination, ['iframe', 'frame'], true)) {
             return true;
         }
 
-        $referer = $request->headers->get('Referer', '');
+        $site = $request->headers->get('Sec-Fetch-Site');
 
-        if ($referer !== '') {
-            return ! str_starts_with($referer, $allowedParent);
-        }
-
-        $origin = $request->headers->get('Origin', '');
-
-        if ($origin !== '') {
-            return ! str_starts_with($origin, $allowedParent);
+        if (in_array($site, ['same-origin', 'same-site'], true)) {
+            return false;
         }
 
         return true;
+    }
+
+    private function matchesAllowedParent(Request $request, string $allowedParent): bool
+    {
+        $referer = $request->headers->get('Referer');
+
+        if (is_string($referer) && str_starts_with($referer, $allowedParent)) {
+            return true;
+        }
+
+        $origin = $request->headers->get('Origin');
+
+        return is_string($origin) && str_starts_with($origin, $allowedParent);
+    }
+
+    private function matchesApplicationOrigin(Request $request): bool
+    {
+        $origin = $request->headers->get('Origin');
+        $referer = $request->headers->get('Referer');
+        $applicationOrigin = $request->getSchemeAndHttpHost();
+
+        foreach ([$origin, $referer] as $candidate) {
+            if (is_string($candidate) && str_starts_with($candidate, $applicationOrigin)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function addFrameAncestorsHeader(Response $response, string $allowedParent): void
