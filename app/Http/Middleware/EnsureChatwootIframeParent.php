@@ -20,11 +20,19 @@ class EnsureChatwootIframeParent
             );
         }
 
-        if ($this->shouldBlockRequest($request, $allowedParents)) {
-            throw new HttpException(
-                403,
-                'The Filament panel must be loaded inside the Chatwoot Dashboard App iframe after / but inside iframe',
-            );
+        if ($this->shouldVerifyRequest($request) && ! $this->isRequestVerified($request)) {
+            $loadedFromAllowedParent = $this->requestMatchesAllowedParents($request, $allowedParents);
+
+            if (! $loadedFromAllowedParent && ! $this->requestMatchesApplication($request)) {
+                throw new HttpException(
+                    403,
+                    'The Filament panel must be loaded inside the Chatwoot Dashboard App iframe after / but inside iframe',
+                );
+            }
+
+            if ($loadedFromAllowedParent) {
+                $this->markRequestAsVerified($request);
+            }
         }
 
         /** @var Response $response */
@@ -35,33 +43,14 @@ class EnsureChatwootIframeParent
         return $response;
     }
 
-    /**
-     * @param  string[]  $allowedParents
-     */
-    private function shouldBlockRequest(Request $request, array $allowedParents): bool
+    private function shouldVerifyRequest(Request $request): bool
     {
         if (! $request->isMethod('GET')) {
             return false;
         }
 
-        $acceptHeader = $request->headers->get('Accept', '');
-
-        if (! str_contains($acceptHeader, 'text/html')) {
+        if (! str_contains($request->headers->get('Accept', ''), 'text/html')) {
             return false;
-        }
-
-        if ($this->matchesAllowedParent($request, $allowedParents)) {
-            return false;
-        }
-
-        if ($this->matchesApplicationOrigin($request)) {
-            return false;
-        }
-
-        $destination = $request->headers->get('Sec-Fetch-Dest');
-
-        if (in_array($destination, ['iframe', 'frame'], true)) {
-            return true;
         }
 
         $site = $request->headers->get('Sec-Fetch-Site');
@@ -73,29 +62,37 @@ class EnsureChatwootIframeParent
         return true;
     }
 
-    /**
-     * @param  string[]  $allowedParents
-     */
-    private function matchesAllowedParent(Request $request, array $allowedParents): bool
+    private function isRequestVerified(Request $request): bool
     {
-        $referer = $request->headers->get('Referer');
-
-        if (is_string($referer) && $this->candidateMatchesAllowedParents($referer, $allowedParents)) {
-            return true;
+        if (! $request->hasSession()) {
+            return false;
         }
 
-        $origin = $request->headers->get('Origin');
+        return (bool) $request->session()->get('chatwoot_iframe_parent_verified', false);
+    }
 
-        return is_string($origin) && $this->candidateMatchesAllowedParents($origin, $allowedParents);
+    private function markRequestAsVerified(Request $request): void
+    {
+        if (! $request->hasSession()) {
+            return;
+        }
+
+        $request->session()->put('chatwoot_iframe_parent_verified', true);
     }
 
     /**
      * @param  string[]  $allowedParents
      */
-    private function candidateMatchesAllowedParents(string $candidate, array $allowedParents): bool
+    private function requestMatchesAllowedParents(Request $request, array $allowedParents): bool
     {
-        foreach ($allowedParents as $allowedParent) {
-            if ($this->candidateMatchesAllowedParent($candidate, $allowedParent)) {
+        foreach (['Referer', 'Origin'] as $header) {
+            $value = $request->headers->get($header);
+
+            if (! is_string($value) || $value === '') {
+                continue;
+            }
+
+            if ($this->valueMatchesAllowedParents($value, $allowedParents)) {
                 return true;
             }
         }
@@ -103,58 +100,84 @@ class EnsureChatwootIframeParent
         return false;
     }
 
-    private function candidateMatchesAllowedParent(string $candidate, string $allowedParent): bool
+    /**
+     * @param  string[]  $allowedParents
+     */
+    private function valueMatchesAllowedParents(string $value, array $allowedParents): bool
     {
-        $normalizedAllowed = $this->normalizeUrlForComparison($allowedParent);
-
-        if ($normalizedAllowed === null) {
-            return $this->rawPrefixMatch($candidate, $allowedParent);
-        }
-
-        $normalizedCandidate = $this->normalizeUrlForComparison($candidate);
-
-        if ($normalizedCandidate === null) {
-            return $this->rawPrefixMatch($candidate, $allowedParent);
-        }
-
-        if ($normalizedCandidate['host'] === null || $normalizedAllowed['host'] === null) {
-            return false;
-        }
-
-        if ($normalizedAllowed['scheme'] !== null && $normalizedCandidate['scheme'] !== null
-            && strcasecmp($normalizedAllowed['scheme'], $normalizedCandidate['scheme']) !== 0) {
-            return false;
-        }
-
-        if (strcasecmp($normalizedCandidate['host'], $normalizedAllowed['host']) !== 0) {
-            return false;
-        }
-
-        if ($normalizedAllowed['port'] !== null) {
-            $candidatePort = $normalizedCandidate['port']
-                ?? $this->defaultPortForScheme($normalizedCandidate['scheme']);
-
-            $allowedPort = $normalizedAllowed['port'];
-
-            if ($candidatePort !== $allowedPort) {
-                return false;
+        foreach ($allowedParents as $allowedParent) {
+            if ($this->valuesShareOrigin($value, $allowedParent)) {
+                return true;
             }
         }
 
-        $allowedPath = $this->normalizePathForComparison($normalizedAllowed['path']);
-        $candidatePath = $this->normalizePathForComparison($normalizedCandidate['path']);
-
-        return str_starts_with($candidatePath, $allowedPath);
+        return false;
     }
 
-    private function matchesApplicationOrigin(Request $request): bool
+    private function valuesShareOrigin(string $candidate, string $allowedParent): bool
     {
-        $origin = $request->headers->get('Origin');
-        $referer = $request->headers->get('Referer');
+        $candidateOrigin = $this->parseOrigin($candidate);
+        $allowedOrigin = $this->parseOrigin($allowedParent);
+
+        if ($candidateOrigin === null || $allowedOrigin === null) {
+            return $this->relaxedPrefixMatch($candidate, $allowedParent);
+        }
+
+        if ($allowedOrigin['scheme'] !== null && $candidateOrigin['scheme'] !== null
+            && $allowedOrigin['scheme'] !== $candidateOrigin['scheme']) {
+            return false;
+        }
+
+        if ($candidateOrigin['host'] !== $allowedOrigin['host']) {
+            return false;
+        }
+
+        if ($allowedOrigin['port'] !== null && $candidateOrigin['port'] !== null
+            && $allowedOrigin['port'] !== $candidateOrigin['port']) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function parseOrigin(string $value): ?array
+    {
+        $parts = parse_url($value);
+
+        if ($parts === false || ! isset($parts['host'])) {
+            return null;
+        }
+
+        $scheme = isset($parts['scheme']) ? strtolower($parts['scheme']) : null;
+        $host = strtolower($parts['host']);
+        $port = $parts['port'] ?? $this->defaultPortForScheme($scheme);
+
+        return [
+            'scheme' => $scheme,
+            'host' => $host,
+            'port' => $port,
+        ];
+    }
+
+    private function relaxedPrefixMatch(string $candidate, string $allowedParent): bool
+    {
+        $trimmed = rtrim($allowedParent, '/');
+
+        if (str_starts_with($candidate, $allowedParent)) {
+            return true;
+        }
+
+        return $trimmed !== '' && str_starts_with($candidate, $trimmed);
+    }
+
+    private function requestMatchesApplication(Request $request): bool
+    {
         $applicationOrigin = $request->getSchemeAndHttpHost();
 
-        foreach ([$origin, $referer] as $candidate) {
-            if (is_string($candidate) && str_starts_with($candidate, $applicationOrigin)) {
+        foreach (['Origin', 'Referer'] as $header) {
+            $value = $request->headers->get($header);
+
+            if (is_string($value) && str_starts_with($value, $applicationOrigin)) {
                 return true;
             }
         }
@@ -215,75 +238,6 @@ class EnsureChatwootIframeParent
         }
 
         return array_values(array_unique($allowedParents));
-    }
-
-    /**
-     * @return array{scheme: string|null, host: string|null, port: int|null, path: string}|null
-     */
-    private function normalizeUrlForComparison(string $url): ?array
-    {
-        $parts = parse_url($url);
-
-        if ($parts === false) {
-            return null;
-        }
-
-        $host = $parts['host'] ?? null;
-
-        if ($host === null) {
-            return null;
-        }
-
-        $scheme = isset($parts['scheme']) ? strtolower($parts['scheme']) : null;
-        $normalizedHost = strtolower($host);
-        $port = $parts['port'] ?? null;
-        $path = $parts['path'] ?? '/';
-
-        if ($path === '') {
-            $path = '/';
-        }
-
-        return [
-            'scheme' => $scheme,
-            'host' => $normalizedHost,
-            'port' => $port,
-            'path' => $path,
-        ];
-    }
-
-    private function normalizePathForComparison(string $path): string
-    {
-        if ($path === '' || $path === '/') {
-            return '/';
-        }
-
-        return rtrim($path, '/') . '/';
-    }
-
-    private function rawPrefixMatch(string $candidate, string $allowedParent): bool
-    {
-        foreach ($this->buildAllowedPrefixes($allowedParent) as $prefix) {
-            if ($prefix !== '' && str_starts_with($candidate, $prefix)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private function buildAllowedPrefixes(string $allowedParent): array
-    {
-        $prefixes = [$allowedParent];
-        $trimmed = rtrim($allowedParent, '/');
-
-        if ($trimmed !== $allowedParent) {
-            $prefixes[] = $trimmed;
-        }
-
-        return array_values(array_unique($prefixes));
     }
 
     private function defaultPortForScheme(?string $scheme): ?int
