@@ -6,12 +6,11 @@ readonly class StripeContext
 {
     public function __construct(
         public ?string $customerId,
-        public array $previousCustomerIds = [],
     ) {}
 
     public static function empty(): self
     {
-        return new self(null, []);
+        return new self(null);
     }
 
     public static function fromArray(?array $data): self
@@ -22,7 +21,6 @@ readonly class StripeContext
 
         return new self(
             $data['customer_id'] ?? null,
-            array_values($data['previous_customer_ids'] ?? []),
         );
     }
 
@@ -30,12 +28,11 @@ readonly class StripeContext
     {
         return [
             'customer_id' => $this->customerId,
-            'previous_customer_ids' => $this->previousCustomerIds,
         ];
     }
 
     public function hasCustomer(): bool
     {
-        return $this->customerId !== null;
+        return \filled($this->customerId);
     }
 }

@@ -71,7 +71,10 @@ class ChatwootContextListener extends Component
             return;
         }
 
-        $stripeContext = $this->stripeCustomerFinder->forChatwootContact($chatwootContext->contactId);
+        $stripeContext = $this->stripeCustomerFinder->forChatwootContact(
+            $chatwootContext->contactId,
+            $chatwootContext->accountId,
+        );
 
         $this->dashboardContext->storeStripe($stripeContext);
         $this->dashboardContext->markReady();

@@ -2,35 +2,24 @@
 
 namespace App\Support\Dashboard;
 
-use Stripe\StripeClient;
+use App\Support\Chatwoot\ContactIdentifierSynchronizer;
 
 readonly class StripeCustomerFinder
 {
-    public function __construct(private StripeClient $stripe) {}
+    public function __construct(private ContactIdentifierSynchronizer $synchronizer) {}
 
-    public function forChatwootContact(?int $contactId): StripeContext
+    public function forChatwootContact(?int $contactId, ?int $accountId): StripeContext
     {
-        if ($contactId === null) {
+        if ($contactId === null || $accountId === null) {
             return StripeContext::empty();
         }
 
-        $query = stripeSearchQuery()
-            ->metadata('chatwoot_contact_id')
-            ->equals((string) $contactId);
+        $customerId = $this->synchronizer->sync($accountId, $contactId);
 
-        $response = $this->stripe->customers->search([
-            'query' => $query->toString(),
-        ])->toArray();
+        if ($customerId === null) {
+            return StripeContext::empty();
+        }
 
-        $customers = $response['data'] ?? [];
-
-        $primary = $customers[0]['id'] ?? null;
-        $previous = collect($customers)
-            ->pluck('id')
-            ->skip(1)
-            ->values()
-            ->all();
-
-        return new StripeContext($primary, $previous);
+        return new StripeContext($customerId);
     }
 }
