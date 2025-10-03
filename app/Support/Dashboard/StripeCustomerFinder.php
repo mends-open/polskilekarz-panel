@@ -8,12 +8,12 @@ readonly class StripeCustomerFinder
 {
     public function __construct(private ContactIdentifierSynchronizer $synchronizer) {}
 
-    public function findFallback(?int $accountId, ?int $contactId): ?string
+    public function findFallback(?int $contactId): ?string
     {
-        if ($accountId === null || $contactId === null) {
+        if ($contactId === null) {
             return null;
         }
 
-        return $this->synchronizer->findCustomerId($accountId, $contactId);
+        return $this->synchronizer->findCustomerId($contactId);
     }
 }

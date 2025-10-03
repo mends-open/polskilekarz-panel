@@ -80,10 +80,7 @@ class ChatwootContextListener extends Component
         $customerId = $identifier;
 
         if ($customerId === null) {
-            $customerId = $this->stripeCustomerFinder->findFallback(
-                $chatwootContext->accountId,
-                $chatwootContext->contactId,
-            );
+            $customerId = $this->stripeCustomerFinder->findFallback($chatwootContext->contactId);
 
             if ($customerId !== null) {
                 $this->dashboardContext->storeStripe(new StripeContext($customerId));

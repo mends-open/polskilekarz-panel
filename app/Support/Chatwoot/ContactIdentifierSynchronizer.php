@@ -19,25 +19,19 @@ class ContactIdentifierSynchronizer
 
     public function sync(int $accountId, int $contactId, ?string $knownCustomerId = null): ?string
     {
-        if ($knownCustomerId !== null) {
+        if ($knownCustomerId !== null && $this->identifierMatchesContact($knownCustomerId, $contactId)) {
             $this->updateContactIdentifier($accountId, $contactId, $knownCustomerId);
 
             return $knownCustomerId;
         }
 
-        $contact = $this->getContact($accountId, $contactId);
+        $identifier = $this->getCurrentIdentifier($accountId, $contactId);
 
-        if ($contact === null) {
-            return null;
-        }
-
-        $identifier = $this->normalizeIdentifier(Arr::get($contact, 'identifier'));
-
-        if ($identifier !== null && $this->identifierMatchesContact($identifier, $accountId, $contactId)) {
+        if ($identifier !== null && $this->identifierMatchesContact($identifier, $contactId)) {
             return $identifier;
         }
 
-        $customerId = $this->findCustomerId($accountId, $contactId);
+        $customerId = $this->findCustomerId($contactId);
 
         if ($customerId === null) {
             return null;
@@ -50,21 +44,18 @@ class ContactIdentifierSynchronizer
         return $customerId;
     }
 
-    public function findCustomerId(int $accountId, int $contactId): ?string
+    public function findCustomerId(int $contactId): ?string
     {
         try {
             $response = $this->stripe->customers->search([
                 'query' => \stripeSearchQuery()
-                    ->metadata('chatwoot_account_id')
-                    ->equals((string) $accountId)
-                    ->andMetadata('chatwoot_contact_id')
+                    ->metadata('chatwoot_contact_id')
                     ->equals((string) $contactId)
                     ->toString(),
                 'limit' => 1,
             ])->toArray();
         } catch (ApiErrorException $exception) {
             Log::warning('Failed to search Stripe customers for Chatwoot identifier sync.', [
-                'account_id' => $accountId,
                 'contact_id' => $contactId,
                 'exception' => $exception->getMessage(),
             ]);
@@ -121,7 +112,18 @@ class ContactIdentifierSynchronizer
         return $identifier === '' ? null : $identifier;
     }
 
-    private function identifierMatchesContact(string $customerId, int $accountId, int $contactId): bool
+    private function getCurrentIdentifier(int $accountId, int $contactId): ?string
+    {
+        $contact = $this->getContact($accountId, $contactId);
+
+        if ($contact === null) {
+            return null;
+        }
+
+        return $this->normalizeIdentifier(Arr::get($contact, 'identifier'));
+    }
+
+    private function identifierMatchesContact(string $customerId, int $contactId): bool
     {
         $customer = $this->retrieveCustomer($customerId);
 
@@ -138,14 +140,8 @@ class ContactIdentifierSynchronizer
         if ((string) Arr::get($metadata, 'chatwoot_contact_id') !== (string) $contactId) {
             return false;
         }
-
-        $accountValue = Arr::get($metadata, 'chatwoot_account_id');
-
-        if ($accountValue === null) {
-            return true;
-        }
-
-        return (string) $accountValue === (string) $accountId;
+        
+        return true;
     }
 
     private function retrieveCustomer(string $customerId): ?array

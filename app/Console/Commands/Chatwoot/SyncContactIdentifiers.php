@@ -4,9 +4,11 @@ namespace App\Console\Commands\Chatwoot;
 
 use App\Jobs\Stripe\SyncChatwootContactIdentifier;
 use Illuminate\Console\Command;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
-use Throwable;
+use Stripe\Exception\ApiErrorException;
+use Stripe\StripeClient;
 
 class SyncContactIdentifiers extends Command
 {
@@ -15,6 +17,11 @@ class SyncContactIdentifiers extends Command
 
     protected $description = 'Synchronise Stripe customer identifiers for all Chatwoot contacts in the specified account.';
 
+    public function __construct(private readonly StripeClient $stripe)
+    {
+        parent::__construct();
+    }
+
     public function handle(): int
     {
         $accountId = (int) $this->argument('account');
@@ -22,31 +29,51 @@ class SyncContactIdentifiers extends Command
 
         $this->info(sprintf('Starting identifier sync for Chatwoot account %d.', $accountId));
 
-        $page = 1;
+        $page = null;
         $pendingJobs = [];
         $batchCount = 0;
 
         do {
-            $response = $this->fetchContacts($accountId, $page);
+            $response = $this->fetchCustomers($page);
 
             if ($response === null) {
                 return self::FAILURE;
             }
 
-            $contacts = \data_get($response, 'payload', []);
+            $customers = \data_get($response, 'data', []);
 
-            if (! is_array($contacts)) {
-                $contacts = [];
+            if (! is_array($customers)) {
+                $customers = [];
             }
 
-            foreach ($contacts as $contact) {
-                $contactId = \data_get($contact, 'id');
+            foreach ($customers as $customer) {
+                if (! is_array($customer) || ($customer['deleted'] ?? false) === true) {
+                    continue;
+                }
+
+                $metadata = Arr::get($customer, 'metadata');
+
+                if (! is_array($metadata)) {
+                    continue;
+                }
+
+                $contactId = Arr::get($metadata, 'chatwoot_contact_id');
 
                 if (! is_numeric($contactId)) {
                     continue;
                 }
 
-                $pendingJobs[] = new SyncChatwootContactIdentifier($accountId, (int) $contactId);
+                $customerId = Arr::get($customer, 'id');
+
+                if (! is_string($customerId) || $customerId === '') {
+                    continue;
+                }
+
+                $pendingJobs[] = new SyncChatwootContactIdentifier(
+                    $accountId,
+                    (int) $contactId,
+                    $customerId,
+                );
 
                 if (count($pendingJobs) >= $chunkSize) {
                     $this->dispatchBatch(++$batchCount, $accountId, $pendingJobs);
@@ -73,18 +100,26 @@ class SyncContactIdentifiers extends Command
         return self::SUCCESS;
     }
 
-    private function fetchContacts(int $accountId, int $page): ?array
+    private function fetchCustomers(?string $page): ?array
     {
-        try {
-            return \chatwoot()
-                ->impersonateFallback($accountId)
-                ->contacts()
-                ->list($accountId, ['page' => $page]);
-        } catch (Throwable $exception) {
-            $this->error('Failed to fetch contacts from Chatwoot. Check the logs for more details.');
+        $params = [
+            'query' => \stripeSearchQuery()
+                ->metadata('chatwoot_contact_id')
+                ->exists()
+                ->toString(),
+            'limit' => 100,
+        ];
 
-            Log::error('Chatwoot contact fetch failed during identifier sync.', [
-                'account_id' => $accountId,
+        if ($page !== null) {
+            $params['page'] = $page;
+        }
+
+        try {
+            return $this->stripe->customers->search($params)->toArray();
+        } catch (ApiErrorException $exception) {
+            $this->error('Failed to fetch customers from Stripe. Check the logs for more details.');
+
+            Log::error('Stripe customer search failed during identifier sync.', [
                 'page' => $page,
                 'exception' => $exception->getMessage(),
             ]);
@@ -93,14 +128,14 @@ class SyncContactIdentifiers extends Command
         }
     }
 
-    private function nextPage(array $response): ?int
+    private function nextPage(array $response): ?string
     {
-        $nextPage = \data_get($response, 'meta.next_page');
+        $nextPage = \data_get($response, 'next_page');
 
-        if (is_numeric($nextPage)) {
-            $value = (int) $nextPage;
+        if (is_string($nextPage)) {
+            $value = trim($nextPage);
 
-            return $value > 0 ? $value : null;
+            return $value === '' ? null : $value;
         }
 
         return null;
