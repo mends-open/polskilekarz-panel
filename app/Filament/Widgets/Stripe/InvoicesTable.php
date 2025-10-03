@@ -8,9 +8,9 @@ use App\Jobs\Stripe\CreateInvoice;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use App\Support\Dashboard\StripeContext;
 use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TableRepeater;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Actions\Action;
@@ -92,7 +92,7 @@ class InvoicesTable extends BaseTableWidget
     private function getCreateInvoiceForm(): array
     {
         return [
-            TableRepeater::make('line_items')
+            Repeater::make('line_items')
                 ->label('Products')
                 ->reorderable(false)
                 ->required()
