@@ -86,7 +86,11 @@ class ContactIdentifierSynchronizer
             return false;
         }
 
-        return $this->customerMatchesIdentifiers($customer, $accountId, $contactId);
+        if ($this->customerMatches($customer, $accountId, $contactId)) {
+            return true;
+        }
+
+        return $this->customerMatches($customer, $accountId, $contactId, requireAccount: false);
     }
 
     private function retrieveCustomer(string $customerId): ?array
@@ -113,20 +117,54 @@ class ContactIdentifierSynchronizer
 
     private function findLatestCustomer(int $accountId, int $contactId): ?array
     {
-        try {
-            $response = $this->stripe->customers->search([
-                'query' => \stripeSearchQuery()
+        $queries = [
+            [
+                \stripeSearchQuery()
                     ->metadata('chatwoot_account_id')
                     ->equals((string) $accountId)
                     ->andMetadata('chatwoot_contact_id')
                     ->equals((string) $contactId)
                     ->toString(),
+                true,
+                'account_and_contact',
+            ],
+            [
+                \stripeSearchQuery()
+                    ->metadata('chatwoot_contact_id')
+                    ->equals((string) $contactId)
+                    ->toString(),
+                false,
+                'contact_only',
+            ],
+        ];
+
+        foreach ($queries as [$query, $requireAccount, $mode]) {
+            $customer = $this->searchLatestCustomer($query, $accountId, $contactId, $mode);
+
+            if ($customer === null) {
+                continue;
+            }
+
+            if ($this->customerMatches($customer, $accountId, $contactId, $requireAccount)) {
+                return $customer;
+            }
+        }
+
+        return null;
+    }
+
+    private function searchLatestCustomer(string $query, int $accountId, int $contactId, string $mode): ?array
+    {
+        try {
+            $response = $this->stripe->customers->search([
+                'query' => $query,
                 'limit' => 1,
             ])->toArray();
         } catch (ApiErrorException $exception) {
             Log::warning('Failed to search Stripe customers for identifier sync.', [
                 'account_id' => $accountId,
                 'contact_id' => $contactId,
+                'mode' => $mode,
                 'exception' => $exception->getMessage(),
             ]);
 
@@ -143,12 +181,10 @@ class ContactIdentifierSynchronizer
             return null;
         }
 
-        return $this->customerMatchesIdentifiers($customer, $accountId, $contactId)
-            ? $customer
-            : null;
+        return $customer;
     }
 
-    private function customerMatchesIdentifiers(array $customer, int $accountId, int $contactId): bool
+    private function customerMatches(array $customer, int $accountId, int $contactId, bool $requireAccount = true): bool
     {
         $metadata = Arr::get($customer, 'metadata');
 
@@ -156,10 +192,23 @@ class ContactIdentifierSynchronizer
             return false;
         }
 
-        $accountMatches = (string) Arr::get($metadata, 'chatwoot_account_id') === (string) $accountId;
         $contactMatches = (string) Arr::get($metadata, 'chatwoot_contact_id') === (string) $contactId;
 
-        return $accountMatches && $contactMatches;
+        if (! $contactMatches) {
+            return false;
+        }
+
+        $accountValue = Arr::get($metadata, 'chatwoot_account_id');
+
+        if ($requireAccount) {
+            return (string) $accountValue === (string) $accountId;
+        }
+
+        if ($accountValue === null) {
+            return true;
+        }
+
+        return (string) $accountValue === (string) $accountId;
     }
 
     private function updateContactIdentifier(int $accountId, int $contactId, string $customerId): void

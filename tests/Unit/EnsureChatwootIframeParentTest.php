@@ -76,7 +76,10 @@ class EnsureChatwootIframeParentTest extends TestCase
             $this->fail('Expected HttpException was not thrown.');
         } catch (HttpException $exception) {
             $this->assertSame(403, $exception->getStatusCode());
-            $this->assertSame('The Filament panel must be loaded inside the Chatwoot Dashboard App iframe', $exception->getMessage());
+            $this->assertSame(
+                'The Filament panel must be loaded inside the Chatwoot Dashboard App iframe after / but inside iframe',
+                $exception->getMessage(),
+            );
         }
     }
 
@@ -93,7 +96,9 @@ class EnsureChatwootIframeParentTest extends TestCase
         $middleware = new EnsureChatwootIframeParent();
 
         $this->expectException(HttpException::class);
-        $this->expectExceptionMessage('The Filament panel must be loaded inside the Chatwoot Dashboard App iframe');
+        $this->expectExceptionMessage(
+            'The Filament panel must be loaded inside the Chatwoot Dashboard App iframe after / but inside iframe',
+        );
 
         $middleware->handle($request, fn () => new Response('ok'));
     }
