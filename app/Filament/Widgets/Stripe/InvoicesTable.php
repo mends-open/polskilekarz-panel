@@ -468,7 +468,7 @@ class InvoicesTable extends BaseTableWidget
         ]);
 
         try {
-            $lineItems = stripe()->invoices->listLineItems($invoiceId, [
+            $lineItems = stripe()->invoices->allLines($invoiceId, [
                 'expand' => ['data.price', 'data.price.product'],
                 'limit' => 100,
             ]);
