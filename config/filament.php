@@ -116,4 +116,8 @@ return [
 
     'system_route_prefix' => 'filament',
 
+    'app' => [
+        'chatwoot_iframe_parent' => env('CHATWOOT_DASHBOARD_PARENT_URL', ''),
+    ],
+
 ];
