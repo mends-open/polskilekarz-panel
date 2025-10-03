@@ -23,7 +23,6 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\HtmlString;
 use Illuminate\Support\Number;
 use Illuminate\Support\Str;
 use Livewire\Attributes\On;
@@ -128,7 +127,7 @@ class InvoicesTable extends BaseTableWidget
             ->filter(fn (array $price) => Str::lower($price['currency'] ?? '') === $currency)
             ->mapWithKeys(function (array $price): array {
                 return [
-                    $price['id'] => new HtmlString($this->formatPriceOptionLabel($price)),
+                    $price['id'] => $this->formatPriceOptionLabel($price),
                 ];
             })
             ->all();
@@ -460,7 +459,6 @@ class InvoicesTable extends BaseTableWidget
 
         $response = stripe()->invoices->all([
             'customer' => $customerId,
-            'expand' => ['data.lines.data.price.product'],
         ]);
 
         return collect($response->data ?? [])
