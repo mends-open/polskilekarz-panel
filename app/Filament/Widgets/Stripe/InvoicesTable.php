@@ -10,6 +10,8 @@ use App\Support\Dashboard\StripeContext;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\ToggleButtons;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Notifications\Notification;
@@ -25,13 +27,10 @@ use Filament\Tables\Table;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Number;
 use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Computed;
-use Filament\Schemas\Components\Utilities\Get;
-use Filament\Schemas\Components\Utilities\Set;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Stripe\Exception\ApiErrorException;
@@ -44,6 +43,11 @@ class InvoicesTable extends BaseTableWidget
     protected int|string|array $columnSpan = 'full';
 
     protected static ?string $heading = 'Invoices';
+
+    private ?array $customerInvoicesCache = null;
+
+    private bool $suppressCurrencyReset = false;
+
     public function isReady(): bool
     {
         return $this->dashboardContextIsReady();
@@ -55,11 +59,17 @@ class InvoicesTable extends BaseTableWidget
         $this->resetTable();
         $this->resetErrorBag();
         $this->resetValidation();
+        $this->clearCustomerInvoicesCache();
     }
 
     private function refreshTable(): void
     {
         $this->resetComponent();
+    }
+
+    private function clearCustomerInvoicesCache(): void
+    {
+        $this->customerInvoicesCache = null;
     }
 
     #[Computed(persist: true)]
@@ -73,9 +83,7 @@ class InvoicesTable extends BaseTableWidget
                 'limit' => 100,
             ])->toArray()['data'] ?? [];
         } catch (ApiErrorException $exception) {
-            Log::error('Failed to fetch Stripe prices.', [
-                'exception' => $exception,
-            ]);
+            report($exception);
 
             return [];
         }
@@ -90,32 +98,45 @@ class InvoicesTable extends BaseTableWidget
                 ->required()
                 ->inline()
                 ->live()
-                ->afterStateUpdated(function ($state, Set $set): void {
-                    if (blank($state)) {
-                        $set('line_items', []);
+                ->afterStateUpdated(function (?string $state, Set $set, ?string $old): void {
+                    if ($this->isCurrencyResetSuppressed() || $state === $old) {
                         return;
                     }
-                    $set('line_items', [['price' => null]]);
+                    $set('line_items', blank($state) ? [] : [null]);
                 }),
             Repeater::make('line_items')
-                ->live()
                 ->label('Line items')
-                ->minItems(1)
                 ->reorderable(false)
                 ->hidden(fn (Get $get): bool => blank($get('../../currency') ?? $get('currency')))
                 ->simple(
                     Select::make('price')
                         ->label('Product')
                         ->native(false)
-                        ->required()
-                        ->live()
                         ->searchable()
                         ->allowHtml()
                         ->options(fn (Get $get): array => $this->getPriceOptionsForCurrency($get('../../currency') ?? $get('currency')))
                         ->disabled(fn (Get $get): bool => blank($get('../../currency') ?? $get('currency')))
                         ->placeholder(fn (Get $get): string => ($get('../../currency') ?? $get('currency')) ? 'Select a product' : 'Choose a currency first'),
-                ),
+                )
+                ->default([]),
         ];
+    }
+
+    private function isCurrencyResetSuppressed(): bool
+    {
+        return $this->suppressCurrencyReset;
+    }
+
+    private function withSuppressedCurrencyReset(callable $callback): mixed
+    {
+        $previous = $this->suppressCurrencyReset;
+        $this->suppressCurrencyReset = true;
+
+        try {
+            return $callback();
+        } finally {
+            $this->suppressCurrencyReset = $previous;
+        }
     }
 
     private function getCurrencyOptions(): array
@@ -159,7 +180,7 @@ class InvoicesTable extends BaseTableWidget
             return false;
         }
 
-        $price = collect($this->stripePrices())
+        $price = $this->getStripePriceCollection()
             ->firstWhere('id', $priceId);
 
         if (! $price) {
@@ -178,22 +199,14 @@ class InvoicesTable extends BaseTableWidget
 
         $descriptionComponent = Text::make($description)
             ->container($schema)
-            ->grow()
-            ->extraAttributes(['class' => 'text-left']);
+            ->grow();
 
         $amountComponent = Text::make($amount)
             ->container($schema)
             ->badge()
-            ->color('primary')
-            ->size(TextSize::Small)
-            ->extraAttributes(['class' => 'whitespace-nowrap']);
+            ->color('primary');
 
-        return sprintf(
-            "<span class='%s'>%s%s</span>",
-            'flex w-full items-center justify-between gap-3',
-            $descriptionComponent->toHtml(),
-            $amountComponent->toHtml(),
-        );
+        return $descriptionComponent->toHtml() . $amountComponent->toHtml();
     }
 
     private function resolvePriceDescription(array $price): string
@@ -207,7 +220,7 @@ class InvoicesTable extends BaseTableWidget
 
     private function formatPriceAmount(array $price): string
     {
-        $currency = Str::upper((string) data_get($price, 'currency', 'USD'));
+        $currency = Str::upper((string) data_get($price, 'currency'));
         $amount = (int) data_get($price, 'unit_amount', 0);
 
         $divisor = $this->isZeroDecimalCurrency($currency) ? 1 : 100;
@@ -231,11 +244,7 @@ class InvoicesTable extends BaseTableWidget
                     return $item['price'] ?? null;
                 }
 
-                if (is_string($item)) {
-                    return $item;
-                }
-
-                return null;
+                return is_string($item) ? $item : null;
             })
             ->filter(fn (?string $priceId) => $this->isSelectablePrice($priceId))
             ->values()
@@ -275,6 +284,100 @@ class InvoicesTable extends BaseTableWidget
         $this->resetComponent();
     }
 
+    private function getInvoiceFormDefaults(?array $invoice): array
+    {
+        $currency = null;
+        $lineItems = [];
+
+        if ($invoice) {
+            $currency = data_get($invoice, 'currency');
+            $currency = is_string($currency) ? Str::lower($currency) : null;
+
+            $currencyOptions = $this->getCurrencyOptions();
+
+            if (! $currency || ! array_key_exists($currency, $currencyOptions)) {
+                $currency = null;
+            }
+
+            if ($currency) {
+                $invoiceId = data_get($invoice, 'id');
+                $lines = collect();
+
+                if (is_string($invoiceId)) {
+                    $lines = collect($this->fetchInvoiceLineItems($invoiceId));
+                }
+
+                if ($lines->isEmpty()) {
+                    $lines = collect(data_get($invoice, 'lines.data', []));
+                }
+
+                $lineItems = $lines
+                    ->map(fn ($line) => $line instanceof StripeObject ? $line->toArray() : (array) $line)
+                    ->map(function (array $line) use ($currency) {
+                        $priceId = $this->resolveLineItemPrice($line);
+                        $lineCurrency = data_get($line, 'price.currency') ?? data_get($line, 'currency');
+                        $lineCurrency = $lineCurrency ? Str::lower((string) $lineCurrency) : null;
+
+                        return [
+                            'price' => $priceId,
+                            'currency' => $lineCurrency,
+                            'quantity' => max(1, (int) data_get($line, 'quantity', 1)),
+                        ];
+                    })
+                    ->filter(fn (array $line) => $line['price'] && (! $line['currency'] || $line['currency'] === $currency) && $this->isSelectablePrice($line['price']))
+                    ->flatMap(fn (array $line) => array_fill(0, $line['quantity'], $line['price']))
+                    ->values()
+                    ->all();
+            }
+        }
+
+        return [
+            'currency' => $currency,
+            'line_items' => $lineItems,
+        ];
+    }
+
+    private function fetchInvoiceLineItems(string $invoiceId): array
+    {
+        try {
+            $lineItems = stripe()->invoices->allLines($invoiceId, [
+                'expand' => ['data.price', 'data.price.product'],
+                'limit' => 100,
+            ]);
+        } catch (ApiErrorException $exception) {
+            report($exception);
+
+            return [];
+        }
+
+        $normalized = $this->normalizeStripeObject($lineItems);
+
+        $lines = data_get($normalized, 'data', []);
+
+        if (! is_array($lines)) {
+            $lines = [];
+        }
+
+        return $lines;
+    }
+
+    private function resolveLineItemPrice(array $line): ?string
+    {
+        foreach ([
+            data_get($line, 'price.id'),
+            data_get($line, 'price'),
+            data_get($line, 'price_id'),
+            data_get($line, 'pricing.price_details.price'),
+            data_get($line, 'pricing.price_details.price.id'),
+        ] as $value) {
+            if (is_string($value) && $value !== '') {
+                return $value;
+            }
+        }
+
+        return null;
+    }
+
     private function ensureStripeCustomer(): ?string
     {
         $stripeContext = $this->stripeContext();
@@ -306,11 +409,7 @@ class InvoicesTable extends BaseTableWidget
                 ->contacts()
                 ->get($accountId, $contactId)['payload'] ?? [];
         } catch (ConnectionException | RequestException $exception) {
-            Log::error('Failed to fetch Chatwoot contact for Stripe customer creation.', [
-                'account_id' => $accountId,
-                'contact_id' => $contactId,
-                'exception' => $exception,
-            ]);
+            report($exception);
 
             Notification::make()
                 ->title('Failed to load Chatwoot contact')
@@ -334,12 +433,7 @@ class InvoicesTable extends BaseTableWidget
         try {
             $customer = stripe()->customers->create($payload);
         } catch (ApiErrorException $exception) {
-            Log::error('Failed to create Stripe customer from Chatwoot contact.', [
-                'account_id' => $accountId,
-                'contact_id' => $contactId,
-                'payload' => $payload,
-                'exception' => $exception,
-            ]);
+            report($exception);
 
             Notification::make()
                 ->title('Failed to create Stripe customer')
@@ -426,8 +520,19 @@ class InvoicesTable extends BaseTableWidget
                 Action::make('duplicateLatest')
                     ->icon(Heroicon::OutlinedDocumentDuplicate)
                     ->outlined()
-                    ->color(fn () => $this->getCustomerInvoices() == [] ? 'gray' : 'primary')
-                    ->disabled(fn () => $this->getCustomerInvoices() == []),
+                    ->color(fn () => $this->hasCustomerInvoices() ? 'primary' : 'gray')
+                    ->disabled(fn () => ! $this->hasCustomerInvoices())
+                    ->modalIcon(Heroicon::OutlinedDocumentDuplicate)
+                    ->modalHeading('Duplicate latest invoice')
+                    ->modalSubmitActionLabel('Create invoice')
+                    ->form($this->getCreateInvoiceForm())
+                    ->fillForm(function () {
+                        return $this->withSuppressedCurrencyReset(function () {
+                            $invoice = $this->latestCustomerInvoice();
+                            return $this->getInvoiceFormDefaults($invoice);
+                        });
+                    })
+                    ->action(fn (array $data) => $this->handleCreateInvoice($data)),
                 Action::make('sendLatest')
                     ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
                     ->outlined()
@@ -435,8 +540,8 @@ class InvoicesTable extends BaseTableWidget
                     ->modalIcon(Heroicon::OutlinedExclamationTriangle)
                     ->modalHeading('Send latest invoice link?')
                     ->modalDescription('We will send the latest invoice link to the active Chatwoot conversation.')
-                    ->color(fn () => $this->getCustomerInvoices() == [] ? 'gray' : 'warning')
-                    ->disabled(fn () => $this->getCustomerInvoices() == [])
+                    ->color(fn () => $this->hasCustomerInvoices() ? 'warning' : 'gray')
+                    ->disabled(fn () => ! $this->hasCustomerInvoices())
                     ->action(fn () => $this->sendLatestInvoice()),
                 Action::make('reset')
                     ->action(fn () => $this->refreshTable())
@@ -448,7 +553,18 @@ class InvoicesTable extends BaseTableWidget
                 ActionGroup::make([
                     Action::make('duplicateInvoice')
                         ->label('Duplicate')
-                        ->icon(Heroicon::OutlinedDocumentDuplicate),
+                        ->icon(Heroicon::OutlinedDocumentDuplicate)
+                        ->form($this->getCreateInvoiceForm())
+                        ->fillForm(function ($record): array {
+                            if ($record instanceof StripeObject) {
+                                $record = $this->normalizeStripeObject($record);
+                            }
+
+                            return $this->withSuppressedCurrencyReset(function () use ($record) {
+                                return $this->getInvoiceFormDefaults(is_array($record) ? $record : null);
+                            });
+                        })
+                        ->action(fn (array $data) => $this->handleCreateInvoice($data)),
                     Action::make('sendInvoiceShortUrl')
                         ->action(fn ($record) => $this->sendShortUrl($record['hosted_invoice_url']))
                         ->label('Send')
@@ -509,17 +625,21 @@ class InvoicesTable extends BaseTableWidget
      */
     private function getCustomerInvoices(): array
     {
+        if ($this->customerInvoicesCache !== null) {
+            return $this->customerInvoicesCache;
+        }
+
         $customerId = $this->stripeContext()->customerId;
 
         if (! $customerId) {
-            return [];
+            return $this->customerInvoicesCache = [];
         }
 
         $response = stripe()->invoices->all([
             'customer' => $customerId,
         ]);
 
-        return collect($response->data ?? [])
+        return $this->customerInvoicesCache = collect($response->data ?? [])
             ->map(fn (mixed $invoice) => $this->normalizeStripeInvoice($invoice))
             ->all();
     }
@@ -528,19 +648,16 @@ class InvoicesTable extends BaseTableWidget
     public function refreshContext(): void
     {
         $this->resetTable();
+        $this->clearCustomerInvoicesCache();
     }
 
     private function sendLatestInvoice(): void
     {
-        $invoices = $this->getCustomerInvoices();
+        $latest = $this->latestCustomerInvoice();
 
-        if ($invoices === []) {
+        if (! $latest) {
             return;
         }
-
-        $latest = collect($invoices)
-            ->sortByDesc('created')
-            ->first();
 
         $invoiceUrl = data_get($latest, 'hosted_invoice_url');
 
@@ -555,6 +672,18 @@ class InvoicesTable extends BaseTableWidget
         }
 
         $this->sendShortUrl($invoiceUrl);
+    }
+
+    private function hasCustomerInvoices(): bool
+    {
+        return $this->getCustomerInvoices() !== [];
+    }
+
+    private function latestCustomerInvoice(): ?array
+    {
+        return collect($this->getCustomerInvoices())
+            ->sortByDesc('created')
+            ->first() ?: null;
     }
 
     /**
