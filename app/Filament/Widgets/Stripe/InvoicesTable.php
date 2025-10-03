@@ -47,6 +47,8 @@ class InvoicesTable extends BaseTableWidget
 
     private ?array $customerInvoicesCache = null;
 
+    private bool $suppressCurrencyReset = false;
+
     public function isReady(): bool
     {
         return $this->dashboardContextIsReady();
@@ -102,6 +104,12 @@ class InvoicesTable extends BaseTableWidget
                 ->inline()
                 ->live()
                 ->afterStateUpdated(function (?string $state, Set $set, ?string $old): void {
+                    if ($this->isCurrencyResetSuppressed()) {
+                        Log::debug('Currency update triggered while suppression active, keeping existing line items.');
+
+                        return;
+                    }
+
                     Log::info('Invoice currency updated.', [
                         'previous' => $old,
                         'current' => $state,
@@ -146,6 +154,23 @@ class InvoicesTable extends BaseTableWidget
                 )
                 ->default([]),
         ];
+    }
+
+    private function isCurrencyResetSuppressed(): bool
+    {
+        return $this->suppressCurrencyReset;
+    }
+
+    private function withSuppressedCurrencyReset(callable $callback): mixed
+    {
+        $previous = $this->suppressCurrencyReset;
+        $this->suppressCurrencyReset = true;
+
+        try {
+            return $callback();
+        } finally {
+            $this->suppressCurrencyReset = $previous;
+        }
     }
 
     private function getCurrencyOptions(): array
@@ -360,7 +385,18 @@ class InvoicesTable extends BaseTableWidget
 
                 foreach ($rawLines as $line) {
                     $rawPrice = data_get($line, 'price');
-                    $priceId = is_string($rawPrice) ? $rawPrice : data_get($line, 'price.id');
+                    $priceId = null;
+
+                    if (is_string($rawPrice)) {
+                        $priceId = $rawPrice;
+                    } elseif (is_array($rawPrice)) {
+                        $priceId = data_get($rawPrice, 'id');
+                    }
+
+                    $priceId ??= data_get($line, 'price.id');
+                    $priceId ??= data_get($line, 'price_id');
+                    $priceId = is_string($priceId) ? $priceId : null;
+
                     $lineCurrency = data_get($line, 'price.currency') ?? data_get($line, 'currency');
                     $lineCurrency = $lineCurrency ? Str::lower((string) $lineCurrency) : null;
 
@@ -372,7 +408,9 @@ class InvoicesTable extends BaseTableWidget
                     ]);
 
                     if (! $priceId) {
-                        Log::debug('Skipping invoice line without a price identifier.');
+                        Log::debug('Skipping invoice line without a price identifier.', [
+                            'line_id' => data_get($line, 'id'),
+                        ]);
                         continue;
                     }
 
@@ -429,7 +467,7 @@ class InvoicesTable extends BaseTableWidget
 
         try {
             $invoice = stripe()->invoices->retrieve($invoiceId, [
-                'expand' => ['lines.data.price.product'],
+                'expand' => ['lines.data.price', 'lines.data.price.product'],
             ]);
         } catch (ApiErrorException $exception) {
             Log::error('Failed to fetch invoice for duplication defaults.', [
@@ -440,7 +478,14 @@ class InvoicesTable extends BaseTableWidget
             return null;
         }
 
-        return $this->normalizeStripeObject($invoice);
+        $normalized = $this->normalizeStripeObject($invoice);
+
+        Log::info('Fetched invoice for duplication defaults.', [
+            'invoice_id' => $invoiceId,
+            'line_count' => count(data_get($normalized, 'lines.data', [])),
+        ]);
+
+        return $normalized;
     }
 
     private function ensureStripeCustomer(): ?string
@@ -601,13 +646,15 @@ class InvoicesTable extends BaseTableWidget
                     ->modalSubmitActionLabel('Create invoice')
                     ->form($this->getCreateInvoiceForm())
                     ->fillForm(function () {
-                        $invoice = $this->latestCustomerInvoice();
+                        return $this->withSuppressedCurrencyReset(function () {
+                            $invoice = $this->latestCustomerInvoice();
 
-                        Log::info('Filling form for latest invoice duplication.', [
-                            'has_invoice' => (bool) $invoice,
-                        ]);
+                            Log::info('Filling form for latest invoice duplication.', [
+                                'has_invoice' => (bool) $invoice,
+                            ]);
 
-                        return $this->getInvoiceFormDefaults($invoice);
+                            return $this->getInvoiceFormDefaults($invoice);
+                        });
                     })
                     ->action(fn (array $data) => $this->handleCreateInvoice($data)),
                 Action::make('sendLatest')
@@ -637,11 +684,13 @@ class InvoicesTable extends BaseTableWidget
                                 $record = $this->normalizeStripeObject($record);
                             }
 
-                            Log::info('Filling form for invoice duplication from table row.', [
-                                'has_record' => is_array($record),
-                            ]);
+                            return $this->withSuppressedCurrencyReset(function () use ($record) {
+                                Log::info('Filling form for invoice duplication from table row.', [
+                                    'has_record' => is_array($record),
+                                ]);
 
-                            return $this->getInvoiceFormDefaults(is_array($record) ? $record : null);
+                                return $this->getInvoiceFormDefaults(is_array($record) ? $record : null);
+                            });
                         })
                         ->action(fn (array $data) => $this->handleCreateInvoice($data)),
                     Action::make('sendInvoiceShortUrl')
