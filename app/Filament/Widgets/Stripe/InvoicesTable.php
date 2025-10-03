@@ -97,12 +97,14 @@ class InvoicesTable extends BaseTableWidget
                 ->options(fn (): array => $this->getCurrencyOptions())
                 ->required()
                 ->inline()
-                ->live(),
+                ->live()
+                ->afterStateUpdated(function (?string $state, callable $set): void {
+                    $set('line_items', $state ? [null] : []);
+                }),
             Repeater::make('line_items')
                 ->label('Line items')
-                ->minItems(1)
-                ->defaultItems(1)
                 ->reorderable(false)
+                ->visible(fn (Get $get): bool => filled($get('currency')))
                 ->simple(
                     Select::make('price')
                         ->label('Product')
