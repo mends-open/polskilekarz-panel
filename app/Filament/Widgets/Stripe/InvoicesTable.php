@@ -4,7 +4,12 @@ namespace App\Filament\Widgets\Stripe;
 
 use App\Filament\Widgets\BaseTableWidget;
 use App\Jobs\Chatwoot\CreateInvoiceShortLink;
+use App\Jobs\Stripe\CreateInvoice;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
+use App\Support\Dashboard\StripeContext;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\ToggleButtons;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Notifications\Notification;
@@ -16,7 +21,15 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\HtmlString;
+use Illuminate\Support\Number;
+use Illuminate\Support\Str;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Computed;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Stripe\Exception\ApiErrorException;
@@ -44,6 +57,250 @@ class InvoicesTable extends BaseTableWidget
     private function refreshTable(): void
     {
         $this->resetComponent();
+    }
+
+    #[Computed(persist: true)]
+    public function stripePrices(): array
+    {
+        try {
+            return stripe()->prices->all([
+                'active' => true,
+                'expand' => ['data.product'],
+                'limit' => 100,
+            ])->toArray()['data'] ?? [];
+        } catch (ApiErrorException $exception) {
+            Log::error('Failed to fetch Stripe prices.', [
+                'exception' => $exception,
+            ]);
+
+            return [];
+        }
+    }
+
+    private function getCreateInvoiceForm(): array
+    {
+        return [
+            ToggleButtons::make('currency')
+                ->label('Currency')
+                ->options(fn (): array => $this->getCurrencyOptions())
+                ->required()
+                ->live()
+                ->afterStateUpdated(function (ToggleButtons $component, $state, Set $set): void {
+                    $set('line_items', []);
+                }),
+            Repeater::make('line_items')
+                ->label('Line items')
+                ->minItems(1)
+                ->simple(
+                    Select::make('price')
+                        ->label('Product')
+                        ->required()
+                        ->searchable()
+                        ->allowHtml()
+                        ->options(fn (Get $get): array => $this->getPriceOptionsForCurrency($get('../../currency') ?? $get('currency')))
+                        ->disabled(fn (Get $get): bool => blank($get('../../currency') ?? $get('currency')))
+                        ->placeholder(fn (Get $get): string => ($get('../../currency') ?? $get('currency')) ? 'Select a product' : 'Choose a currency first'),
+                ),
+        ];
+    }
+
+    private function getCurrencyOptions(): array
+    {
+        return $this->getStripePriceCollection()
+            ->pluck('currency')
+            ->filter()
+            ->unique()
+            ->sort()
+            ->mapWithKeys(fn (string $currency) => [$currency => Str::upper($currency)])
+            ->all();
+    }
+
+    private function getPriceOptionsForCurrency(?string $currency): array
+    {
+        if (! $currency) {
+            return [];
+        }
+
+        $currency = Str::lower($currency);
+
+        return $this->getStripePriceCollection()
+            ->filter(fn (array $price) => Str::lower($price['currency'] ?? '') === $currency)
+            ->mapWithKeys(function (array $price): array {
+                return [
+                    $price['id'] => new HtmlString($this->formatPriceOptionLabel($price)),
+                ];
+            })
+            ->all();
+    }
+
+    private function getStripePriceCollection(): Collection
+    {
+        return collect($this->stripePrices());
+    }
+
+    private function formatPriceOptionLabel(array $price): string
+    {
+        $description = $this->resolvePriceDescription($price);
+        $amount = $this->formatPriceAmount($price);
+
+        return <<<HTML
+            <span class="flex w-full items-center justify-between gap-3">
+                <span class="flex-1 text-left">{$description}</span>
+                <span class="fi-badge fi-badge-color-primary fi-badge-size-sm">{$amount}</span>
+            </span>
+        HTML;
+    }
+
+    private function resolvePriceDescription(array $price): string
+    {
+        $description = data_get($price, 'product.name')
+            ?? data_get($price, 'nickname')
+            ?? data_get($price, 'id');
+
+        return e($description);
+    }
+
+    private function formatPriceAmount(array $price): string
+    {
+        $currency = Str::upper((string) data_get($price, 'currency', 'USD'));
+        $amount = (int) data_get($price, 'unit_amount', 0);
+
+        $divisor = $this->isZeroDecimalCurrency($currency) ? 1 : 100;
+
+        return Number::currency($amount / $divisor, $currency);
+    }
+
+    private function isZeroDecimalCurrency(string $currency): bool
+    {
+        return in_array($currency, [
+            'BIF', 'CLP', 'DJF', 'GNF', 'JPY', 'KMF', 'KRW', 'MGA', 'PYG',
+            'RWF', 'UGX', 'VND', 'VUV', 'XAF', 'XOF', 'XPF',
+        ], true);
+    }
+
+    private function handleCreateInvoice(array $data): void
+    {
+        $priceIds = collect($data['line_items'] ?? [])
+            ->pluck('price')
+            ->filter()
+            ->values()
+            ->all();
+
+        if ($priceIds === []) {
+            Notification::make()
+                ->title('No products selected')
+                ->body('Please select at least one product to include on the invoice.')
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        $customerId = $this->ensureStripeCustomer();
+
+        if (! $customerId) {
+            return;
+        }
+
+        CreateInvoice::dispatch(
+            customerId: $customerId,
+            priceIds: $priceIds,
+            notifiableId: auth()->id(),
+        );
+
+        Notification::make()
+            ->title('Creating invoice')
+            ->body('We are preparing the invoice in Stripe. You will be notified once it is ready.')
+            ->info()
+            ->send();
+
+        $this->resetComponent();
+    }
+
+    private function ensureStripeCustomer(): ?string
+    {
+        $stripeContext = $this->stripeContext();
+
+        if ($stripeContext->customerId) {
+            return $stripeContext->customerId;
+        }
+
+        $chatwootContext = $this->chatwootContext();
+
+        $accountId = $chatwootContext->accountId;
+        $contactId = $chatwootContext->contactId;
+        $impersonatorId = $chatwootContext->currentUserId;
+
+        if (! $accountId || ! $contactId || ! $impersonatorId) {
+            Notification::make()
+                ->title('Missing Chatwoot context')
+                ->body('We need a Chatwoot contact to create a Stripe customer. Please open this widget from a Chatwoot conversation.')
+                ->danger()
+                ->send();
+
+            return null;
+        }
+
+        try {
+            $contact = chatwoot()
+                ->platform()
+                ->impersonate($impersonatorId)
+                ->contacts()
+                ->get($accountId, $contactId)['payload'] ?? [];
+        } catch (ConnectionException | RequestException $exception) {
+            Log::error('Failed to fetch Chatwoot contact for Stripe customer creation.', [
+                'account_id' => $accountId,
+                'contact_id' => $contactId,
+                'exception' => $exception,
+            ]);
+
+            Notification::make()
+                ->title('Failed to load Chatwoot contact')
+                ->body('We were unable to load the Chatwoot contact details. Please try again.')
+                ->danger()
+                ->send();
+
+            return null;
+        }
+
+        $payload = array_filter([
+            'name' => data_get($contact, 'name'),
+            'email' => data_get($contact, 'email'),
+            'phone' => data_get($contact, 'phone_number'),
+            'metadata' => [
+                'chatwoot_account_id' => (string) $accountId,
+                'chatwoot_contact_id' => (string) $contactId,
+            ],
+        ], fn ($value) => filled($value));
+
+        try {
+            $customer = stripe()->customers->create($payload);
+        } catch (ApiErrorException $exception) {
+            Log::error('Failed to create Stripe customer from Chatwoot contact.', [
+                'account_id' => $accountId,
+                'contact_id' => $contactId,
+                'payload' => $payload,
+                'exception' => $exception,
+            ]);
+
+            Notification::make()
+                ->title('Failed to create Stripe customer')
+                ->body('We were unable to create a Stripe customer from the Chatwoot contact. Please try again.')
+                ->danger()
+                ->send();
+
+            return null;
+        }
+
+        $this->dashboardContext()->storeStripe(new StripeContext($customer->id));
+
+        Notification::make()
+            ->title('Stripe customer created')
+            ->body('A Stripe customer was created from the Chatwoot contact.')
+            ->success()
+            ->send();
+
+        return $customer->id;
     }
 
     public function table(Table $table): Table
@@ -102,7 +359,12 @@ class InvoicesTable extends BaseTableWidget
                 Action::make('create')
                     ->icon(Heroicon::OutlinedDocumentPlus)
                     ->color('success')
-                    ->outlined(),
+                    ->outlined()
+                    ->modalIcon(Heroicon::OutlinedDocumentPlus)
+                    ->modalHeading('Create invoice')
+                    ->modalSubmitActionLabel('Create invoice')
+                    ->form($this->getCreateInvoiceForm())
+                    ->action(fn (array $data) => $this->handleCreateInvoice($data)),
                 Action::make('duplicateLatest')
                     ->icon(Heroicon::OutlinedDocumentDuplicate)
                     ->outlined()
