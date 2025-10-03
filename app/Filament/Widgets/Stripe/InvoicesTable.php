@@ -101,12 +101,9 @@ class InvoicesTable extends BaseTableWidget
                 ->default([$this->blankLineItem()])
                 ->validationAttribute('products')
                 ->table([
-                    TableColumn::make('product')
-                        ->label('Product'),
-                    TableColumn::make('price')
-                        ->label('Price'),
-                    TableColumn::make('amount')
-                        ->label('Amount'),
+                    TableColumn::make('Product'),
+                    TableColumn::make('Price'),
+                    TableColumn::make('Amount'),
                 ])
                 ->schema([
                     Select::make('product')
