@@ -99,6 +99,7 @@ class InvoicesTable extends BaseTableWidget
                 ->simple(
                     Select::make('price')
                         ->label('Product')
+                        ->statePath('')
                         ->required()
                         ->searchable()
                         ->allowHtml()
