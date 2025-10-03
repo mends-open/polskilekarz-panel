@@ -274,6 +274,45 @@ class InvoicesTable extends BaseTableWidget
         $this->resetComponent();
     }
 
+    private function getInvoiceFormDefaults(?array $invoice): array
+    {
+        $currency = null;
+        $lineItems = [];
+
+        if ($invoice) {
+            $currencyOptions = $this->getCurrencyOptions();
+            $currency = data_get($invoice, 'currency');
+            $currency = is_string($currency) ? Str::lower($currency) : null;
+
+            if (! $currency || ! array_key_exists($currency, $currencyOptions)) {
+                $currency = null;
+            }
+
+            if ($currency) {
+                $lineItems = collect(data_get($invoice, 'lines.data', []))
+                    ->flatMap(function (array $line) use ($currency): array {
+                        $priceId = data_get($line, 'price.id');
+                        $priceCurrency = Str::lower((string) data_get($line, 'price.currency'));
+
+                        if (! $priceId || $priceCurrency !== $currency || ! $this->isSelectablePrice($priceId)) {
+                            return [];
+                        }
+
+                        $quantity = max(1, (int) data_get($line, 'quantity', 1));
+
+                        return array_fill(0, $quantity, ['price' => $priceId]);
+                    })
+                    ->values()
+                    ->all();
+            }
+        }
+
+        return [
+            'currency' => $currency,
+            'line_items' => $lineItems,
+        ];
+    }
+
     private function ensureStripeCustomer(): ?string
     {
         $stripeContext = $this->stripeContext();
@@ -422,6 +461,17 @@ class InvoicesTable extends BaseTableWidget
                     ->modalSubmitActionLabel('Create invoice')
                     ->form($this->getCreateInvoiceForm())
                     ->action(fn (array $data) => $this->handleCreateInvoice($data)),
+                Action::make('duplicateLatest')
+                    ->icon(Heroicon::OutlinedDocumentDuplicate)
+                    ->outlined()
+                    ->color(fn () => $this->hasCustomerInvoices() ? 'primary' : 'gray')
+                    ->disabled(fn () => ! $this->hasCustomerInvoices())
+                    ->modalIcon(Heroicon::OutlinedDocumentDuplicate)
+                    ->modalHeading('Duplicate latest invoice')
+                    ->modalSubmitActionLabel('Create invoice')
+                    ->form($this->getCreateInvoiceForm())
+                    ->fillForm(fn () => $this->getInvoiceFormDefaults($this->latestCustomerInvoice()))
+                    ->action(fn (array $data) => $this->handleCreateInvoice($data)),
                 Action::make('sendLatest')
                     ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
                     ->outlined()
@@ -440,6 +490,18 @@ class InvoicesTable extends BaseTableWidget
             ])
             ->recordActions([
                 ActionGroup::make([
+                    Action::make('duplicateInvoice')
+                        ->label('Duplicate')
+                        ->icon(Heroicon::OutlinedDocumentDuplicate)
+                        ->form($this->getCreateInvoiceForm())
+                        ->fillForm(function ($record): array {
+                            if ($record instanceof StripeObject) {
+                                $record = $this->normalizeStripeObject($record);
+                            }
+
+                            return $this->getInvoiceFormDefaults(is_array($record) ? $record : null);
+                        })
+                        ->action(fn (array $data) => $this->handleCreateInvoice($data)),
                     Action::make('sendInvoiceShortUrl')
                         ->action(fn ($record) => $this->sendShortUrl($record['hosted_invoice_url']))
                         ->label('Send')
