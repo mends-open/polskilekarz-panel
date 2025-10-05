@@ -11,6 +11,7 @@ use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Actions\Action;
@@ -103,7 +104,8 @@ class InvoicesTable extends BaseTableWidget
                 ->table([
                     TableColumn::make('Product'),
                     TableColumn::make('Price'),
-                    TableColumn::make('Amount'),
+                    TableColumn::make('Quantity'),
+                    TableColumn::make('Subtotal'),
                 ])
                 ->schema([
                     Select::make('product')
@@ -134,10 +136,20 @@ class InvoicesTable extends BaseTableWidget
                         ->disabled(fn (Get $get): bool => ! is_string($get('product')) || $get('product') === '')
                         ->afterStateUpdated(fn (Set $set, Get $get) => $this->guardLineItemsCurrency($set, $get))
                         ->placeholder('Select a price'),
-                    Placeholder::make('amount')
-                        ->label('Amount')
-                        ->content(fn (Get $get): string => $this->formatPriceAmountForPriceId(
+                    TextInput::make('quantity')
+                        ->label('Quantity')
+                        ->numeric()
+                        ->minValue(1)
+                        ->default(1)
+                        ->live()
+                        ->required()
+                        ->rules(['integer', 'min:1'])
+                        ->placeholder('1'),
+                    Placeholder::make('subtotal')
+                        ->label('Subtotal')
+                        ->content(fn (Get $get): string => $this->formatLineItemSubtotal(
                             is_string($priceId = $get('price')) ? $priceId : null,
+                            $this->normalizeQuantity($get('quantity')),
                         )),
                 ]),
         ];
@@ -148,6 +160,7 @@ class InvoicesTable extends BaseTableWidget
         return [
             'product' => null,
             'price' => null,
+            'quantity' => 1,
         ];
     }
 
@@ -197,14 +210,7 @@ class InvoicesTable extends BaseTableWidget
 
     private function formatPriceOptionLabel(array $price): string
     {
-        $description = $this->resolvePriceDescription($price);
-        $amount = $this->formatPriceAmount($price);
-
-        if ($description === '') {
-            return $amount;
-        }
-
-        return sprintf('%s — %s', $description, $amount);
+        return $this->formatPriceAmount($price);
     }
 
     private function stripePriceCollection(): Collection
@@ -316,22 +322,7 @@ class InvoicesTable extends BaseTableWidget
         return 'Product';
     }
 
-    private function resolvePriceDescription(array $price): string
-    {
-        foreach ([
-            data_get($price, 'nickname'),
-            data_get($price, 'product.name'),
-            data_get($price, 'id'),
-        ] as $value) {
-            if (is_string($value) && $value !== '') {
-                return $value;
-            }
-        }
-
-        return '';
-    }
-
-    private function formatPriceAmountForPriceId(?string $priceId): string
+    private function formatLineItemSubtotal(?string $priceId, int $quantity): string
     {
         if (! $priceId) {
             return '—';
@@ -343,17 +334,32 @@ class InvoicesTable extends BaseTableWidget
             return '—';
         }
 
-        return $this->formatPriceAmount($price);
+        $currency = (string) data_get($price, 'currency');
+        $unitAmount = (int) data_get($price, 'unit_amount', 0);
+
+        return $this->formatCurrencyAmount($unitAmount * max(1, $quantity), $currency);
     }
 
     private function formatPriceAmount(array $price): string
     {
-        $currency = Str::upper((string) data_get($price, 'currency'));
+        $currency = (string) data_get($price, 'currency');
         $amount = (int) data_get($price, 'unit_amount', 0);
 
-        $divisor = $this->isZeroDecimalCurrency($currency) ? 1 : 100;
+        return $this->formatCurrencyAmount($amount, $currency);
+    }
 
-        return Number::currency($amount / $divisor, $currency);
+    private function formatCurrencyAmount(int $amount, string $currency): string
+    {
+        $currency = Str::upper($currency);
+
+        if ($currency === '') {
+            return '—';
+        }
+
+        $divisor = $this->isZeroDecimalCurrency($currency) ? 1 : 100;
+        $formatted = Number::currency($amount / $divisor, $currency);
+
+        return sprintf('%s %s', $currency, $formatted);
     }
 
     private function isZeroDecimalCurrency(string $currency): bool
@@ -370,6 +376,7 @@ class InvoicesTable extends BaseTableWidget
             ->map(function ($item): array {
                 $product = is_array($item) ? data_get($item, 'product') : null;
                 $price = is_array($item) ? data_get($item, 'price') : null;
+                $quantity = $this->normalizeQuantity(is_array($item) ? data_get($item, 'quantity') : null);
 
                 $product = is_string($product) && $product !== '' ? $product : null;
                 $price = is_string($price) && $price !== '' ? $price : null;
@@ -385,10 +392,22 @@ class InvoicesTable extends BaseTableWidget
                 return [
                     'product' => $product,
                     'price' => $price,
+                    'quantity' => $quantity,
                 ];
             })
             ->values()
             ->all();
+    }
+
+    private function normalizeQuantity(mixed $quantity): int
+    {
+        if (is_numeric($quantity)) {
+            $quantity = (int) $quantity;
+        } else {
+            $quantity = 1;
+        }
+
+        return $quantity > 0 ? $quantity : 1;
     }
 
     private function lockedCurrency(array $lineItems, ?string $ignorePriceId = null): ?string
@@ -432,17 +451,25 @@ class InvoicesTable extends BaseTableWidget
             ->all();
     }
 
-    private function extractPriceIds(array $lineItems): array
+    private function extractInvoiceLineItems(array $lineItems): array
     {
         return collect($lineItems)
-            ->map(function ($item): ?string {
+            ->map(function ($item): ?array {
                 if (! is_array($item)) {
                     return null;
                 }
 
                 $priceId = data_get($item, 'price');
+                $priceId = is_string($priceId) && $priceId !== '' ? $priceId : null;
 
-                return is_string($priceId) && $priceId !== '' ? $priceId : null;
+                if (! $priceId) {
+                    return null;
+                }
+
+                return [
+                    'price' => $priceId,
+                    'quantity' => $this->normalizeQuantity(data_get($item, 'quantity')),
+                ];
             })
             ->filter()
             ->values()
@@ -519,9 +546,9 @@ class InvoicesTable extends BaseTableWidget
     {
         $data = $this->prepareInvoiceFormData($data);
 
-        $priceIds = $this->extractPriceIds($data['line_items'] ?? []);
+        $lineItems = $this->extractInvoiceLineItems($data['line_items'] ?? []);
 
-        if ($priceIds === []) {
+        if ($lineItems === []) {
             Notification::make()
                 ->title('No products selected')
                 ->body('Please select at least one product to include on the invoice.')
@@ -531,6 +558,7 @@ class InvoicesTable extends BaseTableWidget
             return;
         }
 
+        $priceIds = array_map(fn (array $item): string => $item['price'], $lineItems);
         $currency = $this->determineCurrencyFromPriceIds($priceIds);
 
         if ($currency === null) {
@@ -552,7 +580,7 @@ class InvoicesTable extends BaseTableWidget
         CreateInvoice::dispatch(
             customerId: $customerId,
             currency: $currency,
-            priceIds: $priceIds,
+            lineItems: $lineItems,
             notifiableId: auth()->id(),
         );
 
@@ -588,19 +616,13 @@ class InvoicesTable extends BaseTableWidget
 
                     return [
                         'price' => $priceId,
-                        'quantity' => max(1, (int) data_get($line, 'quantity', 1)),
+                        'quantity' => $this->normalizeQuantity(data_get($line, 'quantity')),
                     ];
                 })
                 ->filter(fn (array $line) => is_string($line['price']) && $line['price'] !== '')
-                ->flatMap(fn (array $line) => array_fill(0, $line['quantity'], $line['price']))
                 ->values()
                 ->all();
         }
-
-        $lineItems = collect($lineItems)
-            ->map(fn (string $priceId) => ['price' => $priceId])
-            ->values()
-            ->all();
 
         $lineItems = $this->sanitizeLineItemsForState($lineItems);
 

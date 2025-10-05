@@ -21,13 +21,11 @@ class CreateInvoice implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    /**
-     * @param  array<int, string>  $priceIds
-     */
     public function __construct(
         public readonly string $customerId,
         public readonly ?string $currency,
-        public readonly array $priceIds,
+        /** @var array<int, array{price: string, quantity: int}> */
+        public readonly array $lineItems,
         public readonly ?int $notifiableId,
     ) {}
 
@@ -36,7 +34,7 @@ class CreateInvoice implements ShouldQueue
      */
     public function handle(StripeClient $stripe): void
     {
-        if ($this->priceIds === []) {
+        if ($this->lineItems === []) {
             return;
         }
 
@@ -54,12 +52,24 @@ class CreateInvoice implements ShouldQueue
 
         $invoice = $stripe->invoices->create($payload);
 
-        foreach ($this->priceIds as $priceId) {
+        foreach ($this->lineItems as $lineItem) {
+            $priceId = $lineItem['price'] ?? null;
+            $quantity = (int) ($lineItem['quantity'] ?? 1);
+
+            if (! is_string($priceId) || $priceId === '') {
+                continue;
+            }
+
+            if ($quantity < 1) {
+                $quantity = 1;
+            }
+
             $stripe->invoiceItems->create([
                 'customer' => $this->customerId,
                 'invoice' => $invoice->id,
+                'quantity' => $quantity,
                 'pricing' => [
-                    'price' => $priceId
+                    'price' => $priceId,
                 ],
             ]);
         }
@@ -83,7 +93,7 @@ class CreateInvoice implements ShouldQueue
         Log::error('Failed to create Stripe invoice', [
             'customer_id' => $this->customerId,
             'currency' => $this->currency,
-            'price_ids' => $this->priceIds,
+            'line_items' => $this->lineItems,
             'exception' => $exception,
         ]);
 
