@@ -504,14 +504,9 @@ class InvoicesTable extends BaseTableWidget
 
     private function sanitizeLineItemsForState(array $lineItems): array
     {
-        $items = collect($lineItems)
-            ->map(fn ($item): Fluent => $this->mapSanitizedLineItem($item));
-
-        if ($items->contains(fn (Fluent $item): bool => filled($item->get('product')) || filled($item->get('price')))) {
-            $items = $items->reject(fn (Fluent $item): bool => blank($item->get('product')) && blank($item->get('price')));
-        }
-
-        return $items
+        return collect($lineItems)
+            ->map(fn ($item): Fluent => $this->mapSanitizedLineItem($item))
+            ->filter(fn (Fluent $item): bool => filled($item->get('product')) || filled($item->get('price')))
             ->values()
             ->map(fn (Fluent $item): array => $item->toArray())
             ->all();
