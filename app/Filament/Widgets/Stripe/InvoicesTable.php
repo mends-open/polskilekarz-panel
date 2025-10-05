@@ -12,8 +12,6 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Illuminate\Support\Facades\Blade;
-use Illuminate\Support\HtmlString;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Actions\Action;
@@ -28,7 +26,6 @@ use Filament\Tables\Table;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Number;
 use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Computed;
@@ -128,7 +125,6 @@ class InvoicesTable extends BaseTableWidget
                         ->native(false)
                         ->searchable()
                         ->live()
-                        ->allowHtml()
                         ->required()
                         ->options(function (Get $get): array {
                             $lineItems = $this->resolveLineItemsState($get);
@@ -138,7 +134,7 @@ class InvoicesTable extends BaseTableWidget
                                 is_string($productId = $get('product')) ? $productId : null,
                             );
                         })
-                        ->getOptionLabelUsing(function ($value): ?HtmlString {
+                        ->getOptionLabelUsing(function ($value): ?string {
                             if (! is_string($value) || $value === '') {
                                 return null;
                             }
@@ -149,7 +145,7 @@ class InvoicesTable extends BaseTableWidget
                                 return null;
                             }
 
-                            return new HtmlString($this->formatPriceBadge($price));
+                            return $this->formatPriceAmount($price);
                         })
                         ->disabled(fn (Get $get): bool => ! is_string($get('product')) || $get('product') === '')
                         ->afterStateUpdated(fn (Set $set, Get $get) => $this->guardLineItemsCurrency($set, $get))
@@ -165,12 +161,12 @@ class InvoicesTable extends BaseTableWidget
                         ->placeholder('1'),
                     Placeholder::make('subtotal')
                         ->label('Subtotal')
-                        ->content(function (Get $get): HtmlString {
+                        ->content(function (Get $get): string {
                             $priceState = $get('price');
                             $priceId = is_string($priceState) ? $priceState : null;
                             $quantity = $this->normalizeQuantity($get('quantity'));
 
-                            return $this->formatLineItemSubtotalBadge($priceId, $quantity);
+                            return $this->formatLineItemSubtotal($priceId, $quantity);
                         }),
                 ]),
         ];
@@ -224,14 +220,9 @@ class InvoicesTable extends BaseTableWidget
                 return $this->priceCurrency($price['id']) === $lockedCurrency;
             })
             ->mapWithKeys(fn (array $price): array => [
-                $price['id'] => $this->formatPriceOptionLabel($price),
+                $price['id'] => $this->formatPriceAmount($price),
             ])
             ->all();
-    }
-
-    private function formatPriceOptionLabel(array $price): string
-    {
-        return $this->formatPriceBadge($price);
     }
 
     private function stripePriceCollection(): Collection
@@ -269,6 +260,7 @@ class InvoicesTable extends BaseTableWidget
                     $productId => [
                         'id' => $productId,
                         'name' => $this->resolveProductName(is_array($first) ? $first : []),
+                        'default_price_id' => $this->resolveProductDefaultPriceId(is_array($first) ? $first : []),
                         'prices' => $prices->values(),
                     ],
                 ];
@@ -343,16 +335,143 @@ class InvoicesTable extends BaseTableWidget
         return 'Product';
     }
 
-    private function formatLineItemSubtotalBadge(?string $priceId, int $quantity): HtmlString
+    private function resolveProductDefaultPriceId(array $price): ?string
+    {
+        foreach ([
+            'product.default_price.id',
+            'product.default_price',
+            'default_price.id',
+            'default_price',
+        ] as $key) {
+            $value = data_get($price, $key);
+
+            if (is_string($value) && $value !== '') {
+                return $value;
+            }
+        }
+
+        return null;
+    }
+
+    private function applyDefaultPrices(array $lineItems): array
+    {
+        $products = $this->stripeProductCollection();
+
+        foreach ($lineItems as $index => $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $priceId = data_get($item, 'price');
+
+            if (is_string($priceId) && $priceId !== '') {
+                continue;
+            }
+
+            $productId = data_get($item, 'product');
+
+            if (! is_string($productId) || $productId === '') {
+                continue;
+            }
+
+            $product = $products->get($productId);
+
+            if (! is_array($product)) {
+                continue;
+            }
+
+            $allowedCurrency = $this->preferredCurrencyForRow($lineItems, $index);
+            $preferredPriceId = $this->determineDefaultPriceForProduct($product, $allowedCurrency);
+
+            if (! $preferredPriceId) {
+                continue;
+            }
+
+            $lineItems[$index]['price'] = $preferredPriceId;
+        }
+
+        return $lineItems;
+    }
+
+    private function preferredCurrencyForRow(array $lineItems, int $currentIndex): ?string
+    {
+        $firstLineCurrency = $this->firstLineCurrency($lineItems);
+
+        if ($firstLineCurrency && $currentIndex !== 0) {
+            return $firstLineCurrency;
+        }
+
+        foreach ($lineItems as $index => $item) {
+            if ($index === $currentIndex) {
+                continue;
+            }
+
+            $priceId = is_array($item) ? data_get($item, 'price') : null;
+
+            if (! is_string($priceId) || $priceId === '') {
+                continue;
+            }
+
+            $currency = $this->priceCurrency($priceId);
+
+            if ($currency) {
+                return $currency;
+            }
+        }
+
+        return null;
+    }
+
+    private function determineDefaultPriceForProduct(array $product, ?string $allowedCurrency): ?string
+    {
+        $prices = $product['prices'] instanceof Collection
+            ? $product['prices']
+            : collect($product['prices']);
+
+        $prices = $prices
+            ->filter(fn ($price): bool => is_array($price))
+            ->filter(fn (array $price): bool => is_string(data_get($price, 'id')) && data_get($price, 'id') !== '')
+            ->values();
+
+        if ($prices->isEmpty()) {
+            return null;
+        }
+
+        $defaultPriceId = data_get($product, 'default_price_id');
+
+        if (is_string($defaultPriceId) && $defaultPriceId !== '') {
+            $defaultPrice = $prices->firstWhere('id', $defaultPriceId);
+
+            if ($defaultPrice && (! $allowedCurrency || $this->priceCurrency($defaultPriceId) === $allowedCurrency)) {
+                return $defaultPriceId;
+            }
+        }
+
+        if ($allowedCurrency) {
+            $currencyPrices = $prices->filter(fn (array $price): bool => $this->priceCurrency($price['id']) === $allowedCurrency);
+
+            if ($currencyPrices->isNotEmpty()) {
+                return $currencyPrices
+                    ->sortByDesc(fn (array $price): int => (int) data_get($price, 'unit_amount', 0))
+                    ->first()['id'] ?? null;
+            }
+        }
+
+        return $prices
+            ->sortByDesc(fn (array $price): int => (int) data_get($price, 'unit_amount', 0))
+            ->first()['id'] ?? null;
+    }
+
+    private function formatLineItemSubtotal(?string $priceId, int $quantity): string
     {
         if (! $priceId) {
-            return new HtmlString('—');
+            return '—';
         }
 
         $price = $this->resolvePrice($priceId);
 
         if (! $price) {
-            return new HtmlString('—');
+            return '—';
         }
 
         $currency = (string) data_get($price, 'currency');
@@ -360,7 +479,7 @@ class InvoicesTable extends BaseTableWidget
 
         $amount = $this->formatCurrencyAmount($unitAmount * max(1, $quantity), $currency);
 
-        return new HtmlString($this->renderBadge($amount));
+        return $amount;
     }
 
     private function formatPriceAmount(array $price): string
@@ -379,23 +498,12 @@ class InvoicesTable extends BaseTableWidget
             return '—';
         }
 
-        $divisor = $this->isZeroDecimalCurrency($currency) ? 1 : 100;
-        $formatted = Number::currency($amount / $divisor, $currency);
+        $decimals = $this->isZeroDecimalCurrency($currency) ? 0 : 2;
+        $divisor = $decimals === 0 ? 1 : 100;
+        $value = $amount / $divisor;
+        $formatted = number_format($value, $decimals, '.', ' ');
 
-        return $formatted;
-    }
-
-    private function formatPriceBadge(array $price): string
-    {
-        return $this->renderBadge($this->formatPriceAmount($price));
-    }
-
-    private function renderBadge(string $label, string $color = 'gray'): string
-    {
-        return Blade::render('<x-filament::badge :color="$color" size="sm">{{ $label }}</x-filament::badge>', [
-            'label' => $label,
-            'color' => $color,
-        ]);
+        return sprintf('%s %s', $formatted, $currency);
     }
 
     private function isZeroDecimalCurrency(string $currency): bool
@@ -437,9 +545,10 @@ class InvoicesTable extends BaseTableWidget
 
     private function normalizeLineItemsState(array $lineItems): array
     {
-        return $this->enforceCurrencyLock(
-            $this->sanitizeLineItemsForState($lineItems)
-        );
+        $lineItems = $this->sanitizeLineItemsForState($lineItems);
+        $lineItems = $this->applyDefaultPrices($lineItems);
+
+        return $this->enforceCurrencyLock($lineItems);
     }
 
     private function normalizeQuantity(mixed $quantity): int
@@ -472,13 +581,25 @@ class InvoicesTable extends BaseTableWidget
 
     private function lockedCurrency(array $lineItems): ?string
     {
-        foreach ($lineItems as $item) {
-            $priceId = is_array($item) ? data_get($item, 'price') : null;
+        $selectedPrices = collect($lineItems)
+            ->map(function ($item) {
+                $priceId = is_array($item) ? data_get($item, 'price') : null;
 
-            if (! is_string($priceId) || $priceId === '') {
-                continue;
-            }
+                return is_string($priceId) && $priceId !== '' ? $priceId : null;
+            })
+            ->filter();
 
+        if ($selectedPrices->count() < 2) {
+            return null;
+        }
+
+        $firstLineCurrency = $this->firstLineCurrency($lineItems);
+
+        if ($firstLineCurrency) {
+            return $firstLineCurrency;
+        }
+
+        foreach ($selectedPrices as $priceId) {
             $currency = $this->priceCurrency($priceId);
 
             if ($currency) {
@@ -492,7 +613,7 @@ class InvoicesTable extends BaseTableWidget
     private function enforceCurrencyLock(array $lineItems): array
     {
         $firstLineCurrency = $this->firstLineCurrency($lineItems);
-        $lockedCurrency = $firstLineCurrency ?? $this->lockedCurrency($lineItems);
+        $lockedCurrency = $this->lockedCurrency($lineItems);
 
         if (! $lockedCurrency) {
             return $lineItems;
