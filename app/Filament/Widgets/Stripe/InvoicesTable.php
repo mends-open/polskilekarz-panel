@@ -116,6 +116,8 @@ class InvoicesTable extends BaseTableWidget
                         ->searchable()
                         ->live()
                         ->native(false)
+                        ->required()
+                        ->disabled(fn (Get $get): bool => is_string($get('price')) && $get('price') !== '')
                         ->afterStateUpdated(function (Set $set, Get $get): void {
                             $set('price', null, shouldCallUpdatedHooks: false);
                             $this->guardLineItemsCurrency($set, $get);
@@ -127,13 +129,13 @@ class InvoicesTable extends BaseTableWidget
                         ->searchable()
                         ->live()
                         ->allowHtml()
+                        ->required()
                         ->options(function (Get $get): array {
                             $lineItems = $this->resolveLineItemsState($get);
 
                             return $this->getPriceOptionsForRow(
                                 $lineItems,
                                 is_string($productId = $get('product')) ? $productId : null,
-                                is_string($currentValue = $get('price')) ? $currentValue : null,
                             );
                         })
                         ->getOptionLabelUsing(function ($value): ?HtmlString {
@@ -193,9 +195,9 @@ class InvoicesTable extends BaseTableWidget
             ->all();
     }
 
-    private function getPriceOptionsForRow(array $lineItems, ?string $productId, ?string $currentPriceId): array
+    private function getPriceOptionsForRow(array $lineItems, ?string $productId): array
     {
-        $lockedCurrency = $this->lockedCurrency($lineItems, $currentPriceId);
+        $lockedCurrency = $this->lockedCurrency($lineItems);
 
         $products = $this->stripeProductCollection();
 
@@ -468,12 +470,12 @@ class InvoicesTable extends BaseTableWidget
         return $this->priceCurrency($priceId);
     }
 
-    private function lockedCurrency(array $lineItems, ?string $ignorePriceId = null): ?string
+    private function lockedCurrency(array $lineItems): ?string
     {
         foreach ($lineItems as $item) {
             $priceId = is_array($item) ? data_get($item, 'price') : null;
 
-            if (! is_string($priceId) || $priceId === '' || $priceId === $ignorePriceId) {
+            if (! is_string($priceId) || $priceId === '') {
                 continue;
             }
 
@@ -625,7 +627,7 @@ class InvoicesTable extends BaseTableWidget
         if ($lineItems === []) {
             Notification::make()
                 ->title('No products selected')
-                ->body('Please select at least one product to include on the invoice.')
+                ->body('Please select at least one product and price to include on the invoice.')
                 ->danger()
                 ->send();
 
