@@ -12,6 +12,7 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Actions\Action;
@@ -159,9 +160,9 @@ class InvoicesTable extends BaseTableWidget
                         ->required()
                         ->rules(['integer', 'min:1'])
                         ->placeholder('1'),
-                    Placeholder::make('subtotal')
+                    TextEntry::make('subtotal')
                         ->label('Subtotal')
-                        ->content(function (Get $get): string {
+                        ->state(function (Get $get): string {
                             $priceState = $get('price');
                             $priceId = is_string($priceState) ? $priceState : null;
                             $quantity = $this->normalizeQuantity($get('quantity'));
@@ -1116,8 +1117,6 @@ class InvoicesTable extends BaseTableWidget
     }
 
     /**
-     * @throws ContainerExceptionInterface
-     * @throws NotFoundExceptionInterface
      * @throws ApiErrorException
      */
     private function getCustomerInvoices(): array
@@ -1171,6 +1170,11 @@ class InvoicesTable extends BaseTableWidget
         $this->sendShortUrl($invoiceUrl);
     }
 
+    /**
+     * @throws ContainerExceptionInterface
+     * @throws ApiErrorException
+     * @throws NotFoundExceptionInterface
+     */
     private function hasCustomerInvoices(): bool
     {
         return $this->getCustomerInvoices() !== [];
