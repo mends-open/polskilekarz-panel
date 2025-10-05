@@ -433,6 +433,13 @@ class InvoicesTable extends BaseTableWidget
             ->all();
     }
 
+    private function normalizeLineItemsState(array $lineItems): array
+    {
+        return $this->enforceCurrencyLock(
+            $this->sanitizeLineItemsForState($lineItems)
+        );
+    }
+
     private function normalizeQuantity(mixed $quantity): int
     {
         if (is_numeric($quantity)) {
@@ -442,6 +449,23 @@ class InvoicesTable extends BaseTableWidget
         }
 
         return $quantity > 0 ? $quantity : 1;
+    }
+
+    private function firstLineCurrency(array $lineItems): ?string
+    {
+        $firstLine = $lineItems[0] ?? null;
+
+        if (! is_array($firstLine)) {
+            return null;
+        }
+
+        $priceId = data_get($firstLine, 'price');
+
+        if (! is_string($priceId) || $priceId === '') {
+            return null;
+        }
+
+        return $this->priceCurrency($priceId);
     }
 
     private function lockedCurrency(array $lineItems, ?string $ignorePriceId = null): ?string
@@ -465,17 +489,32 @@ class InvoicesTable extends BaseTableWidget
 
     private function enforceCurrencyLock(array $lineItems): array
     {
-        $lockedCurrency = $this->lockedCurrency($lineItems);
+        $firstLineCurrency = $this->firstLineCurrency($lineItems);
+        $lockedCurrency = $firstLineCurrency ?? $this->lockedCurrency($lineItems);
 
         if (! $lockedCurrency) {
             return $lineItems;
         }
 
         return collect($lineItems)
-            ->map(function (array $item) use ($lockedCurrency): array {
+            ->map(function (array $item, int $index) use ($lockedCurrency, $firstLineCurrency): array {
                 $priceId = data_get($item, 'price');
 
-                if (is_string($priceId) && $priceId !== '' && $this->priceCurrency($priceId) !== $lockedCurrency) {
+                if (! is_string($priceId) || $priceId === '') {
+                    return $item;
+                }
+
+                $priceCurrency = $this->priceCurrency($priceId);
+
+                if (! $priceCurrency) {
+                    return $item;
+                }
+
+                if ($index === 0 && $firstLineCurrency) {
+                    return $item;
+                }
+
+                if ($priceCurrency !== $lockedCurrency) {
                     $item['price'] = null;
                 }
 
@@ -487,6 +526,8 @@ class InvoicesTable extends BaseTableWidget
 
     private function extractInvoiceLineItems(array $lineItems): array
     {
+        $lineItems = $this->normalizeLineItemsState($lineItems);
+
         return collect($lineItems)
             ->map(function ($item): ?array {
                 if (! is_array($item)) {
@@ -530,7 +571,7 @@ class InvoicesTable extends BaseTableWidget
 
         $lineItems = is_array($lineItems) ? $lineItems : [];
 
-        return $this->sanitizeLineItemsForState($lineItems);
+        return $this->normalizeLineItemsState($lineItems);
     }
 
     private function updateLineItemsState(Set $set, array $lineItems): void
@@ -544,8 +585,7 @@ class InvoicesTable extends BaseTableWidget
         $lineItems = $get('../../line_items') ?? $get('line_items');
         $lineItems = is_array($lineItems) ? $lineItems : [];
 
-        $sanitized = $this->sanitizeLineItemsForState($lineItems);
-        $normalized = $this->enforceCurrencyLock($sanitized);
+        $normalized = $this->normalizeLineItemsState($lineItems);
 
         if ($lineItems !== $normalized) {
             $this->updateLineItemsState($set, $normalized);
@@ -556,7 +596,7 @@ class InvoicesTable extends BaseTableWidget
     {
         $lineItems = is_array($data['line_items'] ?? null) ? $data['line_items'] : [];
 
-        $data['line_items'] = $this->sanitizeLineItemsForState($lineItems);
+        $data['line_items'] = $this->normalizeLineItemsState($lineItems);
 
         if ($data['line_items'] === []) {
             $data['line_items'][] = $this->blankLineItem();
@@ -665,7 +705,7 @@ class InvoicesTable extends BaseTableWidget
                 ->all();
         }
 
-        $lineItems = $this->sanitizeLineItemsForState($lineItems);
+        $lineItems = $this->normalizeLineItemsState($lineItems);
 
         if ($lineItems === []) {
             $lineItems[] = $this->blankLineItem();
