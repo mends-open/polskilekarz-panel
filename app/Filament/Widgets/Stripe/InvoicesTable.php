@@ -687,17 +687,27 @@ class InvoicesTable extends BaseTableWidget
     {
         $lineItems = $get('line_items', isAbsolute: true);
 
+        if (! is_array($lineItems)) {
+            $lineItems = $get('../../line_items');
+        }
+
         return $this->normalizeLineItemsState(is_array($lineItems) ? $lineItems : []);
     }
 
     private function updateLineItemsState(Set $set, array $lineItems): void
     {
-        $set('line_items', $lineItems, isAbsolute: true);
+        $set('../../line_items', $lineItems, shouldCallUpdatedHooks: true);
+        $set('line_items', $lineItems, isAbsolute: true, shouldCallUpdatedHooks: true);
     }
 
     private function guardLineItemsCurrency(Set $set, Get $get): void
     {
         $lineItems = $get('line_items', isAbsolute: true);
+
+        if (! is_array($lineItems)) {
+            $lineItems = $get('../../line_items');
+        }
+
         $lineItems = is_array($lineItems) ? $lineItems : [];
 
         $normalized = $this->normalizeLineItemsState($lineItems);
