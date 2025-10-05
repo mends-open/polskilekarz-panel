@@ -12,6 +12,8 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\HtmlString;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Actions\Action;
@@ -124,6 +126,7 @@ class InvoicesTable extends BaseTableWidget
                         ->native(false)
                         ->searchable()
                         ->live()
+                        ->allowHtml()
                         ->options(function (Get $get): array {
                             $lineItems = $this->resolveLineItemsState($get);
 
@@ -132,6 +135,19 @@ class InvoicesTable extends BaseTableWidget
                                 is_string($productId = $get('product')) ? $productId : null,
                                 is_string($currentValue = $get('price')) ? $currentValue : null,
                             );
+                        })
+                        ->getOptionLabelUsing(function ($value): ?HtmlString {
+                            if (! is_string($value) || $value === '') {
+                                return null;
+                            }
+
+                            $price = $this->resolvePrice($value);
+
+                            if (! $price) {
+                                return null;
+                            }
+
+                            return new HtmlString($this->formatPriceBadge($price));
                         })
                         ->disabled(fn (Get $get): bool => ! is_string($get('product')) || $get('product') === '')
                         ->afterStateUpdated(fn (Set $set, Get $get) => $this->guardLineItemsCurrency($set, $get))
@@ -147,10 +163,13 @@ class InvoicesTable extends BaseTableWidget
                         ->placeholder('1'),
                     Placeholder::make('subtotal')
                         ->label('Subtotal')
-                        ->content(fn (Get $get): string => $this->formatLineItemSubtotal(
-                            is_string($priceId = $get('price')) ? $priceId : null,
-                            $this->normalizeQuantity($get('quantity')),
-                        )),
+                        ->content(function (Get $get): HtmlString {
+                            $priceState = $get('price');
+                            $priceId = is_string($priceState) ? $priceState : null;
+                            $quantity = $this->normalizeQuantity($get('quantity'));
+
+                            return $this->formatLineItemSubtotalBadge($priceId, $quantity);
+                        }),
                 ]),
         ];
     }
@@ -210,7 +229,7 @@ class InvoicesTable extends BaseTableWidget
 
     private function formatPriceOptionLabel(array $price): string
     {
-        return $this->formatPriceAmount($price);
+        return $this->formatPriceBadge($price);
     }
 
     private function stripePriceCollection(): Collection
@@ -322,22 +341,24 @@ class InvoicesTable extends BaseTableWidget
         return 'Product';
     }
 
-    private function formatLineItemSubtotal(?string $priceId, int $quantity): string
+    private function formatLineItemSubtotalBadge(?string $priceId, int $quantity): HtmlString
     {
         if (! $priceId) {
-            return '—';
+            return new HtmlString('—');
         }
 
         $price = $this->resolvePrice($priceId);
 
         if (! $price) {
-            return '—';
+            return new HtmlString('—');
         }
 
         $currency = (string) data_get($price, 'currency');
         $unitAmount = (int) data_get($price, 'unit_amount', 0);
 
-        return $this->formatCurrencyAmount($unitAmount * max(1, $quantity), $currency);
+        $amount = $this->formatCurrencyAmount($unitAmount * max(1, $quantity), $currency);
+
+        return new HtmlString($this->renderBadge($amount));
     }
 
     private function formatPriceAmount(array $price): string
@@ -359,7 +380,20 @@ class InvoicesTable extends BaseTableWidget
         $divisor = $this->isZeroDecimalCurrency($currency) ? 1 : 100;
         $formatted = Number::currency($amount / $divisor, $currency);
 
-        return sprintf('%s %s', $currency, $formatted);
+        return $formatted;
+    }
+
+    private function formatPriceBadge(array $price): string
+    {
+        return $this->renderBadge($this->formatPriceAmount($price));
+    }
+
+    private function renderBadge(string $label, string $color = 'gray'): string
+    {
+        return Blade::render('<x-filament::badge :color="$color" size="sm">{{ $label }}</x-filament::badge>', [
+            'label' => $label,
+            'color' => $color,
+        ]);
     }
 
     private function isZeroDecimalCurrency(string $currency): bool
@@ -620,6 +654,13 @@ class InvoicesTable extends BaseTableWidget
                     ];
                 })
                 ->filter(fn (array $line) => is_string($line['price']) && $line['price'] !== '')
+                ->groupBy('price')
+                ->map(function (Collection $items, string $priceId): array {
+                    return [
+                        'price' => $priceId,
+                        'quantity' => max(1, (int) $items->sum('quantity')),
+                    ];
+                })
                 ->values()
                 ->all();
         }
