@@ -28,6 +28,7 @@ use Filament\Tables\Table;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Fluent;
 use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Computed;
@@ -503,31 +504,43 @@ class InvoicesTable extends BaseTableWidget
 
     private function sanitizeLineItemsForState(array $lineItems): array
     {
-        return collect($lineItems)
-            ->map(function ($item): array {
-                $product = is_array($item) ? data_get($item, 'product') : null;
-                $price = is_array($item) ? data_get($item, 'price') : null;
-                $quantity = $this->normalizeQuantity(is_array($item) ? data_get($item, 'quantity') : null);
+        $items = collect($lineItems)
+            ->map(fn ($item): Fluent => $this->mapSanitizedLineItem($item));
 
-                $product = is_string($product) && $product !== '' ? $product : null;
-                $price = is_string($price) && $price !== '' ? $price : null;
+        if ($items->contains(fn (Fluent $item): bool => filled($item->get('product')) || filled($item->get('price')))) {
+            $items = $items->reject(fn (Fluent $item): bool => blank($item->get('product')) && blank($item->get('price')));
+        }
 
-                if ($price) {
-                    $resolvedProduct = $this->resolvePriceProductId($price);
-
-                    if ($resolvedProduct) {
-                        $product = $resolvedProduct;
-                    }
-                }
-
-                return [
-                    'product' => $product,
-                    'price' => $price,
-                    'quantity' => $quantity,
-                ];
-            })
+        return $items
             ->values()
+            ->map(fn (Fluent $item): array => $item->toArray())
             ->all();
+    }
+
+    private function mapSanitizedLineItem(mixed $item): Fluent
+    {
+        $state = is_array($item) ? $item : [];
+
+        $product = data_get($state, 'product');
+        $price = data_get($state, 'price');
+        $quantity = $this->normalizeQuantity(data_get($state, 'quantity'));
+
+        $product = is_string($product) && $product !== '' ? $product : null;
+        $price = is_string($price) && $price !== '' ? $price : null;
+
+        if ($price) {
+            $resolvedProduct = $this->resolvePriceProductId($price);
+
+            if (is_string($resolvedProduct) && $resolvedProduct !== '') {
+                $product = $resolvedProduct;
+            }
+        }
+
+        return fluent([
+            'product' => $product,
+            'price' => $price,
+            'quantity' => $quantity,
+        ]);
     }
 
     private function normalizeLineItemsState(array $lineItems): array
