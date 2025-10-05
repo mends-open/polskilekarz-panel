@@ -7,17 +7,18 @@ use App\Jobs\Chatwoot\CreateInvoiceShortLink;
 use App\Jobs\Stripe\CreateInvoice;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use App\Support\Dashboard\StripeContext;
-use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Repeater\TableColumn;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Notifications\Notification;
+use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\Layout\Panel;
 use Filament\Tables\Columns\Layout\Split;
@@ -99,25 +100,25 @@ class InvoicesTable extends BaseTableWidget
                 ->required()
                 ->rules(['array', 'min:1'])
                 ->minItems(1)
-                ->default([$this->blankLineItem()])
                 ->validationAttribute('products')
+                ->hiddenLabel()
                 ->table([
-                    TableColumn::make('Product'),
-                    TableColumn::make('Price'),
-                    TableColumn::make('Quantity'),
-                    TableColumn::make('Subtotal'),
+                    TableColumn::make('product'),
+                    TableColumn::make('price'),
+                    TableColumn::make('quantity'),
+                    TableColumn::make('subtotal'),
                 ])
                 ->schema([
                     Select::make('product')
                         ->label('Product')
                         ->options(fn (): array => $this->getProductOptions())
                         ->searchable()
-                        ->live()
+                        ->debounce()
                         ->native(false)
                         ->required()
                         ->disabled(fn (Get $get): bool => is_string($get('price')) && $get('price') !== '')
                         ->afterStateUpdated(function (Set $set, Get $get): void {
-                            $set('price', null, shouldCallUpdatedHooks: false);
+                            $set('price', null);
                             $this->guardLineItemsCurrency($set, $get);
                         })
                         ->placeholder('Select a product'),
@@ -125,11 +126,10 @@ class InvoicesTable extends BaseTableWidget
                         ->label('Price')
                         ->native(false)
                         ->searchable()
-                        ->live()
+                        ->debounce()
                         ->required()
                         ->options(function (Get $get): array {
                             $lineItems = $this->resolveLineItemsState($get);
-
                             return $this->getPriceOptionsForRow(
                                 $lineItems,
                                 is_string($productId = $get('product')) ? $productId : null,
@@ -139,13 +139,10 @@ class InvoicesTable extends BaseTableWidget
                             if (! is_string($value) || $value === '') {
                                 return null;
                             }
-
                             $price = $this->resolvePrice($value);
-
                             if (! $price) {
                                 return null;
                             }
-
                             return $this->formatPriceAmount($price);
                         })
                         ->disabled(fn (Get $get): bool => ! is_string($get('product')) || $get('product') === '')
@@ -154,31 +151,20 @@ class InvoicesTable extends BaseTableWidget
                     TextInput::make('quantity')
                         ->label('Quantity')
                         ->numeric()
+                        ->integer()
                         ->minValue(1)
                         ->default(1)
-                        ->live()
-                        ->required()
-                        ->rules(['integer', 'min:1'])
-                        ->placeholder('1'),
+                        ->debounce()
+                        ->required(),
                     TextEntry::make('subtotal')
                         ->label('Subtotal')
                         ->state(function (Get $get): string {
                             $priceState = $get('price');
                             $priceId = is_string($priceState) ? $priceState : null;
                             $quantity = $this->normalizeQuantity($get('quantity'));
-
                             return $this->formatLineItemSubtotal($priceId, $quantity);
                         }),
                 ]),
-        ];
-    }
-
-    private function blankLineItem(): array
-    {
-        return [
-            'product' => null,
-            'price' => null,
-            'quantity' => 1,
         ];
     }
 
@@ -700,8 +686,8 @@ class InvoicesTable extends BaseTableWidget
 
     private function updateLineItemsState(Set $set, array $lineItems): void
     {
-        $set('../../line_items', $lineItems, shouldCallUpdatedHooks: false);
-        $set('line_items', $lineItems, shouldCallUpdatedHooks: false);
+        $set('../../line_items', $lineItems);
+        $set('line_items', $lineItems,);
     }
 
     private function guardLineItemsCurrency(Set $set, Get $get): void
@@ -721,19 +707,12 @@ class InvoicesTable extends BaseTableWidget
         $lineItems = is_array($data['line_items'] ?? null) ? $data['line_items'] : [];
 
         $data['line_items'] = $this->normalizeLineItemsState($lineItems);
-
-        if ($data['line_items'] === []) {
-            $data['line_items'][] = $this->blankLineItem();
-        }
-
         return $data;
     }
 
     private function configureInvoiceFormAction(Action $action): Action
     {
         return $action
-            ->modalWidth('7xl')
-            ->extraModalWindowAttributes(['class' => 'sm:min-h-[70vh] sm:max-h-[90vh]'])
             ->modalSubmitActionLabel('Create invoice')
             ->form($this->getCreateInvoiceForm())
             ->mutateFormDataUsing(fn (array $data): array => $this->prepareInvoiceFormData($data))
@@ -830,10 +809,6 @@ class InvoicesTable extends BaseTableWidget
         }
 
         $lineItems = $this->normalizeLineItemsState($lineItems);
-
-        if ($lineItems === []) {
-            $lineItems[] = $this->blankLineItem();
-        }
 
         return [
             'line_items' => $lineItems,
