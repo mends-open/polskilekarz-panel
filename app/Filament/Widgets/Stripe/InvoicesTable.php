@@ -692,7 +692,7 @@ class InvoicesTable extends BaseTableWidget
 
     private function updateLineItemsState(Set $set, array $lineItems): void
     {
-        $set('line_items', $lineItems, isAbsolute: true, shouldCallUpdatedHooks: false);
+        $set('line_items', $lineItems, isAbsolute: true);
     }
 
     private function guardLineItemsCurrency(Set $set, Get $get): void
