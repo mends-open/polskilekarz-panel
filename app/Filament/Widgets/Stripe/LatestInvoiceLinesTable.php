@@ -44,7 +44,7 @@ class LatestInvoiceLinesTable extends BaseTableWidget
 
         $invoiceCurrency = (string) data_get($invoice, 'currency');
 
-        return collect(data_get($invoice, 'lines.data', []))
+        return collect($this->latestInvoiceLines)
             ->map(function ($line) use ($invoiceCurrency) {
                 $line = is_array($line) ? $line : (array) $line;
 

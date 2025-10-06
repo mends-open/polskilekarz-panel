@@ -27,21 +27,59 @@ trait HasLatestStripeInvoice
         }
     }
 
+    #[Computed(persist: true)]
+    protected function latestInvoiceLines(): array
+    {
+        $invoiceId = (string) data_get($this->latestInvoice, 'id', '');
+
+        if ($invoiceId === '') {
+            return [];
+        }
+
+        try {
+            return $this->latestStripeInvoiceLines($invoiceId, $this->latestInvoiceLinesRequestOptions());
+        } catch (ApiErrorException $exception) {
+            report($exception);
+
+            return [];
+        }
+    }
+
+    #[Computed(persist: true)]
+    protected function latestInvoicePayments(): array
+    {
+        $invoiceId = (string) data_get($this->latestInvoice, 'id', '');
+
+        if ($invoiceId === '') {
+            return [];
+        }
+
+        try {
+            return $this->latestStripeInvoicePayments($invoiceId, $this->latestInvoicePaymentsRequestOptions());
+        } catch (ApiErrorException $exception) {
+            report($exception);
+
+            return [];
+        }
+    }
+
     protected function latestInvoiceRequestOptions(): array
     {
-        return [
-            'expand' => [
-                'data.lines',
-                'data.lines.data.price',
-                'data.lines.data.price.product',
-                'data.payments',
-                'data.payments.data.payment',
-            ],
-        ];
+        return [];
+    }
+
+    protected function latestInvoiceLinesRequestOptions(): array
+    {
+        return [];
+    }
+
+    protected function latestInvoicePaymentsRequestOptions(): array
+    {
+        return [];
     }
 
     protected function clearLatestInvoiceCache(): void
     {
-        unset($this->latestInvoice);
+        unset($this->latestInvoice, $this->latestInvoiceLines, $this->latestInvoicePayments);
     }
 }

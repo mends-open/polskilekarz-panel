@@ -84,9 +84,9 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                             ->color(blank($data) ? 'gray' : 'primary')
                             ->disabled(blank($data))
                             ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
-                            ->url($data['hosted_invoice_url'])
+                            ->url(data_get($data, 'hosted_invoice_url'))
                             ->openUrlInNewTab()
-                            ->hidden(blank($data['hosted_invoice_url'])),
+                            ->hidden(blank(data_get($data, 'hosted_invoice_url'))),
                         Action::make('reset')
                             ->action(fn () => $this->refreshLatestInvoice())
                             ->hiddenLabel()

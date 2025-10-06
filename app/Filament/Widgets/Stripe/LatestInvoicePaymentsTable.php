@@ -35,7 +35,7 @@ class LatestInvoicePaymentsTable extends BaseTableWidget
     }
 
     #[Computed(persist: true)]
-    protected function latestInvoicePayments(): array
+    protected function latestInvoicePaymentSummaries(): array
     {
         $invoice = $this->latestInvoice;
 
@@ -45,7 +45,7 @@ class LatestInvoicePaymentsTable extends BaseTableWidget
 
         $invoiceCurrency = (string) data_get($invoice, 'currency');
 
-        return collect(data_get($invoice, 'payments.data', []))
+        return collect($this->latestInvoicePayments)
             ->map(function ($payment) use ($invoiceCurrency) {
                 $payment = is_array($payment) ? $payment : (array) $payment;
                 $details = data_get($payment, 'payment');
@@ -53,7 +53,7 @@ class LatestInvoicePaymentsTable extends BaseTableWidget
 
                 $currency = (string) data_get($details, 'currency', data_get($payment, 'currency', $invoiceCurrency));
                 $amount = (int) data_get($details, 'amount', data_get($payment, 'amount', 0));
-                $status = (string) data_get($details, 'status', data_get($payment, 'status', '')); 
+                $status = (string) data_get($details, 'status', data_get($payment, 'status', ''));
                 $created = (int) data_get($details, 'created', data_get($payment, 'created'));
                 $method = data_get($details, 'payment_method_details.type')
                     ?? data_get($details, 'payment_method.type')
@@ -78,7 +78,7 @@ class LatestInvoicePaymentsTable extends BaseTableWidget
     {
         return $table
             ->records(function (int $page, int $recordsPerPage): LengthAwarePaginator {
-                $payments = collect($this->latestInvoicePayments);
+                $payments = collect($this->latestInvoicePaymentSummaries);
 
                 $records = $payments
                     ->forPage($page, $recordsPerPage)
@@ -166,7 +166,7 @@ class LatestInvoicePaymentsTable extends BaseTableWidget
     {
         $this->resetComponent();
         $this->clearLatestInvoiceCache();
-        unset($this->latestInvoicePayments);
+        unset($this->latestInvoicePaymentSummaries);
     }
 
     private function resetComponent(): void

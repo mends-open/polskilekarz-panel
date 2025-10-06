@@ -61,18 +61,7 @@ trait InteractsWithStripeInvoices
         $normalized = $this->normalizeStripeObject($invoice);
 
         $normalized['lines']['data'] = collect(data_get($normalized, 'lines.data', []))
-            ->map(function (array $line): array {
-                $line['description'] = $line['description']
-                    ?? data_get($line, 'price.product.name')
-                    ?? data_get($line, 'price.nickname')
-                    ?? data_get($line, 'price.id');
-
-                $line['amount'] = $line['amount']
-                    ?? data_get($line, 'amount_excluding_tax')
-                    ?? data_get($line, 'price.unit_amount');
-
-                return $line;
-            })
+            ->map(fn (array $line): array => $this->normalizeStripeInvoiceLine($line))
             ->all();
 
         return $normalized;
@@ -95,6 +84,79 @@ trait InteractsWithStripeInvoices
         }
 
         return $value;
+    }
+
+    /**
+     * @throws ApiErrorException
+     */
+    protected function latestStripeInvoiceLines(string $invoiceId, array $parameters = []): array
+    {
+        $parameters = array_merge([
+            'limit' => $parameters['limit'] ?? 100,
+        ], $parameters);
+
+        $response = stripe()->invoices->allLines($invoiceId, $parameters);
+
+        $lines = [];
+
+        if (method_exists($response, 'autoPagingIterator')) {
+            foreach ($response->autoPagingIterator() as $line) {
+                $lines[] = $this->normalizeStripeInvoiceLine($line);
+            }
+
+            return $lines;
+        }
+
+        foreach ($response->data ?? [] as $line) {
+            $lines[] = $this->normalizeStripeInvoiceLine($line);
+        }
+
+        return $lines;
+    }
+
+    /**
+     * @throws ApiErrorException
+     */
+    protected function latestStripeInvoicePayments(string $invoiceId, array $parameters = []): array
+    {
+        $parameters = array_merge([
+            'invoice' => $invoiceId,
+            'limit' => $parameters['limit'] ?? 100,
+        ], $parameters);
+
+        $response = stripe()->invoicePayments->all($parameters);
+
+        $payments = [];
+
+        if (method_exists($response, 'autoPagingIterator')) {
+            foreach ($response->autoPagingIterator() as $payment) {
+                $payments[] = $this->normalizeStripeObject($payment);
+            }
+
+            return $payments;
+        }
+
+        foreach ($response->data ?? [] as $payment) {
+            $payments[] = $this->normalizeStripeObject($payment);
+        }
+
+        return $payments;
+    }
+
+    protected function normalizeStripeInvoiceLine(mixed $line): array
+    {
+        $line = $this->normalizeStripeObject($line);
+
+        $line['description'] = $line['description']
+            ?? data_get($line, 'price.product.name')
+            ?? data_get($line, 'price.nickname')
+            ?? data_get($line, 'price.id');
+
+        $line['amount'] = $line['amount']
+            ?? data_get($line, 'amount_excluding_tax')
+            ?? data_get($line, 'price.unit_amount');
+
+        return $line;
     }
 
     protected function sendHostedInvoiceLink(?array $invoice): void
