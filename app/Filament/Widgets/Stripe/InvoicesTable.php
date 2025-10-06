@@ -96,6 +96,7 @@ class InvoicesTable extends BaseTableWidget
     {
         return [
             Repeater::make('line_items')
+                ->compact()
                 ->label('Products')
                 ->reorderable(false)
                 ->required()
@@ -104,10 +105,14 @@ class InvoicesTable extends BaseTableWidget
                 ->validationAttribute('products')
                 ->hiddenLabel()
                 ->table([
-                    TableColumn::make('product'),
-                    TableColumn::make('price'),
-                    TableColumn::make('quantity'),
-                    TableColumn::make('subtotal'),
+                    TableColumn::make('Product')
+                        ->width('45%'),
+                    TableColumn::make('Price')
+                        ->width('25%'),
+                    TableColumn::make('Quantity')
+                        ->width('10%'),
+                    TableColumn::make('Subtotal')
+                        ->width('20%'),
                 ])
                 ->schema([
                     Select::make('product')
@@ -1161,9 +1166,7 @@ class InvoicesTable extends BaseTableWidget
     }
 
     /**
-     * @throws ContainerExceptionInterface
      * @throws ApiErrorException
-     * @throws NotFoundExceptionInterface
      */
     private function hasCustomerInvoices(): bool
     {
