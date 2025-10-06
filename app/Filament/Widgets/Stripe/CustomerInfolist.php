@@ -48,7 +48,8 @@ class CustomerInfolist extends BaseSchemaWidget
     public function schema(Schema $schema): Schema
     {
         $chatwootContext = $this->chatwootContext();
-        $portalReady = $this->stripeContext()->hasCustomer()
+        $customerReady = $this->stripeContext()->hasCustomer();
+        $portalReady = $customerReady
             && $chatwootContext->accountId !== null
             && $chatwootContext->conversationId !== null
             && $chatwootContext->currentUserId !== null;
@@ -69,6 +70,13 @@ class CustomerInfolist extends BaseSchemaWidget
                             ->color($portalReady ? 'warning' : 'gray')
                             ->disabled(! $portalReady)
                             ->action(fn () => $this->sendCustomerPortalLink()),
+                        Action::make('openCustomerPortal')
+                            ->label('Open portal')
+                            ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
+                            ->outlined()
+                            ->color($customerReady ? 'primary' : 'gray')
+                            ->disabled(! $customerReady)
+                            ->action(fn () => $this->openCustomerPortal()),
                         Action::make('reset')
                             ->action(fn () => $this->reset())
                             ->hiddenLabel()
@@ -147,5 +155,42 @@ class CustomerInfolist extends BaseSchemaWidget
             ->send();
 
         $this->reset();
+    }
+
+    protected function openCustomerPortal()
+    {
+        $customerId = $this->stripeContext()->customerId;
+
+        if (! $customerId) {
+            Notification::make()
+                ->title('Missing Stripe customer')
+                ->body('We could not find the Stripe customer. Please select a customer first.')
+                ->danger()
+                ->send();
+
+            return null;
+        }
+
+        $config = config('stripe.customer_portal', []);
+
+        try {
+            $session = stripe()->billingPortal->sessions->create(array_filter([
+                'customer' => $customerId,
+                'return_url' => Arr::get($config, 'return_url'),
+                'locale' => Arr::get($config, 'locale', 'auto'),
+            ], static fn ($value) => $value !== null && $value !== ''));
+        } catch (ApiErrorException $exception) {
+            report($exception);
+
+            Notification::make()
+                ->title('Failed to open portal')
+                ->body('We were unable to open the customer portal. Please try again.')
+                ->danger()
+                ->send();
+
+            return null;
+        }
+
+        return redirect()->away($session->url);
     }
 }
