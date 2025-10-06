@@ -10,24 +10,24 @@ trait HasMoneyBadges
     protected function moneyCurrency(?string $path = 'currency', BackedEnum|Closure|string|null $fallback = null): Closure
     {
         return function ($record = null, $state = null) use ($path, $fallback): ?string {
-            $target = $record ?? $state;
-
-            $currency = $path === null ? null : data_get($target, $path);
-            $currency = $this->normalizeCurrencyValue($currency);
-
-            if ($currency === null && $fallback !== null) {
-                $currency = $fallback instanceof Closure
-                    ? $this->normalizeCurrencyValue($fallback($record, $state, $target))
-                    : $this->normalizeCurrencyValue($fallback);
-            }
-
-            return $currency;
+            return $this->resolveCurrencyForMoneyBadge($record, $state, $path, $fallback);
         };
     }
 
-    protected function moneyDivideBy(int $divideBy = 100): int
-    {
-        return $divideBy;
+    protected function moneyDivideBy(
+        int $defaultDivideBy = 100,
+        ?string $currencyPath = 'currency',
+        BackedEnum|Closure|string|null $fallback = null,
+    ): Closure {
+        return function ($record = null, $state = null) use ($defaultDivideBy, $currencyPath, $fallback): int {
+            $currency = $this->resolveCurrencyForMoneyBadge($record, $state, $currencyPath, $fallback);
+
+            if ($currency !== null && $this->isZeroDecimalCurrency($currency)) {
+                return 1;
+            }
+
+            return $defaultDivideBy;
+        };
     }
 
     protected function moneyLocale(?string $locale = null): ?string
@@ -38,6 +38,25 @@ trait HasMoneyBadges
     protected function moneyDecimalPlaces(?int $decimalPlaces = null): ?int
     {
         return $decimalPlaces;
+    }
+
+    protected function resolveCurrencyForMoneyBadge(
+        $record,
+        $state,
+        ?string $path,
+        BackedEnum|Closure|string|null $fallback,
+    ): ?string {
+        $target = $record ?? $state;
+
+        $currency = $path === null ? null : data_get($target, $path);
+
+        if ($currency === null && $fallback !== null) {
+            $currency = $fallback instanceof Closure
+                ? $fallback($record, $state, $target)
+                : $fallback;
+        }
+
+        return $this->normalizeCurrencyValue($currency);
     }
 
     protected function normalizeCurrencyValue(mixed $value): ?string
@@ -57,5 +76,32 @@ trait HasMoneyBadges
         }
 
         return strtoupper($value);
+    }
+
+    protected function isZeroDecimalCurrency(string $currency): bool
+    {
+        return in_array($currency, $this->zeroDecimalCurrencies(), true);
+    }
+
+    protected function zeroDecimalCurrencies(): array
+    {
+        return [
+            'BIF',
+            'CLP',
+            'DJF',
+            'GNF',
+            'JPY',
+            'KMF',
+            'KRW',
+            'MGA',
+            'PYG',
+            'RWF',
+            'UGX',
+            'VND',
+            'VUV',
+            'XAF',
+            'XOF',
+            'XPF',
+        ];
     }
 }
