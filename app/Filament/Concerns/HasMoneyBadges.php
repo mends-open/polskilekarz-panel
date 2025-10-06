@@ -2,6 +2,7 @@
 
 namespace App\Filament\Concerns;
 
+use App\Support\Stripe\Currency as StripeCurrency;
 use BackedEnum;
 use Closure;
 
@@ -22,7 +23,7 @@ trait HasMoneyBadges
         return function ($record = null, $state = null) use ($defaultDivideBy, $currencyPath, $fallback): int {
             $currency = $this->resolveCurrencyForMoneyBadge($record, $state, $currencyPath, $fallback);
 
-            if ($currency !== null && $this->isZeroDecimalCurrency($currency)) {
+            if ($currency !== null && StripeCurrency::isZeroDecimal($currency)) {
                 return 1;
             }
 
@@ -76,32 +77,5 @@ trait HasMoneyBadges
         }
 
         return strtoupper($value);
-    }
-
-    protected function isZeroDecimalCurrency(string $currency): bool
-    {
-        return in_array($currency, $this->zeroDecimalCurrencies(), true);
-    }
-
-    protected function zeroDecimalCurrencies(): array
-    {
-        return [
-            'BIF',
-            'CLP',
-            'DJF',
-            'GNF',
-            'JPY',
-            'KMF',
-            'KRW',
-            'MGA',
-            'PYG',
-            'RWF',
-            'UGX',
-            'VND',
-            'VUV',
-            'XAF',
-            'XOF',
-            'XPF',
-        ];
     }
 }

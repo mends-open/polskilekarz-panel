@@ -4,6 +4,7 @@ namespace App\Filament\Widgets\Stripe\Concerns;
 
 use App\Jobs\Stripe\CreateInvoice;
 use App\Support\Dashboard\StripeContext;
+use App\Support\Stripe\Currency as StripeCurrency;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Repeater\TableColumn;
@@ -437,20 +438,12 @@ trait HasStripeInvoiceForm
             return '—';
         }
 
-        $decimals = $this->isZeroDecimalCurrency($currency) ? 0 : 2;
+        $decimals = StripeCurrency::isZeroDecimal($currency) ? 0 : 2;
         $divisor = $decimals === 0 ? 1 : 100;
         $value = $amount / $divisor;
         $formatted = number_format($value, $decimals, '.', ' ');
 
         return sprintf('%s %s', $formatted, $currency);
-    }
-
-    protected function isZeroDecimalCurrency(string $currency): bool
-    {
-        return in_array($currency, [
-            'BIF', 'CLP', 'DJF', 'GNF', 'JPY', 'KMF', 'KRW', 'MGA', 'PYG',
-            'RWF', 'UGX', 'VND', 'VUV', 'XAF', 'XOF', 'XPF',
-        ], true);
     }
 
     protected function sanitizeLineItemsForState(array $lineItems): array

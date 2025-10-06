@@ -3,6 +3,7 @@
 namespace App\Jobs\Stripe;
 
 use App\Models\User;
+use App\Support\Stripe\Currency as StripeCurrency;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Illuminate\Bus\Queueable;
@@ -143,16 +144,8 @@ class CreateInvoice implements ShouldQueue
         }
 
         $currency = strtoupper($currency);
-        $divisor = $this->isZeroDecimalCurrency($currency) ? 1 : 100;
+        $divisor = StripeCurrency::isZeroDecimal($currency) ? 1 : 100;
 
         return Number::currency($amount / $divisor, $currency);
-    }
-
-    private function isZeroDecimalCurrency(string $currency): bool
-    {
-        return in_array($currency, [
-            'BIF', 'CLP', 'DJF', 'GNF', 'JPY', 'KMF', 'KRW', 'MGA', 'PYG',
-            'RWF', 'UGX', 'VND', 'VUV', 'XAF', 'XOF', 'XPF',
-        ], true);
     }
 }
