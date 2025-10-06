@@ -8,6 +8,8 @@ use App\Filament\Widgets\Stripe\Concerns\HasStripeInvoiceForm;
 use App\Filament\Widgets\Stripe\Concerns\InteractsWithStripeInvoices;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use Filament\Actions\Action;
+use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\RepeatableEntry\TableColumn;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -24,9 +26,8 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
     use HasStripeInvoiceForm;
     use InteractsWithStripeInvoices;
 
-    /**
-     * @throws ApiErrorException
-     */
+    protected int|string|array $columnSpan = 'full';
+
     #[Computed(persist: true)]
     protected function latestInvoice(): array
     {
@@ -38,11 +39,10 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
 
         try {
             return $this->latestStripeInvoice($customerId, [
-                'expand' => ['data.payment_intent'],
+                'expand' => ['data.lines', 'data.payments'],
             ]);
-        } catch (ApiErrorException $exception) {
-            report($exception);
-
+        } catch (ApiErrorException $e) {
+            report($e);
             return [];
         }
     }
@@ -60,8 +60,7 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
     #[On('stripe.invoices.refresh')]
     public function refreshLatestInvoice(): void
     {
-        unset($this->latestInvoice);
-        unset($this->stripePriceCollection, $this->stripeProductCollection);
+        unset($this->latestInvoice, $this->stripePriceCollection, $this->stripeProductCollection);
     }
 
     #[On('stripe.set-context')]
@@ -70,9 +69,6 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
         $this->refreshLatestInvoice();
     }
 
-    /**
-     * @throws ApiErrorException
-     */
     public function schema(Schema $schema): Schema
     {
         $invoice = $this->latestInvoice();
@@ -81,7 +77,8 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
         return $schema
             ->state($invoice)
             ->components([
-                Section::make('latest invoice')
+                Section::make('Latest Invoice')
+                    ->columns(2)
                     ->headerActions([
                         $this->configureInvoiceFormAction(
                             Action::make('duplicateLatest')
@@ -90,25 +87,30 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                                 ->outlined()
                                 ->color(blank($invoice) ? 'gray' : 'primary')
                                 ->disabled(blank($invoice))
-                                ->modalIcon(Heroicon::OutlinedDocumentDuplicate)
                                 ->modalHeading('Duplicate latest invoice')
-                        )
-                            ->fillForm(fn () => $this->getInvoiceFormDefaults(blank($invoice) ? null : $invoice)),
+                        )->fillForm(fn() => $this->getInvoiceFormDefaults(blank($invoice) ? null : $invoice)),
+
                         Action::make('sendLatest')
+                            ->requiresConfirmation()
                             ->label('Send')
                             ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
                             ->outlined()
                             ->color(blank($invoice) ? 'gray' : 'warning')
                             ->disabled(blank($invoice))
-                            ->action(fn () => $this->sendHostedInvoiceLink($invoice)),
+                            ->action(fn() => $this->sendHostedInvoiceLink($invoice)),
+
                         Action::make('openInvoice')
                             ->label('Open')
+                            ->outlined()
+                            ->color(blank($invoice) ? 'gray' : 'primary')
+                            ->disabled(blank($invoice))
                             ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
                             ->url($hostedUrl)
                             ->openUrlInNewTab()
                             ->hidden(blank($hostedUrl)),
+
                         Action::make('reset')
-                            ->action(fn () => $this->refreshLatestInvoice())
+                            ->action(fn() => $this->refreshLatestInvoice())
                             ->hiddenLabel()
                             ->icon(Heroicon::OutlinedArrowPath)
                             ->link(),
@@ -118,9 +120,10 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                             ->badge()
                             ->color('gray')
                             ->inlineLabel(),
+
                         TextEntry::make('status')
                             ->badge()
-                            ->color(fn (?string $state) => match ($state) {
+                            ->color(fn(?string $state) => match ($state) {
                                 'draft' => 'gray',
                                 'open' => 'warning',
                                 'paid' => 'success',
@@ -128,42 +131,77 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                                 'void' => 'gray',
                                 default => 'secondary',
                             })
-                            ->inlineLabel()
-                            ->placeholder('No status'),
+                            ->inlineLabel(),
+
                         TextEntry::make('created')
-                            ->inlineLabel()
-                            ->placeholder('No created date')
-                            ->since(),
+                            ->since()
+                            ->inlineLabel(),
+
+                        TextEntry::make('due_date')
+                            ->date()
+                            ->inlineLabel(),
+
                         TextEntry::make('total')
                             ->label('Total')
-                            ->state(fn (?array $record): ?float => $this->extractStripeAmount($record, 'total'))
-                            ->money(fn (?array $record): ?string => $this->resolveStripeCurrency($record))
-                            ->inlineLabel()
-                            ->placeholder('No total'),
+                            ->inlineLabel(),
+
                         TextEntry::make('amount_paid')
-                            ->label('Amount paid')
-                            ->state(fn (?array $record): ?float => $this->extractStripeAmount($record, 'amount_paid'))
-                            ->money(fn (?array $record): ?string => $this->resolveStripeCurrency($record))
-                            ->inlineLabel()
-                            ->placeholder('No amount paid'),
+                            ->label('Amount Paid')
+                            ->inlineLabel(),
+
                         TextEntry::make('amount_remaining')
-                            ->label('Amount remaining')
-                            ->state(fn (?array $record): ?float => $this->extractStripeAmount($record, 'amount_remaining'))
-                            ->money(fn (?array $record): ?string => $this->resolveStripeCurrency($record))
-                            ->inlineLabel()
-                            ->placeholder('No amount remaining'),
+                            ->label('Amount Remaining')
+                            ->inlineLabel(),
+
                         TextEntry::make('collection_method')
-                            ->inlineLabel()
-                            ->placeholder('No collection method'),
-                        TextEntry::make('customer_email')
-                            ->inlineLabel()
-                            ->placeholder('No customer email'),
-                        TextEntry::make('hosted_invoice_url')
-                            ->label('Hosted invoice URL')
-                            ->inlineLabel()
-                            ->placeholder('No hosted URL')
-                            ->url(fn (?array $record): ?string => Arr::get($record ?? [], 'hosted_invoice_url'))
-                            ->openUrlInNewTab(),
+                            ->inlineLabel(),
+                        RepeatableEntry::make('lines.data')
+                            ->hiddenLabel()
+                            ->columnSpanFull()
+                            ->table([
+                                TableColumn::make('description'),
+                                TableColumn::make('pricing.unit_amount_decimal'),
+                                TableColumn::make('quantity'),
+                                TableColumn::make('amount'),
+
+                            ])
+                            ->schema([
+                                TextEntry::make('description'),
+                                TextEntry::make('pricing.unit_amount_decimal'),
+                                TextEntry::make('quantity'),
+                                TextEntry::make('amount'),
+                            ]),
+                        RepeatableEntry::make('payments.data')
+                            ->hiddenLabel()
+                            ->columnSpanFull()
+                            ->table([
+                                TableColumn::make('id'),
+                                TableColumn::make('type'),
+                                TableColumn::make('status'),
+                                TableColumn::make('amount_paid'),
+                                TableColumn::make('currency'),
+                                TableColumn::make('created'),
+                            ])
+                            ->schema([
+                                TextEntry::make('id')
+                                    ->badge()
+                                    ->color('gray')
+                                    ->copyable(),
+                                TextEntry::make('payment.type')
+                                    ->badge(),
+                                TextEntry::make('status')
+                                    ->badge()
+                                    ->color(fn($state) => match ($state) {
+                                        'paid' => 'success',
+                                        'pending' => 'warning',
+                                        'failed' => 'danger',
+                                        default => 'gray',
+                                    }),
+                                TextEntry::make('amount_paid'),
+                                TextEntry::make('currency'),
+                                TextEntry::make('created')
+                                    ->since(),
+                            ]),
                     ]),
             ]);
     }
