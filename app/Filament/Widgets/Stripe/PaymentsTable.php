@@ -12,11 +12,13 @@ use Filament\Tables\Columns\Layout\Split;
 use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 use Stripe\Exception\ApiErrorException;
+use Stripe\StripeObject;
 
 class PaymentsTable extends BaseTableWidget
 {
@@ -51,7 +53,23 @@ class PaymentsTable extends BaseTableWidget
     public function table(Table $table): Table
     {
         return $table
-            ->records(fn () => $this->customerPayments())
+            ->records(function (int $page, int $recordsPerPage): LengthAwarePaginator {
+                $payments = collect($this->customerPayments());
+
+                $records = $payments
+                    ->forPage($page, $recordsPerPage)
+                    ->values()
+                    ->all();
+
+                return new LengthAwarePaginator(
+                    items: $records,
+                    total: $payments->count(),
+                    perPage: $recordsPerPage,
+                    currentPage: $page,
+                );
+            })
+            ->defaultPaginationPageOption(3)
+            ->paginationPageOptions([3, 10, 25, 50])
             ->columns([
                 Split::make([
                     Stack::make([
@@ -117,11 +135,24 @@ class PaymentsTable extends BaseTableWidget
     {
         $customerId = (string) $this->stripeContext()->customerId;
 
-        return $customerId
-            ? stripe()->paymentIntents->all([
-                'customer' => $customerId,
-            ])->toArray()['data']
-            : [];
+        if ($customerId === '') {
+            return [];
+        }
+
+        $response = stripe()->paymentIntents->all([
+            'customer' => $customerId,
+            'limit' => 100,
+        ]);
+
+        $payments = [];
+
+        foreach ($response->autoPagingIterator() as $payment) {
+            $payments[] = $payment instanceof StripeObject
+                ? $payment->toArray()
+                : (array) $payment;
+        }
+
+        return $payments;
     }
 
     #[On('stripe.set-context')]

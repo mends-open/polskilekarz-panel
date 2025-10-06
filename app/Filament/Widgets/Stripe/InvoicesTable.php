@@ -25,6 +25,7 @@ use Filament\Tables\Columns\Layout\Split;
 use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Collection;
@@ -948,7 +949,23 @@ class InvoicesTable extends BaseTableWidget
     public function table(Table $table): Table
     {
         return $table
-            ->records(fn () => $this->customerInvoices())
+            ->records(function (int $page, int $recordsPerPage): LengthAwarePaginator {
+                $invoices = collect($this->customerInvoices());
+
+                $records = $invoices
+                    ->forPage($page, $recordsPerPage)
+                    ->values()
+                    ->all();
+
+                return new LengthAwarePaginator(
+                    items: $records,
+                    total: $invoices->count(),
+                    perPage: $recordsPerPage,
+                    currentPage: $page,
+                );
+            })
+            ->defaultPaginationPageOption(3)
+            ->paginationPageOptions([3, 10, 25, 50])
             ->columns([
                 Split::make([
                     Stack::make([
@@ -1117,11 +1134,16 @@ class InvoicesTable extends BaseTableWidget
 
         $response = stripe()->invoices->all([
             'customer' => $customerId,
+            'limit' => 100,
         ]);
 
-        return collect($response->data ?? [])
-            ->map(fn (mixed $invoice) => $this->normalizeStripeInvoice($invoice))
-            ->all();
+        $invoices = [];
+
+        foreach ($response->autoPagingIterator() as $invoice) {
+            $invoices[] = $this->normalizeStripeInvoice($invoice);
+        }
+
+        return $invoices;
     }
 
     #[On('stripe.set-context')]
