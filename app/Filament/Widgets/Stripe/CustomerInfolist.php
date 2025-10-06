@@ -13,6 +13,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
@@ -40,11 +41,14 @@ class CustomerInfolist extends BaseSchemaWidget
     /**
      * @throws ApiErrorException
      */
-    protected function getStripeCustomer(): array
+    #[Computed(persist: true)]
+    protected function stripeCustomer(): array
     {
         $customerId = $this->stripeContext()->customerId;
 
-        return $customerId ? stripe()->customers->retrieve($customerId)->toArray() : [];
+        return $customerId
+            ? stripe()->customers->retrieve($customerId)->toArray()
+            : [];
     }
 
     /**
@@ -61,7 +65,7 @@ class CustomerInfolist extends BaseSchemaWidget
             && $chatwootContext->currentUserId !== null;
 
         return $schema
-            ->state($this->getStripeCustomer())
+            ->state($this->stripeCustomer())
             ->components([
                 Section::make('customer')
                     ->headerActions([
