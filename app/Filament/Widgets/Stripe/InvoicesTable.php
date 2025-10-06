@@ -45,8 +45,6 @@ class InvoicesTable extends BaseTableWidget
 
     protected static ?string $heading = 'Invoices';
 
-    private ?array $customerInvoicesCache = null;
-
     private ?Collection $stripePriceCollectionCache = null;
 
     private ?Collection $stripeProductCollectionCache = null;
@@ -62,17 +60,11 @@ class InvoicesTable extends BaseTableWidget
         $this->resetTable();
         $this->resetErrorBag();
         $this->resetValidation();
-        $this->clearCustomerInvoicesCache();
     }
 
     private function refreshTable(): void
     {
         $this->resetComponent();
-    }
-
-    private function clearCustomerInvoicesCache(): void
-    {
-        $this->customerInvoicesCache = null;
     }
 
     #[Computed(persist: true)]
@@ -956,7 +948,7 @@ class InvoicesTable extends BaseTableWidget
     public function table(Table $table): Table
     {
         return $table
-            ->records(fn () => $this->getCustomerInvoices())
+            ->records(fn () => $this->customerInvoices())
             ->columns([
                 Split::make([
                     Stack::make([
@@ -1114,23 +1106,20 @@ class InvoicesTable extends BaseTableWidget
     /**
      * @throws ApiErrorException
      */
-    private function getCustomerInvoices(): array
+    #[Computed(persist: true)]
+    private function customerInvoices(): array
     {
-        if ($this->customerInvoicesCache !== null) {
-            return $this->customerInvoicesCache;
-        }
-
         $customerId = $this->stripeContext()->customerId;
 
         if (! $customerId) {
-            return $this->customerInvoicesCache = [];
+            return [];
         }
 
         $response = stripe()->invoices->all([
             'customer' => $customerId,
         ]);
 
-        return $this->customerInvoicesCache = collect($response->data ?? [])
+        return collect($response->data ?? [])
             ->map(fn (mixed $invoice) => $this->normalizeStripeInvoice($invoice))
             ->all();
     }
@@ -1139,7 +1128,6 @@ class InvoicesTable extends BaseTableWidget
     public function refreshContext(): void
     {
         $this->resetTable();
-        $this->clearCustomerInvoicesCache();
     }
 
     private function sendLatestInvoice(): void
@@ -1170,12 +1158,12 @@ class InvoicesTable extends BaseTableWidget
      */
     private function hasCustomerInvoices(): bool
     {
-        return $this->getCustomerInvoices() !== [];
+        return $this->customerInvoices() !== [];
     }
 
     private function latestCustomerInvoice(): ?array
     {
-        return collect($this->getCustomerInvoices())
+        return collect($this->customerInvoices())
             ->sortByDesc('created')
             ->first() ?: null;
     }

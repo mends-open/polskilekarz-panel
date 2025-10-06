@@ -12,6 +12,7 @@ use Filament\Tables\Columns\Layout\Split;
 use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
@@ -50,7 +51,7 @@ class PaymentsTable extends BaseTableWidget
     public function table(Table $table): Table
     {
         return $table
-            ->records(fn () => $this->getCustomerPayments())
+            ->records(fn () => $this->customerPayments())
             ->columns([
                 Split::make([
                     Stack::make([
@@ -111,13 +112,16 @@ class PaymentsTable extends BaseTableWidget
      * @throws ApiErrorException
      * @throws NotFoundExceptionInterface
      */
-    private function getCustomerPayments(): array
+    #[Computed(persist: true)]
+    private function customerPayments(): array
     {
         $customerId = (string) $this->stripeContext()->customerId;
 
-        return $customerId ? stripe()->paymentIntents->all([
-            'customer' => $customerId,
-        ])->toArray()['data'] : [];
+        return $customerId
+            ? stripe()->paymentIntents->all([
+                'customer' => $customerId,
+            ])->toArray()['data']
+            : [];
     }
 
     #[On('stripe.set-context')]
