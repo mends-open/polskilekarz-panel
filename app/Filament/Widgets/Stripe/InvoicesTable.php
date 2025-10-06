@@ -2,9 +2,8 @@
 
 namespace App\Filament\Widgets\Stripe;
 
-
-use App\Filament\Concerns\HasMoneyBadges;
 use App\Filament\Widgets\BaseTableWidget;
+use App\Filament\Widgets\Stripe\Concerns\HandlesCurrencyDecimals;
 use App\Filament\Widgets\Stripe\Concerns\HasStripeInvoiceForm;
 use App\Filament\Widgets\Stripe\Concerns\InteractsWithStripeInvoices;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
@@ -17,16 +16,18 @@ use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Livewire\Attributes\On;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Stripe\Exception\ApiErrorException;
 use Stripe\StripeObject;
+
 class InvoicesTable extends BaseTableWidget
 {
-    use InteractsWithDashboardContext;
+    use HandlesCurrencyDecimals;
     use HasStripeInvoiceForm;
+    use InteractsWithDashboardContext;
     use InteractsWithStripeInvoices;
-    use HasMoneyBadges;
 
     protected int|string|array $columnSpan = 'full';
 
@@ -68,6 +69,7 @@ class InvoicesTable extends BaseTableWidget
                 );
             })
             ->defaultPaginationPageOption(3)
+            ->extremePaginationLinks()
             ->paginationPageOptions([3, 10, 25, 50])
             ->columns([
                 Split::make([
@@ -82,10 +84,10 @@ class InvoicesTable extends BaseTableWidget
                         TextColumn::make('total')
                             ->badge()
                             ->money(
-                                currency: $this->moneyCurrency(),
-                                divideBy: $this->moneyDivideBy(),
-                                locale: $this->moneyLocale(),
-                                decimalPlaces: $this->moneyDecimalPlaces(),
+                                currency: fn ($record) => $record['currency'],
+                                divideBy: fn ($record) => $this->isZeroDecimal($record['currency']) ? 1 : 100,
+                                locale: config('app.locale'),
+                                decimalPlaces: fn ($record) => $this->isZeroDecimal($record['currency']) ? 0 : 2,
                             )
                             ->color(fn ($record) => match ($record['status']) {
                                 'paid' => 'success',                     // ✅ money in
@@ -104,8 +106,15 @@ class InvoicesTable extends BaseTableWidget
                                 default => 'secondary',
                             }),
                     ])->space(2),
-                    TextColumn::make('created')
-                        ->since(),
+                    Stack::make([
+                        TextColumn::make('currency')
+                            ->state(fn ($record) => Str::upper($record['currency']))
+                            ->badge(),
+                    ]),
+                    Stack::make([
+                        TextColumn::make('created')
+                            ->since(),
+                    ]),
                 ]),
                 Panel::make([
                     Split::make([
@@ -116,13 +125,13 @@ class InvoicesTable extends BaseTableWidget
                             ->listWithLineBreaks(),
                         TextColumn::make('lines.data.*.amount')
                             ->listWithLineBreaks()
-                            ->badge()
                             ->money(
-                                currency: $this->moneyCurrency(),
-                                divideBy: $this->moneyDivideBy(),
-                                locale: $this->moneyLocale(),
-                                decimalPlaces: $this->moneyDecimalPlaces(),
-                            ),
+                                currency: fn ($record) => $record['currency'],
+                                divideBy: fn ($record) => $this->isZeroDecimal($record['currency']) ? 1 : 100,
+                                locale: config('app.locale'),
+                                decimalPlaces: fn ($record) => $this->isZeroDecimal($record['currency']) ? 0 : 2,
+                            )
+                            ->badge(),
                     ]),
                 ])->collapsible(),
             ])
@@ -229,7 +238,6 @@ class InvoicesTable extends BaseTableWidget
         $this->refreshInvoices();
     }
 
-
     protected function afterInvoiceFormHandled(): void
     {
         $this->refreshInvoices();
@@ -279,5 +287,4 @@ class InvoicesTable extends BaseTableWidget
 
         $this->sendHostedInvoiceLink($record);
     }
-
 }

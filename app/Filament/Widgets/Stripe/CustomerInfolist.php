@@ -65,7 +65,7 @@ class CustomerInfolist extends BaseSchemaWidget
             && $chatwootContext->currentUserId !== null;
 
         return $schema
-            ->state($this->stripeCustomer())
+            ->state($this->stripeCustomer)
             ->components([
                 Section::make('customer')
                     ->headerActions([
@@ -159,5 +159,4 @@ class CustomerInfolist extends BaseSchemaWidget
 
         $this->reset();
     }
-
 }

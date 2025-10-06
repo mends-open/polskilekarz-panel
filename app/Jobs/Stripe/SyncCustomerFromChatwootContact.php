@@ -1,6 +1,5 @@
 <?php
 
-
 namespace App\Jobs\Stripe;
 
 use App\Models\User;
@@ -23,11 +22,9 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
         public readonly int|string $accountId,
         public readonly int|string $contactId,
         public readonly int|string $impersonatorId,
-        public readonly string     $customerId,
-        public readonly ?int       $notifiableId,
-    )
-    {
-    }
+        public readonly string $customerId,
+        public readonly ?int $notifiableId,
+    ) {}
 
     public function handle(): void
     {
@@ -41,7 +38,7 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
             'name' => data_get($contact, 'name'),
             'email' => data_get($contact, 'email'),
             'phone' => data_get($contact, 'phone_number'),
-        ], fn($value) => filled($value));
+        ], fn ($value) => filled($value));
 
         if ($payload === []) {
             $this->notify(
@@ -83,7 +80,7 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
     {
         $user = $this->resolveNotifiable();
 
-        if (!$user) {
+        if (! $user) {
             return;
         }
 
@@ -104,7 +101,7 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
 
     protected function resolveNotifiable(): ?User
     {
-        if (!$this->notifiableId) {
+        if (! $this->notifiableId) {
             return null;
         }
 

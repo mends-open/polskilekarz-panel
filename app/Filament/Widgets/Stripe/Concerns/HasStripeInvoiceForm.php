@@ -4,7 +4,6 @@ namespace App\Filament\Widgets\Stripe\Concerns;
 
 use App\Jobs\Stripe\CreateInvoice;
 use App\Support\Dashboard\StripeContext;
-use App\Support\Stripe\Currency as StripeCurrency;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Repeater\TableColumn;
@@ -19,9 +18,9 @@ use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Fluent;
 use Illuminate\Support\Str;
+use Livewire\Attributes\Computed;
 use Stripe\Exception\ApiErrorException;
 use Stripe\StripeObject;
-use Livewire\Attributes\Computed;
 
 trait HasStripeInvoiceForm
 {
@@ -810,7 +809,7 @@ trait HasStripeInvoiceForm
                 ->impersonate($impersonatorId)
                 ->contacts()
                 ->get($accountId, $contactId)['payload'] ?? [];
-        } catch (ConnectionException | RequestException $exception) {
+        } catch (ConnectionException|RequestException $exception) {
             report($exception);
 
             Notification::make()

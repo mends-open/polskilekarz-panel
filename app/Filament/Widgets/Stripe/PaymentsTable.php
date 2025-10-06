@@ -2,8 +2,8 @@
 
 namespace App\Filament\Widgets\Stripe;
 
-use App\Filament\Concerns\HasMoneyBadges;
 use App\Filament\Widgets\BaseTableWidget;
+use App\Filament\Widgets\Stripe\Concerns\HandlesCurrencyDecimals;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -14,6 +14,7 @@ use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Psr\Container\ContainerExceptionInterface;
@@ -23,8 +24,8 @@ use Stripe\StripeObject;
 
 class PaymentsTable extends BaseTableWidget
 {
+    use HandlesCurrencyDecimals;
     use InteractsWithDashboardContext;
-    use HasMoneyBadges;
 
     protected int|string|array $columnSpan = 'full';
 
@@ -32,10 +33,6 @@ class PaymentsTable extends BaseTableWidget
 
     protected static ?string $heading = 'Payments';
 
-    /**
-     * @throws ContainerExceptionInterface
-     * @throws NotFoundExceptionInterface
-     */
     #[On('reset')]
     public function resetComponent(): void
     {
@@ -85,10 +82,10 @@ class PaymentsTable extends BaseTableWidget
                         TextColumn::make('amount')
                             ->badge()
                             ->money(
-                                currency: $this->moneyCurrency(),
-                                divideBy: $this->moneyDivideBy(),
-                                locale: $this->moneyLocale(),
-                                decimalPlaces: $this->moneyDecimalPlaces(),
+                                currency: fn ($record) => $record['currency'],
+                                divideBy: fn ($record) => $this->isZeroDecimal($record['currency']) ? 1 : 100,
+                                locale: config('app.locale'),
+                                decimalPlaces: fn ($record) => $this->isZeroDecimal($record['currency']) ? 0 : 2,
                             )
                             ->color(fn ($record) => match ($record['status']) {
                                 'succeeded' => 'success',   // ✅ received
@@ -104,6 +101,16 @@ class PaymentsTable extends BaseTableWidget
                                 default => 'secondary',
                             }),
                     ])->space(2),
+                    Stack::make([
+                        TextColumn::make('payment_method.type')
+                            ->badge()
+                            ->state(function ($record) {
+                                $type = data_get($record, 'payment_method.type');
+
+                                return $type ? Str::upper($type) : null;
+                            })
+                            ->color('warning'),
+                    ]),
                     Stack::make([
                         TextColumn::make('created')
                             ->since(),
@@ -149,6 +156,7 @@ class PaymentsTable extends BaseTableWidget
 
         $response = stripe()->paymentIntents->all([
             'customer' => $customerId,
+            'expand' => ['data.payment_method'],
             'limit' => 100,
         ]);
 
@@ -168,5 +176,4 @@ class PaymentsTable extends BaseTableWidget
     {
         $this->resetTable();
     }
-
 }

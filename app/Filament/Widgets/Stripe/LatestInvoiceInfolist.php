@@ -2,32 +2,28 @@
 
 namespace App\Filament\Widgets\Stripe;
 
-use App\Filament\Concerns\HasMoneyBadges;
 use App\Filament\Widgets\BaseSchemaWidget;
-use App\Filament\Widgets\Stripe\Concerns\InterpretsStripeAmounts;
+use App\Filament\Widgets\Stripe\Concerns\HandlesCurrencyDecimals;
 use App\Filament\Widgets\Stripe\Concerns\HasStripeInvoiceForm;
 use App\Filament\Widgets\Stripe\Concerns\InteractsWithStripeInvoices;
+use App\Filament\Widgets\Stripe\Concerns\InterpretsStripeAmounts;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use Filament\Actions\Action;
-use Filament\Infolists\Components\RepeatableEntry;
-use Filament\Infolists\Components\RepeatableEntry\TableColumn;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
-use Filament\Schemas\Components\Utilities\Get;
 use Filament\Support\Icons\Heroicon;
-use Illuminate\Support\Arr;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Stripe\Exception\ApiErrorException;
 
 class LatestInvoiceInfolist extends BaseSchemaWidget
 {
-    use InteractsWithDashboardContext;
-    use InterpretsStripeAmounts;
+    use HandlesCurrencyDecimals;
     use HasStripeInvoiceForm;
+    use InteractsWithDashboardContext;
     use InteractsWithStripeInvoices;
-    use HasMoneyBadges;
+    use InterpretsStripeAmounts;
 
     protected int|string|array $columnSpan = 'full';
 
@@ -45,11 +41,12 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                 'expand' => [
                     'data.lines',
                     'data.payments',
-                    'data.payments.data.payment'
+                    'data.payments.data.payment',
                 ],
             ]);
         } catch (ApiErrorException $e) {
             report($e);
+
             return [];
         }
     }
@@ -78,11 +75,10 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
 
     public function schema(Schema $schema): Schema
     {
-        $invoice = $this->latestInvoice;
-        $hostedUrl = Arr::get($invoice, 'hosted_invoice_url');
+        $data = $this->latestInvoice;
 
         return $schema
-            ->state($invoice)
+            ->state($data)
             ->components([
                 Section::make('Latest Invoice')
                     ->columns(2)
@@ -92,29 +88,29 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                                 ->label('Duplicate')
                                 ->icon(Heroicon::OutlinedDocumentDuplicate)
                                 ->outlined()
-                                ->color(blank($invoice) ? 'gray' : 'primary')
-                                ->disabled(blank($invoice))
+                                ->color(blank($data) ? 'gray' : 'primary')
+                                ->disabled(blank($data))
                                 ->modalHeading('Duplicate latest invoice')
-                        )->fillForm(fn() => $this->getInvoiceFormDefaults(blank($invoice) ? null : $invoice)),
+                        )->fillForm(fn () => $this->getInvoiceFormDefaults(blank($data) ? null : $data)),
                         Action::make('sendLatest')
                             ->requiresConfirmation()
                             ->label('Send')
                             ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
                             ->outlined()
-                            ->color(blank($invoice) ? 'gray' : 'warning')
-                            ->disabled(blank($invoice))
-                            ->action(fn() => $this->sendHostedInvoiceLink($invoice)),
+                            ->color(blank($data) ? 'gray' : 'warning')
+                            ->disabled(blank($data))
+                            ->action(fn () => $this->sendHostedInvoiceLink($data)),
                         Action::make('openInvoice')
                             ->label('Open')
                             ->outlined()
-                            ->color(blank($invoice) ? 'gray' : 'primary')
-                            ->disabled(blank($invoice))
+                            ->color(blank($data) ? 'gray' : 'primary')
+                            ->disabled(blank($data))
                             ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
-                            ->url($hostedUrl)
+                            ->url($data['hosted_invoice_url'])
                             ->openUrlInNewTab()
-                            ->hidden(blank($hostedUrl)),
+                            ->hidden(blank($data['hosted_invoice_url'])),
                         Action::make('reset')
-                            ->action(fn() => $this->refreshLatestInvoice())
+                            ->action(fn () => $this->refreshLatestInvoice())
                             ->hiddenLabel()
                             ->icon(Heroicon::OutlinedArrowPath)
                             ->link(),
@@ -126,7 +122,7 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                             ->inlineLabel(),
                         TextEntry::make('status')
                             ->badge()
-                            ->color(fn(?string $state) => match ($state) {
+                            ->color(fn (?string $state) => match ($state) {
                                 'draft' => 'gray',
                                 'open' => 'warning',
                                 'paid' => 'success',
@@ -146,153 +142,41 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                             ->inlineLabel()
                             ->badge()
                             ->money(
-                                currency: $this->moneyCurrency(
-                                    fallback: fn (?Get $get = null) => data_get($this->latestInvoice, 'currency'),
-                                ),
-                                divideBy: $this->moneyDivideBy(
-                                    currencyPath: 'currency',
-                                    fallback: fn (?Get $get = null) => data_get($this->latestInvoice, 'currency'),
-                                ),
-                                locale: $this->moneyLocale(),
-                                decimalPlaces: $this->moneyDecimalPlaces(),
+                                currency: $data['currency'],
+                                divideBy: $this->isZeroDecimal($data['currency']) ? 1 : 100,
+                                locale: config('app.locale'),
+                                decimalPlaces: $this->isZeroDecimal($data['currency']) ? 0 : 2,
                             ),
                         TextEntry::make('amount_paid')
                             ->label('Amount Paid')
                             ->inlineLabel()
-                            ->badge()
+                            ->color('success')
                             ->money(
-                                currency: $this->moneyCurrency(
-                                    fallback: fn (?Get $get = null) => data_get($this->latestInvoice, 'currency'),
-                                ),
-                                divideBy: $this->moneyDivideBy(
-                                    currencyPath: 'currency',
-                                    fallback: fn (?Get $get = null) => data_get($this->latestInvoice, 'currency'),
-                                ),
-                                locale: $this->moneyLocale(),
-                                decimalPlaces: $this->moneyDecimalPlaces(),
-                            ),
+                                currency: $data['currency'],
+                                divideBy: $this->isZeroDecimal($data['currency']) ? 1 : 100,
+                                locale: config('app.locale'),
+                                decimalPlaces: $this->isZeroDecimal($data['currency']) ? 0 : 2,
+                            )
+                            ->badge(),
                         TextEntry::make('amount_remaining')
                             ->label('Amount Remaining')
+                            ->color('danger')
+                            ->inlineLabel()
+                            ->money(
+                                currency: $data['currency'],
+                                divideBy: $this->isZeroDecimal($data['currency']) ? 1 : 100,
+                                locale: config('app.locale'),
+                                decimalPlaces: $this->isZeroDecimal($data['currency']) ? 0 : 2,
+                            )
+                            ->badge(),
+                        TextEntry::make('collection_method')
                             ->inlineLabel()
                             ->badge()
-                            ->money(
-                                currency: $this->moneyCurrency(
-                                    fallback: fn (?Get $get = null) => data_get($this->latestInvoice, 'currency'),
-                                ),
-                                divideBy: $this->moneyDivideBy(
-                                    currencyPath: 'currency',
-                                    fallback: fn (?Get $get = null) => data_get($this->latestInvoice, 'currency'),
-                                ),
-                                locale: $this->moneyLocale(),
-                                decimalPlaces: $this->moneyDecimalPlaces(),
-                            ),
-                        TextEntry::make('collection_method')
-                            ->inlineLabel(),
-                        RepeatableEntry::make('lines.data')
-                            ->hiddenLabel()
-                            ->columnSpanFull()
-                            ->table([
-                                TableColumn::make('product_id'),
-                                TableColumn::make('price_id'),
-                                TableColumn::make('description'),
-                                TableColumn::make('pricing.unit_amount_decimal'),
-                                TableColumn::make('quantity'),
-                                TableColumn::make('amount'),
-                            ])
-                            ->schema([
-                                TextEntry::make('pricing.price_details.product')
-                                    ->badge()
-                                    ->color('gray'),
-                                TextEntry::make('pricing.price_details.price')
-                                    ->badge()
-                                    ->color('gray'),
-                                TextEntry::make('description'),
-                                TextEntry::make('pricing.unit_amount_decimal')
-                                    ->badge()
-                                    ->money(
-                                        currency: $this->moneyCurrency(
-                                            ['pricing.currency'],
-                                            fallback: fn (?Get $get = null) => data_get($this->latestInvoice, 'currency'),
-                                        ),
-                                        divideBy: $this->moneyDivideBy(
-                                            currencyPath: ['pricing.currency'],
-                                            fallback: fn (?Get $get = null) => data_get($this->latestInvoice, 'currency'),
-                                        ),
-                                        locale: $this->moneyLocale(),
-                                        decimalPlaces: $this->moneyDecimalPlaces(),
-                                    ),
-                                TextEntry::make('quantity'),
-                                TextEntry::make('amount')
-                                    ->badge()
-                                    ->money(
-                                        currency: $this->moneyCurrency(
-                                            [
-                                                'currency',
-                                                'pricing.currency',
-                                            ],
-                                            fallback: fn (?Get $get = null) => data_get($this->latestInvoice, 'currency'),
-                                        ),
-                                        divideBy: $this->moneyDivideBy(
-                                            currencyPath: [
-                                                'currency',
-                                                'pricing.currency',
-                                            ],
-                                            fallback: fn (?Get $get = null) => data_get($this->latestInvoice, 'currency'),
-                                        ),
-                                        locale: $this->moneyLocale(),
-                                        decimalPlaces: $this->moneyDecimalPlaces(),
-                                    ),
-                            ]),
-                        RepeatableEntry::make('payments.data')
-                            ->hiddenLabel()
-                            ->columnSpanFull()
-                            ->table([
-                                TableColumn::make('id'),
-                                TableColumn::make('payment_intent_id'),
-                                TableColumn::make('status'),
-                                TableColumn::make('amount_paid'),
-                                TableColumn::make('currency'),
-                                TableColumn::make('created'),
-                            ])
-                            ->schema([
-                                TextEntry::make('id')
-                                    ->badge()
-                                    ->color('gray')
-                                    ->copyable(),
-                                TextEntry::make('payment.payment_intent')
-                                    ->color('gray')
-                                    ->badge(),
-                                TextEntry::make('status')
-                                    ->badge()
-                                    ->color(fn($state) => match ($state) {
-                                        'paid' => 'success',
-                                        'pending' => 'warning',
-                                        'failed' => 'danger',
-                                        default => 'gray',
-                                    }),
-                                TextEntry::make('amount_paid')
-                                    ->badge()
-                                    ->money(
-                                        currency: $this->moneyCurrency([
-                                            'currency',
-                                            'payment.currency',
-                                        ],
-                                        fallback: fn (?Get $get = null) => data_get($this->latestInvoice, 'currency'),
-                                        ),
-                                        divideBy: $this->moneyDivideBy(
-                                            currencyPath: [
-                                                'currency',
-                                                'payment.currency',
-                                            ],
-                                            fallback: fn (?Get $get = null) => data_get($this->latestInvoice, 'currency'),
-                                        ),
-                                        locale: $this->moneyLocale(),
-                                        decimalPlaces: $this->moneyDecimalPlaces(),
-                                    ),
-                                TextEntry::make('currency'),
-                                TextEntry::make('created')
-                                    ->since(),
-                            ]),
+                            ->color(fn (?string $state) => match ($state) {
+                                'charge_automatically' => 'success',
+                                'send_invoice' => 'warning',
+                                default => 'secondary',
+                            }),
                     ]),
             ]);
     }
