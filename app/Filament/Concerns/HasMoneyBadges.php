@@ -5,7 +5,10 @@ namespace App\Filament\Concerns;
 use App\Support\Stripe\Currency as StripeCurrency;
 use BackedEnum;
 use Closure;
+use Filament\Schemas\Components\Utilities\Get;
 use Illuminate\Support\Arr;
+use ReflectionFunction;
+use ReflectionNamedType;
 
 trait HasMoneyBadges
 {
@@ -13,8 +16,8 @@ trait HasMoneyBadges
     {
         $paths = $this->prepareMoneyCurrencyPaths($path);
 
-        return function ($record = null, $state = null) use ($paths, $fallback): ?string {
-            return $this->resolveMoneyCurrency($record, $state, $paths, $fallback);
+        return function (?Get $get = null, $record = null, $state = null) use ($paths, $fallback): ?string {
+            return $this->resolveMoneyCurrency($get, $record, $state, $paths, $fallback);
         };
     }
 
@@ -25,8 +28,8 @@ trait HasMoneyBadges
     ): Closure {
         $paths = $this->prepareMoneyCurrencyPaths($currencyPath);
 
-        return function ($record = null, $state = null) use ($defaultDivideBy, $paths, $fallback): int {
-            $currency = $this->resolveMoneyCurrency($record, $state, $paths, $fallback);
+        return function (?Get $get = null, $record = null, $state = null) use ($defaultDivideBy, $paths, $fallback): int {
+            $currency = $this->resolveMoneyCurrency($get, $record, $state, $paths, $fallback);
 
             if ($currency !== null && StripeCurrency::isZeroDecimal($currency)) {
                 return 1;
@@ -47,12 +50,23 @@ trait HasMoneyBadges
     }
 
     protected function resolveMoneyCurrency(
+        ?Get $get,
         $record,
         $state,
         array $paths,
         BackedEnum|Closure|string|null $fallback,
     ): ?string {
         if ($paths !== []) {
+            if ($get !== null) {
+                foreach ($paths as $path) {
+                    $normalized = $this->normalizeCurrencyValue($this->getCurrencyValueFromGet($get, $path));
+
+                    if ($normalized !== null) {
+                        return $normalized;
+                    }
+                }
+            }
+
             foreach ([$state, $record] as $source) {
                 if ($source === null) {
                     continue;
@@ -73,7 +87,7 @@ trait HasMoneyBadges
         }
 
         $value = $fallback instanceof Closure
-            ? $fallback($record, $state)
+            ? $this->evaluateMoneyFallback($fallback, $get, $record, $state)
             : $fallback;
 
         return $this->normalizeCurrencyValue($value);
@@ -105,5 +119,69 @@ trait HasMoneyBadges
         }
 
         return strtoupper($value);
+    }
+
+    protected function getCurrencyValueFromGet(Get $get, string $path): mixed
+    {
+        if ($path === '') {
+            return $get();
+        }
+
+        return $get($path);
+    }
+
+    protected function evaluateMoneyFallback(Closure $fallback, ?Get $get, $record, $state): mixed
+    {
+        $reflection = new ReflectionFunction($fallback);
+        $arguments = [];
+
+        foreach ($reflection->getParameters() as $parameter) {
+            $type = $parameter->getType();
+            $name = $parameter->getName();
+
+            if ($type instanceof ReflectionNamedType && (! $type->isBuiltin())) {
+                $typeName = $type->getName();
+
+                if ($get !== null && is_a($typeName, Get::class, true)) {
+                    $arguments[] = $get;
+
+                    continue;
+                }
+            }
+
+            if ($name === 'get' && $get !== null) {
+                $arguments[] = $get;
+
+                continue;
+            }
+
+            if ($name === 'record') {
+                $arguments[] = $record;
+
+                continue;
+            }
+
+            if ($name === 'state') {
+                $arguments[] = $state;
+
+                continue;
+            }
+
+            if ($parameter->isDefaultValueAvailable()) {
+                $arguments[] = $parameter->getDefaultValue();
+
+                continue;
+            }
+
+            if ($parameter->allowsNull()) {
+                $arguments[] = null;
+
+                continue;
+            }
+
+            $arguments[] = null;
+        }
+
+        return $fallback(...$arguments);
     }
 }

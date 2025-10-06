@@ -14,6 +14,7 @@ use Filament\Infolists\Components\RepeatableEntry\TableColumn;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Arr;
 use Livewire\Attributes\Computed;
@@ -146,9 +147,12 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                             ->badge()
                             ->money(
                                 currency: $this->moneyCurrency(
-                                    fallback: fn () => data_get($this->latestInvoice, 'currency'),
+                                    fallback: fn (?Get $get = null) => data_get($this->latestInvoice, 'currency'),
                                 ),
-                                divideBy: $this->moneyDivideBy(),
+                                divideBy: $this->moneyDivideBy(
+                                    currencyPath: 'currency',
+                                    fallback: fn (?Get $get = null) => data_get($this->latestInvoice, 'currency'),
+                                ),
                                 locale: $this->moneyLocale(),
                                 decimalPlaces: $this->moneyDecimalPlaces(),
                             ),
@@ -158,9 +162,12 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                             ->badge()
                             ->money(
                                 currency: $this->moneyCurrency(
-                                    fallback: fn () => data_get($this->latestInvoice, 'currency'),
+                                    fallback: fn (?Get $get = null) => data_get($this->latestInvoice, 'currency'),
                                 ),
-                                divideBy: $this->moneyDivideBy(),
+                                divideBy: $this->moneyDivideBy(
+                                    currencyPath: 'currency',
+                                    fallback: fn (?Get $get = null) => data_get($this->latestInvoice, 'currency'),
+                                ),
                                 locale: $this->moneyLocale(),
                                 decimalPlaces: $this->moneyDecimalPlaces(),
                             ),
@@ -170,9 +177,12 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                             ->badge()
                             ->money(
                                 currency: $this->moneyCurrency(
-                                    fallback: fn () => data_get($this->latestInvoice, 'currency'),
+                                    fallback: fn (?Get $get = null) => data_get($this->latestInvoice, 'currency'),
                                 ),
-                                divideBy: $this->moneyDivideBy(),
+                                divideBy: $this->moneyDivideBy(
+                                    currencyPath: 'currency',
+                                    fallback: fn (?Get $get = null) => data_get($this->latestInvoice, 'currency'),
+                                ),
                                 locale: $this->moneyLocale(),
                                 decimalPlaces: $this->moneyDecimalPlaces(),
                             ),
@@ -201,10 +211,13 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                                     ->badge()
                                     ->money(
                                         currency: $this->moneyCurrency(
-                                            fallback: fn ($record) => data_get($record, 'pricing.currency')
-                                                ?? data_get($this->latestInvoice, 'currency'),
+                                            ['pricing.currency'],
+                                            fallback: fn (?Get $get = null) => data_get($this->latestInvoice, 'currency'),
                                         ),
-                                        divideBy: $this->moneyDivideBy(),
+                                        divideBy: $this->moneyDivideBy(
+                                            currencyPath: ['pricing.currency'],
+                                            fallback: fn (?Get $get = null) => data_get($this->latestInvoice, 'currency'),
+                                        ),
                                         locale: $this->moneyLocale(),
                                         decimalPlaces: $this->moneyDecimalPlaces(),
                                     ),
@@ -213,11 +226,19 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                                     ->badge()
                                     ->money(
                                         currency: $this->moneyCurrency(
-                                            fallback: fn ($record) => data_get($record, 'currency')
-                                                ?? data_get($record, 'pricing.currency')
-                                                ?? data_get($this->latestInvoice, 'currency'),
+                                            [
+                                                'currency',
+                                                'pricing.currency',
+                                            ],
+                                            fallback: fn (?Get $get = null) => data_get($this->latestInvoice, 'currency'),
                                         ),
-                                        divideBy: $this->moneyDivideBy(),
+                                        divideBy: $this->moneyDivideBy(
+                                            currencyPath: [
+                                                'currency',
+                                                'pricing.currency',
+                                            ],
+                                            fallback: fn (?Get $get = null) => data_get($this->latestInvoice, 'currency'),
+                                        ),
                                         locale: $this->moneyLocale(),
                                         decimalPlaces: $this->moneyDecimalPlaces(),
                                     ),
@@ -256,13 +277,14 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                                             'currency',
                                             'payment.currency',
                                         ],
-                                        fallback: fn () => data_get($this->latestInvoice, 'currency'),
+                                        fallback: fn (?Get $get = null) => data_get($this->latestInvoice, 'currency'),
+                                        ),
                                         divideBy: $this->moneyDivideBy(
                                             currencyPath: [
                                                 'currency',
                                                 'payment.currency',
                                             ],
-                                            fallback: fn () => data_get($this->latestInvoice, 'currency'),
+                                            fallback: fn (?Get $get = null) => data_get($this->latestInvoice, 'currency'),
                                         ),
                                         locale: $this->moneyLocale(),
                                         decimalPlaces: $this->moneyDecimalPlaces(),
