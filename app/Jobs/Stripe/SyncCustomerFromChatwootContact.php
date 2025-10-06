@@ -1,6 +1,5 @@
 <?php
 
-
 namespace App\Jobs\Stripe;
 
 use App\Models\User;
@@ -13,6 +12,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Throwable;
 
 class SyncCustomerFromChatwootContact implements ShouldQueue
@@ -23,11 +23,9 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
         public readonly int|string $accountId,
         public readonly int|string $contactId,
         public readonly int|string $impersonatorId,
-        public readonly string     $customerId,
-        public readonly ?int       $notifiableId,
-    )
-    {
-    }
+        public readonly string $customerId,
+        public readonly ?int $notifiableId,
+    ) {}
 
     public function handle(): void
     {
@@ -41,7 +39,13 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
             'name' => data_get($contact, 'name'),
             'email' => data_get($contact, 'email'),
             'phone' => data_get($contact, 'phone_number'),
-        ], fn($value) => filled($value));
+        ], fn ($value) => filled($value));
+
+        $country = Str::upper((string) data_get($contact, 'additional_attributes.country_code', ''));
+
+        if ($country !== '') {
+            $payload['address'] = ['country' => $country];
+        }
 
         if ($payload === []) {
             $this->notify(
@@ -83,7 +87,7 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
     {
         $user = $this->resolveNotifiable();
 
-        if (!$user) {
+        if (! $user) {
             return;
         }
 
@@ -104,7 +108,7 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
 
     protected function resolveNotifiable(): ?User
     {
-        if (!$this->notifiableId) {
+        if (! $this->notifiableId) {
             return null;
         }
 

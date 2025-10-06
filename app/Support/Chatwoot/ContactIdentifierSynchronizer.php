@@ -140,7 +140,7 @@ class ContactIdentifierSynchronizer
         if ((string) Arr::get($metadata, 'chatwoot_contact_id') !== (string) $contactId) {
             return false;
         }
-        
+
         return true;
     }
 

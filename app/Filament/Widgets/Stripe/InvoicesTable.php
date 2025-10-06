@@ -2,9 +2,8 @@
 
 namespace App\Filament\Widgets\Stripe;
 
-
-use App\Filament\Concerns\HasMoneyBadges;
 use App\Filament\Widgets\BaseTableWidget;
+use App\Filament\Widgets\Stripe\Concerns\HandlesCurrencyDecimals;
 use App\Filament\Widgets\Stripe\Concerns\HasStripeInvoiceForm;
 use App\Filament\Widgets\Stripe\Concerns\InteractsWithStripeInvoices;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
@@ -17,16 +16,18 @@ use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Livewire\Attributes\On;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Stripe\Exception\ApiErrorException;
 use Stripe\StripeObject;
+
 class InvoicesTable extends BaseTableWidget
 {
-    use InteractsWithDashboardContext;
+    use HandlesCurrencyDecimals;
     use HasStripeInvoiceForm;
+    use InteractsWithDashboardContext;
     use InteractsWithStripeInvoices;
-    use HasMoneyBadges;
 
     protected int|string|array $columnSpan = 'full';
 
@@ -68,6 +69,7 @@ class InvoicesTable extends BaseTableWidget
                 );
             })
             ->defaultPaginationPageOption(3)
+            ->extremePaginationLinks()
             ->paginationPageOptions([3, 10, 25, 50])
             ->columns([
                 Split::make([
@@ -82,10 +84,10 @@ class InvoicesTable extends BaseTableWidget
                         TextColumn::make('total')
                             ->badge()
                             ->money(
-                                currency: $this->moneyCurrency(),
-                                divideBy: $this->moneyDivideBy(),
-                                locale: $this->moneyLocale(),
-                                decimalPlaces: $this->moneyDecimalPlaces(),
+                                currency: fn ($record) => $record['currency'],
+                                divideBy: fn ($record) => $this->currencyDivisor($record['currency']),
+                                locale: config('app.locale'),
+                                decimalPlaces: fn ($record) => $this->currencyDecimalPlaces($record['currency']),
                             )
                             ->color(fn ($record) => match ($record['status']) {
                                 'paid' => 'success',                     // ✅ money in
@@ -104,8 +106,15 @@ class InvoicesTable extends BaseTableWidget
                                 default => 'secondary',
                             }),
                     ])->space(2),
-                    TextColumn::make('created')
-                        ->since(),
+                    Stack::make([
+                        TextColumn::make('currency')
+                            ->state(fn ($record) => Str::upper($record['currency']))
+                            ->badge(),
+                    ]),
+                    Stack::make([
+                        TextColumn::make('created')
+                            ->since(),
+                    ]),
                 ]),
                 Panel::make([
                     Split::make([
@@ -116,42 +125,18 @@ class InvoicesTable extends BaseTableWidget
                             ->listWithLineBreaks(),
                         TextColumn::make('lines.data.*.amount')
                             ->listWithLineBreaks()
-                            ->badge()
                             ->money(
-                                currency: $this->moneyCurrency(),
-                                divideBy: $this->moneyDivideBy(),
-                                locale: $this->moneyLocale(),
-                                decimalPlaces: $this->moneyDecimalPlaces(),
-                            ),
+                                currency: fn ($record) => $record['currency'],
+                                divideBy: fn ($record) => $this->currencyDivisor($record['currency']),
+                                locale: config('app.locale'),
+                                decimalPlaces: fn ($record) => $this->currencyDecimalPlaces($record['currency']),
+                            )
+                            ->badge(),
                     ]),
                 ])->collapsible(),
             ])
             ->filters([])
             ->headerActions([
-                $this->configureInvoiceFormAction(
-                    Action::make('create')
-                        ->icon(Heroicon::OutlinedDocumentPlus)
-                        ->color('success')
-                        ->outlined()
-                        ->visible(false)
-                        ->modalIcon(Heroicon::OutlinedDocumentPlus)
-                        ->modalHeading('Create invoice')
-                ),
-                $this->configureInvoiceFormAction(
-                    Action::make('duplicateLatest')
-                        ->icon(Heroicon::OutlinedDocumentDuplicate)
-                        ->outlined()
-                        ->visible(false)
-                        ->color(fn () => $this->hasCustomerInvoices() ? 'primary' : 'gray')
-                        ->disabled(fn () => ! $this->hasCustomerInvoices())
-                        ->modalIcon(Heroicon::OutlinedDocumentDuplicate)
-                        ->modalHeading('Duplicate latest invoice')
-                )
-                    ->fillForm(function () {
-                        $invoice = $this->latestCustomerInvoice();
-
-                        return $this->getInvoiceFormDefaults($invoice);
-                    }),
                 Action::make('sendLatest')
                     ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
                     ->outlined()
@@ -178,7 +163,7 @@ class InvoicesTable extends BaseTableWidget
                     )
                         ->fillForm(function ($record): array {
                             if ($record instanceof StripeObject) {
-                                $record = $this->normalizeStripeObject($record);
+                                $record = $record->toArray();
                             }
 
                             return $this->getInvoiceFormDefaults(is_array($record) ? $record : null);
@@ -202,9 +187,6 @@ class InvoicesTable extends BaseTableWidget
             ->toolbarActions([]);
     }
 
-    /**
-     * @throws ApiErrorException
-     */
     #[Computed(persist: true)]
     private function customerInvoices(): array
     {
@@ -215,7 +197,10 @@ class InvoicesTable extends BaseTableWidget
         }
 
         try {
-            return $this->fetchStripeInvoices($customerId);
+            return array_map(
+                fn (StripeObject $invoice) => $invoice->toArray(),
+                $this->fetchStripeInvoices($customerId)
+            );
         } catch (ApiErrorException $exception) {
             report($exception);
 
@@ -228,7 +213,6 @@ class InvoicesTable extends BaseTableWidget
     {
         $this->refreshInvoices();
     }
-
 
     protected function afterInvoiceFormHandled(): void
     {
@@ -246,9 +230,6 @@ class InvoicesTable extends BaseTableWidget
         $this->sendHostedInvoiceLink($latest);
     }
 
-    /**
-     * @throws ApiErrorException
-     */
     private function hasCustomerInvoices(): bool
     {
         return $this->customerInvoices() !== [];
@@ -264,13 +245,17 @@ class InvoicesTable extends BaseTableWidget
             return null;
         }
 
-        return $invoice !== [] ? $invoice : null;
+        if (! $invoice instanceof StripeObject) {
+            return null;
+        }
+
+        return $invoice->toArray();
     }
 
     private function sendInvoiceRecordLink($record): void
     {
         if ($record instanceof StripeObject) {
-            $record = $this->normalizeStripeObject($record);
+            $record = $record->toArray();
         }
 
         if (! is_array($record)) {
@@ -279,5 +264,4 @@ class InvoicesTable extends BaseTableWidget
 
         $this->sendHostedInvoiceLink($record);
     }
-
 }

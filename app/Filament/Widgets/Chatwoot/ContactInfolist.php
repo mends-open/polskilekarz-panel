@@ -5,16 +5,19 @@ namespace App\Filament\Widgets\Chatwoot;
 use App\Filament\Widgets\BaseSchemaWidget;
 use App\Jobs\Stripe\SyncCustomerFromChatwootContact;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
+use App\Support\Dashboard\StripeContext;
 use Filament\Actions\Action;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Notifications\Notification;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Filament\Notifications\Notification;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
+use Stripe\Exception\ApiErrorException;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 
@@ -68,12 +71,10 @@ class ContactInfolist extends BaseSchemaWidget
     public function schema(Schema $schema): Schema
     {
         $chatwootContext = $this->chatwootContext();
-        $stripeContext = $this->stripeContext();
 
         $syncReady = $chatwootContext->accountId !== null
             && $chatwootContext->contactId !== null
-            && $chatwootContext->currentUserId !== null
-            && $stripeContext->hasCustomer();
+            && $chatwootContext->currentUserId !== null;
 
         return $schema
             ->state($this->chatwootContact())
@@ -129,21 +130,88 @@ class ContactInfolist extends BaseSchemaWidget
         $contactId = $chatwootContext->contactId;
         $impersonatorId = $chatwootContext->currentUserId;
 
-        if (! $customerId) {
+        if (! $accountId || ! $contactId || ! $impersonatorId) {
             Notification::make()
-                ->title('Missing Stripe context')
-                ->body('We could not find the Stripe customer to update. Please select a customer first.')
+                ->title('Missing Chatwoot context')
+                ->body('We could not find the Chatwoot contact details. Please open this widget from a Chatwoot conversation.')
                 ->danger()
                 ->send();
 
             return;
         }
 
-        if (! $accountId || ! $contactId || ! $impersonatorId) {
+        try {
+            $contact = chatwoot()
+                ->platform()
+                ->impersonate($impersonatorId)
+                ->contacts()
+                ->get($accountId, $contactId)['payload'] ?? [];
+        } catch (ConnectionException|RequestException $exception) {
+            report($exception);
+
             Notification::make()
-                ->title('Missing Chatwoot context')
-                ->body('We could not find the Chatwoot contact details. Please open this widget from a Chatwoot conversation.')
+                ->title('Failed to load Chatwoot contact')
+                ->body('We were unable to load the Chatwoot contact details. Please try again.')
                 ->danger()
+                ->send();
+
+            return;
+        }
+
+        $payload = array_filter([
+            'name' => data_get($contact, 'name'),
+            'email' => data_get($contact, 'email'),
+            'phone' => data_get($contact, 'phone_number'),
+        ], fn ($value) => filled($value));
+
+        $country = Str::upper((string) data_get($contact, 'additional_attributes.country_code', ''));
+
+        if ($country !== '') {
+            $payload['address'] = ['country' => $country];
+        }
+
+        if (! $customerId) {
+            $metadata = [
+                'chatwoot_account_id' => (string) $accountId,
+                'chatwoot_contact_id' => (string) $contactId,
+            ];
+
+            if ($metadata !== []) {
+                $payload['metadata'] = $metadata;
+            }
+
+            try {
+                $customer = stripe()->customers->create($payload);
+            } catch (ApiErrorException $exception) {
+                report($exception);
+
+                Notification::make()
+                    ->title('Failed to create Stripe customer')
+                    ->body('We were unable to create a Stripe customer from the Chatwoot contact. Please try again.')
+                    ->danger()
+                    ->send();
+
+                return;
+            }
+
+            $this->dashboardContext()->storeStripe(new StripeContext($customer->id));
+
+            Notification::make()
+                ->title('Stripe customer created')
+                ->body('A Stripe customer was created from the Chatwoot contact details.')
+                ->success()
+                ->send();
+
+            $this->reset();
+
+            return;
+        }
+
+        if ($payload === []) {
+            Notification::make()
+                ->title('No contact details to sync')
+                ->body('The Chatwoot contact does not have any details to copy to the Stripe customer.')
+                ->warning()
                 ->send();
 
             return;
