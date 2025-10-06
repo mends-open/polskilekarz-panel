@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets\Stripe;
 
 use App\Filament\Widgets\BaseTableWidget;
+use App\Filament\Widgets\Concerns\HasMoneyBadges;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -23,6 +24,7 @@ use Stripe\StripeObject;
 class PaymentsTable extends BaseTableWidget
 {
     use InteractsWithDashboardContext;
+    use HasMoneyBadges;
 
     protected int|string|array $columnSpan = 'full';
 
@@ -80,10 +82,10 @@ class PaymentsTable extends BaseTableWidget
                             ->badge(),
                     ])->space(2),
                     Stack::make([
-                        TextColumn::make('amount')
-                            ->state(fn ($record) => $record['amount'] / 100)
-                            ->badge()
-                            ->money(fn ($record) => $record['currency'])
+                        $this->moneyBadge(
+                            TextColumn::make('amount'),
+                            currency: fn ($record) => $record['currency'],
+                        )
                             ->color(fn ($record) => match ($record['status']) {
                                 'succeeded' => 'success',   // ✅ received
                                 default => 'gray',          // ❌ not yet settled

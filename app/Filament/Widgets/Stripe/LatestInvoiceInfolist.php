@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets\Stripe;
 
 use App\Filament\Widgets\BaseSchemaWidget;
+use App\Filament\Widgets\Concerns\HasMoneyBadges;
 use App\Filament\Widgets\Stripe\Concerns\InterpretsStripeAmounts;
 use App\Filament\Widgets\Stripe\Concerns\HasStripeInvoiceForm;
 use App\Filament\Widgets\Stripe\Concerns\InteractsWithStripeInvoices;
@@ -25,6 +26,7 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
     use InterpretsStripeAmounts;
     use HasStripeInvoiceForm;
     use InteractsWithStripeInvoices;
+    use HasMoneyBadges;
 
     protected int|string|array $columnSpan = 'full';
 
@@ -141,17 +143,26 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                             ->date()
                             ->inlineLabel(),
 
-                        TextEntry::make('total')
-                            ->label('Total')
-                            ->inlineLabel(),
+                        $this->moneyBadge(
+                            TextEntry::make('total')
+                                ->label('Total')
+                                ->inlineLabel(),
+                            currency: fn (TextEntry $entry) => Arr::get($entry->getRecord(), 'currency'),
+                        ),
 
-                        TextEntry::make('amount_paid')
-                            ->label('Amount Paid')
-                            ->inlineLabel(),
+                        $this->moneyBadge(
+                            TextEntry::make('amount_paid')
+                                ->label('Amount Paid')
+                                ->inlineLabel(),
+                            currency: fn (TextEntry $entry) => Arr::get($entry->getRecord(), 'currency'),
+                        ),
 
-                        TextEntry::make('amount_remaining')
-                            ->label('Amount Remaining')
-                            ->inlineLabel(),
+                        $this->moneyBadge(
+                            TextEntry::make('amount_remaining')
+                                ->label('Amount Remaining')
+                                ->inlineLabel(),
+                            currency: fn (TextEntry $entry) => Arr::get($entry->getRecord(), 'currency'),
+                        ),
 
                         TextEntry::make('collection_method')
                             ->inlineLabel(),
@@ -169,7 +180,10 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                                 TextEntry::make('description'),
                                 TextEntry::make('pricing.unit_amount_decimal'),
                                 TextEntry::make('quantity'),
-                                TextEntry::make('amount'),
+                                $this->moneyBadge(
+                                    TextEntry::make('amount'),
+                                    currency: fn (TextEntry $entry) => Arr::get($entry->getRecord(), 'currency') ?? Arr::get($entry->getRecord(), 'pricing.currency'),
+                                ),
                             ]),
                         RepeatableEntry::make('payments.data')
                             ->hiddenLabel()
@@ -197,7 +211,10 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                                         'failed' => 'danger',
                                         default => 'gray',
                                     }),
-                                TextEntry::make('amount_paid'),
+                                $this->moneyBadge(
+                                    TextEntry::make('amount_paid'),
+                                    currency: fn (TextEntry $entry) => Arr::get($entry->getRecord(), 'currency'),
+                                ),
                                 TextEntry::make('currency'),
                                 TextEntry::make('created')
                                     ->since(),
