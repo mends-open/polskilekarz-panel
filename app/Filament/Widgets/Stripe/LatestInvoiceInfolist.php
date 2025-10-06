@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets\Stripe;
 
+use App\Filament\Concerns\HasMoneyBadges;
 use App\Filament\Widgets\BaseSchemaWidget;
 use App\Filament\Widgets\Stripe\Concerns\InterpretsStripeAmounts;
 use App\Filament\Widgets\Stripe\Concerns\HasStripeInvoiceForm;
@@ -25,6 +26,7 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
     use InterpretsStripeAmounts;
     use HasStripeInvoiceForm;
     use InteractsWithStripeInvoices;
+    use HasMoneyBadges;
 
     protected int|string|array $columnSpan = 'full';
 
@@ -140,13 +142,40 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                             ->inlineLabel(),
                         TextEntry::make('total')
                             ->label('Total')
-                            ->inlineLabel(),
+                            ->inlineLabel()
+                            ->badge()
+                            ->money(
+                                currency: $this->moneyCurrency(
+                                    fallback: fn () => data_get($this->latestInvoice, 'currency'),
+                                ),
+                                divideBy: $this->moneyDivideBy(),
+                                locale: $this->moneyLocale(),
+                                decimalPlaces: $this->moneyDecimalPlaces(),
+                            ),
                         TextEntry::make('amount_paid')
                             ->label('Amount Paid')
-                            ->inlineLabel(),
+                            ->inlineLabel()
+                            ->badge()
+                            ->money(
+                                currency: $this->moneyCurrency(
+                                    fallback: fn () => data_get($this->latestInvoice, 'currency'),
+                                ),
+                                divideBy: $this->moneyDivideBy(),
+                                locale: $this->moneyLocale(),
+                                decimalPlaces: $this->moneyDecimalPlaces(),
+                            ),
                         TextEntry::make('amount_remaining')
                             ->label('Amount Remaining')
-                            ->inlineLabel(),
+                            ->inlineLabel()
+                            ->badge()
+                            ->money(
+                                currency: $this->moneyCurrency(
+                                    fallback: fn () => data_get($this->latestInvoice, 'currency'),
+                                ),
+                                divideBy: $this->moneyDivideBy(),
+                                locale: $this->moneyLocale(),
+                                decimalPlaces: $this->moneyDecimalPlaces(),
+                            ),
                         TextEntry::make('collection_method')
                             ->inlineLabel(),
                         RepeatableEntry::make('lines.data')
@@ -168,9 +197,30 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                                     ->badge()
                                     ->color('gray'),
                                 TextEntry::make('description'),
-                                TextEntry::make('pricing.unit_amount_decimal'),
+                                TextEntry::make('pricing.unit_amount_decimal')
+                                    ->badge()
+                                    ->money(
+                                        currency: $this->moneyCurrency(
+                                            fallback: fn ($record) => data_get($record, 'pricing.currency')
+                                                ?? data_get($this->latestInvoice, 'currency'),
+                                        ),
+                                        divideBy: $this->moneyDivideBy(),
+                                        locale: $this->moneyLocale(),
+                                        decimalPlaces: $this->moneyDecimalPlaces(),
+                                    ),
                                 TextEntry::make('quantity'),
-                                TextEntry::make('amount'),
+                                TextEntry::make('amount')
+                                    ->badge()
+                                    ->money(
+                                        currency: $this->moneyCurrency(
+                                            fallback: fn ($record) => data_get($record, 'currency')
+                                                ?? data_get($record, 'pricing.currency')
+                                                ?? data_get($this->latestInvoice, 'currency'),
+                                        ),
+                                        divideBy: $this->moneyDivideBy(),
+                                        locale: $this->moneyLocale(),
+                                        decimalPlaces: $this->moneyDecimalPlaces(),
+                                    ),
                             ]),
                         RepeatableEntry::make('payments.data')
                             ->hiddenLabel()
@@ -199,7 +249,14 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                                         'failed' => 'danger',
                                         default => 'gray',
                                     }),
-                                TextEntry::make('amount_paid'),
+                                TextEntry::make('amount_paid')
+                                    ->badge()
+                                    ->money(
+                                        currency: $this->moneyCurrency('currency'),
+                                        divideBy: $this->moneyDivideBy(),
+                                        locale: $this->moneyLocale(),
+                                        decimalPlaces: $this->moneyDecimalPlaces(),
+                                    ),
                                 TextEntry::make('currency'),
                                 TextEntry::make('created')
                                     ->since(),
