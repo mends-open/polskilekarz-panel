@@ -28,6 +28,7 @@ use Filament\Tables\Table;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Fluent;
 use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Computed;
@@ -44,8 +45,6 @@ class InvoicesTable extends BaseTableWidget
 
     protected static ?string $heading = 'Invoices';
 
-    private ?array $customerInvoicesCache = null;
-
     private ?Collection $stripePriceCollectionCache = null;
 
     private ?Collection $stripeProductCollectionCache = null;
@@ -61,17 +60,11 @@ class InvoicesTable extends BaseTableWidget
         $this->resetTable();
         $this->resetErrorBag();
         $this->resetValidation();
-        $this->clearCustomerInvoicesCache();
     }
 
     private function refreshTable(): void
     {
         $this->resetComponent();
-    }
-
-    private function clearCustomerInvoicesCache(): void
-    {
-        $this->customerInvoicesCache = null;
     }
 
     #[Computed(persist: true)]
@@ -95,6 +88,7 @@ class InvoicesTable extends BaseTableWidget
     {
         return [
             Repeater::make('line_items')
+                ->compact()
                 ->label('Products')
                 ->reorderable(false)
                 ->required()
@@ -103,10 +97,14 @@ class InvoicesTable extends BaseTableWidget
                 ->validationAttribute('products')
                 ->hiddenLabel()
                 ->table([
-                    TableColumn::make('product'),
-                    TableColumn::make('price'),
-                    TableColumn::make('quantity'),
-                    TableColumn::make('subtotal'),
+                    TableColumn::make('Product')
+                        ->width('45%'),
+                    TableColumn::make('Price')
+                        ->width('25%'),
+                    TableColumn::make('Quantity')
+                        ->width('10%'),
+                    TableColumn::make('Subtotal')
+                        ->width('20%'),
                 ])
                 ->schema([
                     Select::make('product')
@@ -504,30 +502,37 @@ class InvoicesTable extends BaseTableWidget
     private function sanitizeLineItemsForState(array $lineItems): array
     {
         return collect($lineItems)
-            ->map(function ($item): array {
-                $product = is_array($item) ? data_get($item, 'product') : null;
-                $price = is_array($item) ? data_get($item, 'price') : null;
-                $quantity = $this->normalizeQuantity(is_array($item) ? data_get($item, 'quantity') : null);
-
-                $product = is_string($product) && $product !== '' ? $product : null;
-                $price = is_string($price) && $price !== '' ? $price : null;
-
-                if ($price) {
-                    $resolvedProduct = $this->resolvePriceProductId($price);
-
-                    if ($resolvedProduct) {
-                        $product = $resolvedProduct;
-                    }
-                }
-
-                return [
-                    'product' => $product,
-                    'price' => $price,
-                    'quantity' => $quantity,
-                ];
-            })
+            ->map(fn ($item): Fluent => $this->mapSanitizedLineItem($item))
+            ->filter(fn (Fluent $item): bool => filled($item->get('product')) || filled($item->get('price')))
             ->values()
+            ->map(fn (Fluent $item): array => $item->toArray())
             ->all();
+    }
+
+    private function mapSanitizedLineItem(mixed $item): Fluent
+    {
+        $state = is_array($item) ? $item : [];
+
+        $product = data_get($state, 'product');
+        $price = data_get($state, 'price');
+        $quantity = $this->normalizeQuantity(data_get($state, 'quantity'));
+
+        $product = is_string($product) && $product !== '' ? $product : null;
+        $price = is_string($price) && $price !== '' ? $price : null;
+
+        if ($price) {
+            $resolvedProduct = $this->resolvePriceProductId($price);
+
+            if (is_string($resolvedProduct) && $resolvedProduct !== '') {
+                $product = $resolvedProduct;
+            }
+        }
+
+        return fluent([
+            'product' => $product,
+            'price' => $price,
+            'quantity' => $quantity,
+        ]);
     }
 
     private function normalizeLineItemsState(array $lineItems): array
@@ -677,22 +682,29 @@ class InvoicesTable extends BaseTableWidget
 
     private function resolveLineItemsState(Get $get): array
     {
-        $lineItems = $get('../../line_items') ?? $get('line_items');
+        $lineItems = $get('line_items', isAbsolute: true);
 
-        $lineItems = is_array($lineItems) ? $lineItems : [];
+        if (! is_array($lineItems)) {
+            $lineItems = $get('../../line_items');
+        }
 
-        return $this->normalizeLineItemsState($lineItems);
+        return $this->normalizeLineItemsState(is_array($lineItems) ? $lineItems : []);
     }
 
     private function updateLineItemsState(Set $set, array $lineItems): void
     {
-        $set('../../line_items', $lineItems);
-        $set('line_items', $lineItems,);
+        $set('../../line_items', $lineItems, shouldCallUpdatedHooks: true);
+        $set('line_items', $lineItems, isAbsolute: true, shouldCallUpdatedHooks: true);
     }
 
     private function guardLineItemsCurrency(Set $set, Get $get): void
     {
-        $lineItems = $get('../../line_items') ?? $get('line_items');
+        $lineItems = $get('line_items', isAbsolute: true);
+
+        if (! is_array($lineItems)) {
+            $lineItems = $get('../../line_items');
+        }
+
         $lineItems = is_array($lineItems) ? $lineItems : [];
 
         $normalized = $this->normalizeLineItemsState($lineItems);
@@ -936,7 +948,7 @@ class InvoicesTable extends BaseTableWidget
     public function table(Table $table): Table
     {
         return $table
-            ->records(fn () => $this->getCustomerInvoices())
+            ->records(fn () => $this->customerInvoices())
             ->columns([
                 Split::make([
                     Stack::make([
@@ -1094,23 +1106,20 @@ class InvoicesTable extends BaseTableWidget
     /**
      * @throws ApiErrorException
      */
-    private function getCustomerInvoices(): array
+    #[Computed(persist: true)]
+    private function customerInvoices(): array
     {
-        if ($this->customerInvoicesCache !== null) {
-            return $this->customerInvoicesCache;
-        }
-
         $customerId = $this->stripeContext()->customerId;
 
         if (! $customerId) {
-            return $this->customerInvoicesCache = [];
+            return [];
         }
 
         $response = stripe()->invoices->all([
             'customer' => $customerId,
         ]);
 
-        return $this->customerInvoicesCache = collect($response->data ?? [])
+        return collect($response->data ?? [])
             ->map(fn (mixed $invoice) => $this->normalizeStripeInvoice($invoice))
             ->all();
     }
@@ -1119,7 +1128,6 @@ class InvoicesTable extends BaseTableWidget
     public function refreshContext(): void
     {
         $this->resetTable();
-        $this->clearCustomerInvoicesCache();
     }
 
     private function sendLatestInvoice(): void
@@ -1146,18 +1154,16 @@ class InvoicesTable extends BaseTableWidget
     }
 
     /**
-     * @throws ContainerExceptionInterface
      * @throws ApiErrorException
-     * @throws NotFoundExceptionInterface
      */
     private function hasCustomerInvoices(): bool
     {
-        return $this->getCustomerInvoices() !== [];
+        return $this->customerInvoices() !== [];
     }
 
     private function latestCustomerInvoice(): ?array
     {
-        return collect($this->getCustomerInvoices())
+        return collect($this->customerInvoices())
             ->sortByDesc('created')
             ->first() ?: null;
     }
