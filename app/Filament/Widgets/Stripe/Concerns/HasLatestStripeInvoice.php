@@ -3,83 +3,75 @@
 namespace App\Filament\Widgets\Stripe\Concerns;
 
 use Livewire\Attributes\Computed;
-use Stripe\Exception\ApiErrorException;
+
+use function rescue;
 
 trait HasLatestStripeInvoice
 {
     use InteractsWithStripeInvoices;
 
+    protected ?array $latestInvoicePayloadCache = null;
+
     #[Computed(persist: true)]
     protected function latestInvoice(): array
     {
-        $customerId = (string) $this->stripeContext()->customerId;
-
-        if ($customerId === '') {
-            return [];
-        }
-
-        try {
-            return $this->latestStripeInvoice($customerId, $this->latestInvoiceRequestOptions());
-        } catch (ApiErrorException $exception) {
-            report($exception);
-
-            return [];
-        }
+        return $this->latestInvoicePayload()['invoice'];
     }
 
     #[Computed(persist: true)]
     protected function latestInvoiceLines(): array
     {
-        $invoiceId = (string) data_get($this->latestInvoice, 'id', '');
-
-        if ($invoiceId === '') {
-            return [];
-        }
-
-        try {
-            return $this->latestStripeInvoiceLines($invoiceId, $this->latestInvoiceLinesRequestOptions());
-        } catch (ApiErrorException $exception) {
-            report($exception);
-
-            return [];
-        }
+        return $this->latestInvoicePayload()['lines'];
     }
 
     #[Computed(persist: true)]
     protected function latestInvoicePayments(): array
     {
-        $invoiceId = (string) data_get($this->latestInvoice, 'id', '');
-
-        if ($invoiceId === '') {
-            return [];
-        }
-
-        try {
-            return $this->latestStripeInvoicePayments($invoiceId, $this->latestInvoicePaymentsRequestOptions());
-        } catch (ApiErrorException $exception) {
-            report($exception);
-
-            return [];
-        }
-    }
-
-    protected function latestInvoiceRequestOptions(): array
-    {
-        return [];
-    }
-
-    protected function latestInvoiceLinesRequestOptions(): array
-    {
-        return [];
-    }
-
-    protected function latestInvoicePaymentsRequestOptions(): array
-    {
-        return [];
+        return $this->latestInvoicePayload()['payments'];
     }
 
     protected function clearLatestInvoiceCache(): void
     {
+        $this->latestInvoicePayloadCache = null;
         unset($this->latestInvoice, $this->latestInvoiceLines, $this->latestInvoicePayments);
+    }
+
+    protected function latestInvoicePayload(): array
+    {
+        if (is_array($this->latestInvoicePayloadCache)) {
+            return $this->latestInvoicePayloadCache;
+        }
+
+        $empty = [
+            'invoice' => [],
+            'lines' => [],
+            'payments' => [],
+        ];
+
+        $customerId = (string) data_get($this->stripeContext(), 'customerId', '');
+
+        if ($customerId === '') {
+            return $this->latestInvoicePayloadCache = $empty;
+        }
+
+        return $this->latestInvoicePayloadCache = rescue(function () use ($customerId, $empty) {
+            $invoice = $this->latestStripeInvoice($customerId);
+
+            if ($invoice === []) {
+                return $empty;
+            }
+
+            $invoiceId = (string) data_get($invoice, 'id', '');
+
+            if ($invoiceId === '') {
+                return array_replace($empty, ['invoice' => $invoice]);
+            }
+
+            return [
+                'invoice' => $invoice,
+                'lines' => $this->latestStripeInvoiceLines($invoiceId),
+                'payments' => $this->latestStripeInvoicePayments($invoiceId),
+            ];
+        }, $empty, report: true);
     }
 }

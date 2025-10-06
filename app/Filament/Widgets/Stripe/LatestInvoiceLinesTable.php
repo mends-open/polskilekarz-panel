@@ -8,12 +8,8 @@ use App\Filament\Widgets\Stripe\Concerns\HasLatestStripeInvoice;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use Filament\Actions\Action;
 use Filament\Support\Icons\Heroicon;
-use Filament\Tables\Columns\Layout\Split;
-use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Illuminate\Pagination\LengthAwarePaginator;
-use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 
 class LatestInvoiceLinesTable extends BaseTableWidget
@@ -24,8 +20,6 @@ class LatestInvoiceLinesTable extends BaseTableWidget
 
     protected int|string|array $columnSpan = 'full';
 
-    public $tableRecordsPerPage = 5;
-
     protected static ?string $heading = 'Latest Invoice Items';
 
     public function isReady(): bool
@@ -33,8 +27,49 @@ class LatestInvoiceLinesTable extends BaseTableWidget
         return $this->dashboardContextIsReady();
     }
 
-    #[Computed(persist: true)]
-    protected function latestInvoiceLineItems(): array
+    public function table(Table $table): Table
+    {
+        return $table
+            ->paginated(false)
+            ->records(fn () => $this->resolveLineItems())
+            ->columns([
+                TextColumn::make('description')
+                    ->label('Description')
+                    ->wrap(),
+                TextColumn::make('quantity')
+                    ->label('Qty')
+                    ->badge()
+                    ->color('gray'),
+                TextColumn::make('unit_amount')
+                    ->label('Unit Price')
+                    ->badge()
+                    ->money(
+                        currency: fn ($record) => $record['currency'],
+                        divideBy: fn ($record) => $this->currencyDivisor($record['currency']),
+                        locale: config('app.locale'),
+                        decimalPlaces: fn ($record) => $this->currencyDecimalPlaces($record['currency']),
+                    ),
+                TextColumn::make('amount')
+                    ->label('Subtotal')
+                    ->badge()
+                    ->color('primary')
+                    ->money(
+                        currency: fn ($record) => $record['currency'],
+                        divideBy: fn ($record) => $this->currencyDivisor($record['currency']),
+                        locale: config('app.locale'),
+                        decimalPlaces: fn ($record) => $this->currencyDecimalPlaces($record['currency']),
+                    ),
+            ])
+            ->headerActions([
+                Action::make('refresh')
+                    ->action(fn () => $this->refreshLines())
+                    ->hiddenLabel()
+                    ->icon(Heroicon::OutlinedArrowPath)
+                    ->link(),
+            ]);
+    }
+
+    protected function resolveLineItems(): array
     {
         $invoice = $this->latestInvoice;
 
@@ -67,96 +102,23 @@ class LatestInvoiceLinesTable extends BaseTableWidget
             ->all();
     }
 
-    public function table(Table $table): Table
-    {
-        return $table
-            ->records(function (int $page, int $recordsPerPage): LengthAwarePaginator {
-                $items = collect($this->latestInvoiceLineItems);
-
-                $records = $items
-                    ->forPage($page, $recordsPerPage)
-                    ->values()
-                    ->all();
-
-                return new LengthAwarePaginator(
-                    items: $records,
-                    total: $items->count(),
-                    perPage: $recordsPerPage,
-                    currentPage: $page,
-                );
-            })
-            ->defaultPaginationPageOption(5)
-            ->paginationPageOptions([5, 10, 25, 50])
-            ->columns([
-                Split::make([
-                    Stack::make([
-                        TextColumn::make('description')
-                            ->label('Description')
-                            ->wrap(),
-                    ])->grow(),
-                    Stack::make([
-                        TextColumn::make('quantity')
-                            ->label('Quantity')
-                            ->badge()
-                            ->color('gray'),
-                    ])->grow(false),
-                    Stack::make([
-                        TextColumn::make('unit_amount')
-                            ->label('Unit Price')
-                            ->money(
-                                currency: fn ($record) => $record['currency'],
-                                divideBy: fn ($record) => $this->currencyDivisor($record['currency']),
-                                locale: config('app.locale'),
-                                decimalPlaces: fn ($record) => $this->currencyDecimalPlaces($record['currency']),
-                            )
-                            ->badge(),
-                    ])->grow(false),
-                    Stack::make([
-                        TextColumn::make('amount')
-                            ->label('Subtotal')
-                            ->money(
-                                currency: fn ($record) => $record['currency'],
-                                divideBy: fn ($record) => $this->currencyDivisor($record['currency']),
-                                locale: config('app.locale'),
-                                decimalPlaces: fn ($record) => $this->currencyDecimalPlaces($record['currency']),
-                            )
-                            ->badge()
-                            ->color('primary'),
-                    ])->grow(false),
-                ]),
-            ])
-            ->headerActions([
-                Action::make('refresh')
-                    ->action(fn () => $this->refreshTable())
-                    ->hiddenLabel()
-                    ->icon(Heroicon::OutlinedArrowPath)
-                    ->link(),
-            ]);
-    }
-
-    private function refreshTable(): void
-    {
-        $this->resetComponent();
-        $this->clearLatestInvoiceCache();
-        unset($this->latestInvoiceLineItems);
-    }
-
-    private function resetComponent(): void
+    private function refreshLines(): void
     {
         $this->resetTable();
         $this->resetErrorBag();
         $this->resetValidation();
+        $this->clearLatestInvoiceCache();
     }
 
     #[On('stripe.invoices.refresh')]
     public function handleInvoiceRefresh(): void
     {
-        $this->refreshTable();
+        $this->refreshLines();
     }
 
     #[On('stripe.set-context')]
     public function refreshContext(): void
     {
-        $this->refreshTable();
+        $this->refreshLines();
     }
 }
