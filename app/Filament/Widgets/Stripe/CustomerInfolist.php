@@ -95,7 +95,6 @@ class CustomerInfolist extends BaseSchemaWidget
                             ->placeholder('No phone'),
                         TextEntry::make('address.country')
                             ->label('Country')
-                            ->state(fn ($record) => Str::upper(Arr::get($record, 'address.country')))
                             ->inlineLabel()
                             ->badge()
                             ->placeholder('No country'),

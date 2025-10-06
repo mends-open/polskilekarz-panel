@@ -27,17 +27,7 @@ class Payments extends Dashboard
 
     protected function getHeaderActions(): array
     {
-        return [
-            $this->configureInvoiceFormAction(
-                Action::make('createInvoice')
-                    ->label('Create new')
-                    ->icon(Heroicon::OutlinedDocumentPlus)
-                    ->color('success')
-                    ->outlined()
-                    ->modalIcon(Heroicon::OutlinedDocumentPlus)
-                    ->modalHeading('Create invoice')
-            ),
-        ];
+        return [];
     }
 
     public function getWidgets(): array
