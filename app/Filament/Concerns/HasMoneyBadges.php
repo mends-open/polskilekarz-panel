@@ -8,7 +8,7 @@ use Closure;
 
 trait HasMoneyBadges
 {
-    protected function moneyCurrency(?string $path = 'currency', BackedEnum|Closure|string|null $fallback = null): Closure
+    protected function moneyCurrency(string|array|null $path = 'currency', BackedEnum|Closure|string|null $fallback = null): Closure
     {
         return function ($record = null, $state = null) use ($path, $fallback): ?string {
             return $this->resolveCurrencyForMoneyBadge($record, $state, $path, $fallback);
@@ -17,7 +17,7 @@ trait HasMoneyBadges
 
     protected function moneyDivideBy(
         int $defaultDivideBy = 100,
-        ?string $currencyPath = 'currency',
+        string|array|null $currencyPath = 'currency',
         BackedEnum|Closure|string|null $fallback = null,
     ): Closure {
         return function ($record = null, $state = null) use ($defaultDivideBy, $currencyPath, $fallback): int {
@@ -44,22 +44,26 @@ trait HasMoneyBadges
     protected function resolveCurrencyForMoneyBadge(
         $record,
         $state,
-        ?string $path,
+        string|array|null $paths,
         BackedEnum|Closure|string|null $fallback,
     ): ?string {
+        $paths = $paths === null ? [] : (array) $paths;
+
         $targets = array_values(array_filter([
             $state,
             $record !== $state ? $record : null,
         ], static fn ($value) => $value !== null));
 
-        if ($path !== null) {
+        if ($paths !== []) {
             foreach ($targets as $target) {
-                $currency = data_get($target, $path);
+                foreach ($paths as $path) {
+                    $currency = data_get($target, $path);
 
-                $normalized = $this->normalizeCurrencyValue($currency);
+                    $normalized = $this->normalizeCurrencyValue($currency);
 
-                if ($normalized !== null) {
-                    return $normalized;
+                    if ($normalized !== null) {
+                        return $normalized;
+                    }
                 }
             }
         }

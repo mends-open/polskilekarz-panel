@@ -252,8 +252,16 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                                 TextEntry::make('amount_paid')
                                     ->badge()
                                     ->money(
-                                        currency: $this->moneyCurrency('currency'),
-                                        divideBy: $this->moneyDivideBy(),
+                                        currency: $this->moneyCurrency([
+                                            'currency',
+                                            'payment.currency',
+                                        ]),
+                                        divideBy: $this->moneyDivideBy(
+                                            currencyPath: [
+                                                'currency',
+                                                'payment.currency',
+                                            ],
+                                        ),
                                         locale: $this->moneyLocale(),
                                         decimalPlaces: $this->moneyDecimalPlaces(),
                                     ),
