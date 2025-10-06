@@ -59,7 +59,7 @@ class CustomerInfolist extends BaseSchemaWidget
             ->components([
                 Section::make('customer')
                     ->headerActions([
-                        Action::make('sendCustomerPortalLink')
+                        Action::make('sendPortalLink')
                             ->label('Send portal link')
                             ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
                             ->outlined()
@@ -70,13 +70,14 @@ class CustomerInfolist extends BaseSchemaWidget
                             ->color($portalReady ? 'warning' : 'gray')
                             ->disabled(! $portalReady)
                             ->action(fn () => $this->sendCustomerPortalLink()),
-                        Action::make('openCustomerPortal')
+                        Action::make('openPortal')
                             ->label('Open portal')
                             ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
                             ->outlined()
                             ->color($customerReady ? 'primary' : 'gray')
                             ->disabled(! $customerReady)
-                            ->action(fn () => $this->openCustomerPortal()),
+                            ->url($this->getCustomerPortalLink())
+                            ->openUrlInNewTab(),
                         Action::make('reset')
                             ->action(fn () => $this->reset())
                             ->hiddenLabel()
@@ -157,7 +158,7 @@ class CustomerInfolist extends BaseSchemaWidget
         $this->reset();
     }
 
-    protected function openCustomerPortal()
+    protected function getCustomerPortalLink(): ?string
     {
         $customerId = $this->stripeContext()->customerId;
 
@@ -191,6 +192,6 @@ class CustomerInfolist extends BaseSchemaWidget
             return null;
         }
 
-        return redirect()->away($session->url);
+        return $session->url;
     }
 }
