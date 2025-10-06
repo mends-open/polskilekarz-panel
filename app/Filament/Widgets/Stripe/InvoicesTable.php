@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets\Stripe;
 
 
+use App\Filament\Concerns\HasMoneyBadges;
 use App\Filament\Widgets\BaseTableWidget;
 use App\Filament\Widgets\Stripe\Concerns\HasStripeInvoiceForm;
 use App\Filament\Widgets\Stripe\Concerns\InteractsWithStripeInvoices;
@@ -25,6 +26,7 @@ class InvoicesTable extends BaseTableWidget
     use InteractsWithDashboardContext;
     use HasStripeInvoiceForm;
     use InteractsWithStripeInvoices;
+    use HasMoneyBadges;
 
     protected int|string|array $columnSpan = 'full';
 
@@ -79,7 +81,12 @@ class InvoicesTable extends BaseTableWidget
                     Stack::make([
                         TextColumn::make('total')
                             ->badge()
-                            ->money(fn ($record) => $record['currency'], 100)
+                            ->money(
+                                currency: $this->moneyCurrency(),
+                                divideBy: $this->moneyDivideBy(),
+                                locale: $this->moneyLocale(),
+                                decimalPlaces: $this->moneyDecimalPlaces(),
+                            )
                             ->color(fn ($record) => match ($record['status']) {
                                 'paid' => 'success',                     // ✅ money in
                                 'open', 'draft', 'uncollectible' => 'danger', // ❌ not collected
@@ -109,8 +116,13 @@ class InvoicesTable extends BaseTableWidget
                             ->listWithLineBreaks(),
                         TextColumn::make('lines.data.*.amount')
                             ->listWithLineBreaks()
-                            ->money(fn ($record) => $record['currency'], 100)
-                            ->badge(),
+                            ->badge()
+                            ->money(
+                                currency: $this->moneyCurrency(),
+                                divideBy: $this->moneyDivideBy(),
+                                locale: $this->moneyLocale(),
+                                decimalPlaces: $this->moneyDecimalPlaces(),
+                            ),
                     ]),
                 ])->collapsible(),
             ])
