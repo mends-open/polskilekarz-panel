@@ -12,6 +12,7 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Throwable;
 
 class SyncCustomerFromChatwootContact implements ShouldQueue
@@ -39,6 +40,12 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
             'email' => data_get($contact, 'email'),
             'phone' => data_get($contact, 'phone_number'),
         ], fn ($value) => filled($value));
+
+        $country = Str::upper((string) data_get($contact, 'additional_attributes.country_code', ''));
+
+        if ($country !== '') {
+            $payload['address'] = ['country' => $country];
+        }
 
         if ($payload === []) {
             $this->notify(

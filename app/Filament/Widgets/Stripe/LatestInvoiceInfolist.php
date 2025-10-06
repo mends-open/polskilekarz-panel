@@ -9,12 +9,12 @@ use App\Filament\Widgets\Stripe\Concerns\HasStripeInvoiceForm;
 use App\Filament\Widgets\Stripe\Concerns\InterpretsStripeAmounts;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use Filament\Actions\Action;
-use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Livewire\Attributes\On;
+use Stripe\StripeObject;
 
 class LatestInvoiceInfolist extends BaseSchemaWidget
 {
@@ -51,7 +51,8 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
 
     public function schema(Schema $schema): Schema
     {
-        $data = $this->latestInvoice;
+        $invoice = $this->latestInvoice;
+        $data = $invoice instanceof StripeObject ? $invoice->toArray() : [];
         $currency = (string) data_get($data, 'currency');
         $divideBy = $currency === '' ? 100 : $this->currencyDivisor($currency);
         $decimalPlaces = $currency === '' ? 2 : $this->currencyDecimalPlaces($currency);
@@ -63,22 +64,20 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                     ->columns(2)
                     ->headerActions([
                         $this->configureInvoiceFormAction(
-                            Action::make('duplicateLatest')
-                                ->label('Duplicate')
-                                ->icon(Heroicon::OutlinedDocumentDuplicate)
+                            Action::make('createInvoice')
+                                ->label('Create')
+                                ->icon(Heroicon::OutlinedDocumentPlus)
                                 ->outlined()
-                                ->color(blank($data) ? 'gray' : 'primary')
-                                ->disabled(blank($data))
-                                ->modalHeading('Duplicate latest invoice')
-                        )->fillForm(fn () => $this->getInvoiceFormDefaults(blank($data) ? null : $data)),
+                                ->color('success')
+                                ->modalHeading('Create invoice')
+                        ),
                         Action::make('sendLatest')
-                            ->requiresConfirmation()
                             ->label('Send')
                             ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
                             ->outlined()
                             ->color(blank($data) ? 'gray' : 'warning')
                             ->disabled(blank($data))
-                            ->action(fn () => $this->sendHostedInvoiceLink($data)),
+                            ->action(fn () => $this->sendHostedInvoiceLink($invoice)),
                         Action::make('openInvoice')
                             ->label('Open')
                             ->outlined()

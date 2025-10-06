@@ -28,13 +28,13 @@ trait InteractsWithStripeInvoices
                 return [];
             }
 
-            return [$this->normalizeStripeInvoice($invoice)];
+            return [$invoice];
         }
 
         $invoices = [];
 
         foreach ($response->autoPagingIterator() as $invoice) {
-            $invoices[] = $this->normalizeStripeInvoice($invoice);
+            $invoices[] = $invoice;
         }
 
         return $invoices;
@@ -43,47 +43,17 @@ trait InteractsWithStripeInvoices
     /**
      * @throws ApiErrorException
      */
-    protected function latestStripeInvoice(?string $customerId, array $parameters = []): array
+    protected function latestStripeInvoice(?string $customerId, array $parameters = []): ?StripeObject
     {
         if (! is_string($customerId) || $customerId === '') {
-            return [];
+            return null;
         }
 
         $parameters['limit'] = 1;
 
         $invoices = $this->fetchStripeInvoices($customerId, $parameters);
 
-        return $invoices[0] ?? [];
-    }
-
-    protected function normalizeStripeInvoice(mixed $invoice): array
-    {
-        $normalized = $this->normalizeStripeObject($invoice);
-
-        $normalized['lines']['data'] = collect(data_get($normalized, 'lines.data', []))
-            ->map(fn (array $line): array => $this->normalizeStripeInvoiceLine($line))
-            ->all();
-
-        return $normalized;
-    }
-
-    protected function normalizeStripeObject(mixed $value): array
-    {
-        if ($value instanceof StripeObject) {
-            $value = $value->toArray();
-        }
-
-        if (! is_array($value)) {
-            return [];
-        }
-
-        foreach ($value as $key => $item) {
-            if ($item instanceof StripeObject || is_array($item)) {
-                $value[$key] = $this->normalizeStripeObject($item);
-            }
-        }
-
-        return $value;
+        return $invoices[0] ?? null;
     }
 
     /**
@@ -101,14 +71,14 @@ trait InteractsWithStripeInvoices
 
         if (method_exists($response, 'autoPagingIterator')) {
             foreach ($response->autoPagingIterator() as $line) {
-                $lines[] = $this->normalizeStripeInvoiceLine($line);
+                $lines[] = $line;
             }
 
             return $lines;
         }
 
         foreach ($response->data ?? [] as $line) {
-            $lines[] = $this->normalizeStripeInvoiceLine($line);
+            $lines[] = $line;
         }
 
         return $lines;
@@ -130,38 +100,26 @@ trait InteractsWithStripeInvoices
 
         if (method_exists($response, 'autoPagingIterator')) {
             foreach ($response->autoPagingIterator() as $payment) {
-                $payments[] = $this->normalizeStripeObject($payment);
+                $payments[] = $payment;
             }
 
             return $payments;
         }
 
         foreach ($response->data ?? [] as $payment) {
-            $payments[] = $this->normalizeStripeObject($payment);
+            $payments[] = $payment;
         }
 
         return $payments;
     }
 
-    protected function normalizeStripeInvoiceLine(mixed $line): array
+    protected function sendHostedInvoiceLink(StripeObject|array|null $invoice): void
     {
-        $line = $this->normalizeStripeObject($line);
+        $payload = $invoice instanceof StripeObject
+            ? $invoice->toArray()
+            : ($invoice ?? []);
 
-        $line['description'] = $line['description']
-            ?? data_get($line, 'price.product.name')
-            ?? data_get($line, 'price.nickname')
-            ?? data_get($line, 'price.id');
-
-        $line['amount'] = $line['amount']
-            ?? data_get($line, 'amount_excluding_tax')
-            ?? data_get($line, 'price.unit_amount');
-
-        return $line;
-    }
-
-    protected function sendHostedInvoiceLink(?array $invoice): void
-    {
-        $invoiceUrl = data_get($invoice ?? [], 'hosted_invoice_url');
+        $invoiceUrl = data_get($payload, 'hosted_invoice_url');
 
         if (blank($invoiceUrl)) {
             Notification::make()
