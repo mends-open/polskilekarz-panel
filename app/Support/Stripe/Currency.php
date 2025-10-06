@@ -33,11 +33,6 @@ class Currency
         return in_array(self::normalize($currency), self::ZERO_DECIMAL_CURRENCIES, true);
     }
 
-    public static function zeroDecimalCurrencies(): array
-    {
-        return self::ZERO_DECIMAL_CURRENCIES;
-    }
-
     protected static function normalize(string $currency): string
     {
         return strtoupper(trim($currency));

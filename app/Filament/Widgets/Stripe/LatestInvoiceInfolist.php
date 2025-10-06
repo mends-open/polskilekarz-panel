@@ -255,12 +255,14 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                                         currency: $this->moneyCurrency([
                                             'currency',
                                             'payment.currency',
-                                        ]),
+                                        ],
+                                        fallback: fn () => data_get($this->latestInvoice, 'currency'),
                                         divideBy: $this->moneyDivideBy(
                                             currencyPath: [
                                                 'currency',
                                                 'payment.currency',
                                             ],
+                                            fallback: fn () => data_get($this->latestInvoice, 'currency'),
                                         ),
                                         locale: $this->moneyLocale(),
                                         decimalPlaces: $this->moneyDecimalPlaces(),

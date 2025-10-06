@@ -5,13 +5,16 @@ namespace App\Filament\Concerns;
 use App\Support\Stripe\Currency as StripeCurrency;
 use BackedEnum;
 use Closure;
+use Illuminate\Support\Arr;
 
 trait HasMoneyBadges
 {
     protected function moneyCurrency(string|array|null $path = 'currency', BackedEnum|Closure|string|null $fallback = null): Closure
     {
-        return function ($record = null, $state = null) use ($path, $fallback): ?string {
-            return $this->resolveCurrencyForMoneyBadge($record, $state, $path, $fallback);
+        $paths = $this->prepareMoneyCurrencyPaths($path);
+
+        return function ($record = null, $state = null) use ($paths, $fallback): ?string {
+            return $this->resolveMoneyCurrency($record, $state, $paths, $fallback);
         };
     }
 
@@ -20,8 +23,10 @@ trait HasMoneyBadges
         string|array|null $currencyPath = 'currency',
         BackedEnum|Closure|string|null $fallback = null,
     ): Closure {
-        return function ($record = null, $state = null) use ($defaultDivideBy, $currencyPath, $fallback): int {
-            $currency = $this->resolveCurrencyForMoneyBadge($record, $state, $currencyPath, $fallback);
+        $paths = $this->prepareMoneyCurrencyPaths($currencyPath);
+
+        return function ($record = null, $state = null) use ($defaultDivideBy, $paths, $fallback): int {
+            $currency = $this->resolveMoneyCurrency($record, $state, $paths, $fallback);
 
             if ($currency !== null && StripeCurrency::isZeroDecimal($currency)) {
                 return 1;
@@ -41,25 +46,20 @@ trait HasMoneyBadges
         return $decimalPlaces;
     }
 
-    protected function resolveCurrencyForMoneyBadge(
+    protected function resolveMoneyCurrency(
         $record,
         $state,
-        string|array|null $paths,
+        array $paths,
         BackedEnum|Closure|string|null $fallback,
     ): ?string {
-        $paths = $paths === null ? [] : (array) $paths;
-
-        $targets = array_values(array_filter([
-            $state,
-            $record !== $state ? $record : null,
-        ], static fn ($value) => $value !== null));
-
         if ($paths !== []) {
-            foreach ($targets as $target) {
-                foreach ($paths as $path) {
-                    $currency = data_get($target, $path);
+            foreach ([$state, $record] as $source) {
+                if ($source === null) {
+                    continue;
+                }
 
-                    $normalized = $this->normalizeCurrencyValue($currency);
+                foreach ($paths as $path) {
+                    $normalized = $this->normalizeCurrencyValue(data_get($source, $path));
 
                     if ($normalized !== null) {
                         return $normalized;
@@ -72,11 +72,20 @@ trait HasMoneyBadges
             return null;
         }
 
-        $currency = $fallback instanceof Closure
-            ? $fallback($record, $state, $targets[0] ?? null)
+        $value = $fallback instanceof Closure
+            ? $fallback($record, $state)
             : $fallback;
 
-        return $this->normalizeCurrencyValue($currency);
+        return $this->normalizeCurrencyValue($value);
+    }
+
+    protected function prepareMoneyCurrencyPaths(string|array|null $paths): array
+    {
+        if ($paths === null) {
+            return [];
+        }
+
+        return array_values(array_filter(Arr::wrap($paths), static fn ($path) => $path !== null && $path !== ''));
     }
 
     protected function normalizeCurrencyValue(mixed $value): ?string
