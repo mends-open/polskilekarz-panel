@@ -4,6 +4,8 @@ namespace App\Filament\Widgets\Stripe;
 
 use App\Filament\Widgets\BaseSchemaWidget;
 use App\Filament\Widgets\Stripe\Concerns\InterpretsStripeAmounts;
+use App\Filament\Widgets\Stripe\Concerns\HasStripeInvoiceForm;
+use App\Filament\Widgets\Stripe\Concerns\InteractsWithStripeInvoices;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use Filament\Actions\Action;
 use Filament\Infolists\Components\TextEntry;
@@ -14,12 +16,13 @@ use Illuminate\Support\Arr;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Stripe\Exception\ApiErrorException;
-use Stripe\StripeObject;
 
 class LatestInvoiceInfolist extends BaseSchemaWidget
 {
     use InteractsWithDashboardContext;
     use InterpretsStripeAmounts;
+    use HasStripeInvoiceForm;
+    use InteractsWithStripeInvoices;
 
     /**
      * @throws ApiErrorException
@@ -33,19 +36,15 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
             return [];
         }
 
-        $response = stripe()->invoices->all([
-            'customer' => $customerId,
-            'limit' => 1,
-            'expand' => ['data.payment_intent'],
-        ]);
+        try {
+            return $this->latestStripeInvoice($customerId, [
+                'expand' => ['data.payment_intent'],
+            ]);
+        } catch (ApiErrorException $exception) {
+            report($exception);
 
-        $invoice = $response->data[0] ?? null;
-
-        if ($invoice instanceof StripeObject) {
-            return $invoice->toArray();
+            return [];
         }
-
-        return is_array($invoice) ? $invoice : [];
     }
 
     public function isReady(): bool
@@ -57,12 +56,19 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
     public function resetComponent(): void
     {
         $this->reset();
+        $this->resetStripeInvoiceCaches();
     }
 
     #[On('stripe.set-context')]
     public function refreshContext(): void
     {
         $this->reset();
+        $this->resetStripeInvoiceCaches();
+    }
+
+    protected function afterInvoiceFormHandled(): void
+    {
+        $this->resetComponent();
     }
 
     /**
@@ -78,19 +84,17 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
             ->components([
                 Section::make('latest invoice')
                     ->headerActions([
-                        Action::make('create')
-                            ->label('Create new')
-                            ->icon(Heroicon::OutlinedDocumentPlus)
-                            ->color('success')
-                            ->outlined()
-                            ->action(fn () => $this->dispatch('stripe.invoices.mount-action', 'create')),
-                        Action::make('duplicateLatest')
-                            ->label('Duplicate')
-                            ->icon(Heroicon::OutlinedDocumentDuplicate)
-                            ->outlined()
-                            ->color(blank($invoice) ? 'gray' : 'primary')
-                            ->disabled(blank($invoice))
-                            ->action(fn () => $this->dispatch('stripe.invoices.mount-action', 'duplicateLatest')),
+                        $this->configureInvoiceFormAction(
+                            Action::make('duplicateLatest')
+                                ->label('Duplicate')
+                                ->icon(Heroicon::OutlinedDocumentDuplicate)
+                                ->outlined()
+                                ->color(blank($invoice) ? 'gray' : 'primary')
+                                ->disabled(blank($invoice))
+                                ->modalIcon(Heroicon::OutlinedDocumentDuplicate)
+                                ->modalHeading('Duplicate latest invoice')
+                        )
+                            ->fillForm(fn () => $this->getInvoiceFormDefaults(blank($invoice) ? null : $invoice)),
                         Action::make('sendLatest')
                             ->label('Send')
                             ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
@@ -105,7 +109,7 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                             ->openUrlInNewTab()
                             ->hidden(blank($hostedUrl)),
                         Action::make('reset')
-                            ->action(fn () => $this->reset())
+                            ->action(fn () => $this->resetComponent())
                             ->hiddenLabel()
                             ->icon(Heroicon::OutlinedArrowPath)
                             ->link(),
