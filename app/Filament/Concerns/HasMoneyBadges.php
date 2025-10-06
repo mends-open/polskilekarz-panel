@@ -47,15 +47,30 @@ trait HasMoneyBadges
         ?string $path,
         BackedEnum|Closure|string|null $fallback,
     ): ?string {
-        $target = $record ?? $state;
+        $targets = array_values(array_filter([
+            $state,
+            $record !== $state ? $record : null,
+        ], static fn ($value) => $value !== null));
 
-        $currency = $path === null ? null : data_get($target, $path);
+        if ($path !== null) {
+            foreach ($targets as $target) {
+                $currency = data_get($target, $path);
 
-        if ($currency === null && $fallback !== null) {
-            $currency = $fallback instanceof Closure
-                ? $fallback($record, $state, $target)
-                : $fallback;
+                $normalized = $this->normalizeCurrencyValue($currency);
+
+                if ($normalized !== null) {
+                    return $normalized;
+                }
+            }
         }
+
+        if ($fallback === null) {
+            return null;
+        }
+
+        $currency = $fallback instanceof Closure
+            ? $fallback($record, $state, $targets[0] ?? null)
+            : $fallback;
 
         return $this->normalizeCurrencyValue($currency);
     }
