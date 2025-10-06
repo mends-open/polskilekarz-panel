@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets\Stripe;
 
 use App\Filament\Widgets\BaseSchemaWidget;
+use App\Filament\Widgets\Stripe\Concerns\InterpretsStripeAmounts;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use Filament\Actions\Action;
 use Filament\Infolists\Components\TextEntry;
@@ -10,7 +11,6 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Stripe\Exception\ApiErrorException;
@@ -19,6 +19,7 @@ use Stripe\StripeObject;
 class LatestPaymentInfolist extends BaseSchemaWidget
 {
     use InteractsWithDashboardContext;
+    use InterpretsStripeAmounts;
 
     /**
      * @throws ApiErrorException
@@ -110,33 +111,33 @@ class LatestPaymentInfolist extends BaseSchemaWidget
                             ->placeholder('No status'),
                         TextEntry::make('amount')
                             ->label('Amount')
-                            ->state(fn (array $record): ?float => isset($record['amount'])
-                                ? $record['amount'] / 100
-                                : null)
-                            ->money(fn (array $record): ?string => Str::lower($record['currency'] ?? 'usd'))
+                            ->state(fn (?array $record): ?float => $this->extractStripeAmount($record, 'amount'))
+                            ->money(fn (?array $record): ?string => $this->resolveStripeCurrency($record))
                             ->inlineLabel()
                             ->placeholder('No amount'),
                         TextEntry::make('amount_received')
                             ->label('Amount received')
-                            ->state(fn (array $record): ?float => isset($record['amount_received'])
-                                ? $record['amount_received'] / 100
-                                : null)
-                            ->money(fn (array $record): ?string => Str::lower($record['currency'] ?? 'usd'))
+                            ->state(fn (?array $record): ?float => $this->extractStripeAmount($record, 'amount_received'))
+                            ->money(fn (?array $record): ?string => $this->resolveStripeCurrency($record))
                             ->inlineLabel()
                             ->placeholder('No amount received'),
                         TextEntry::make('amount_capturable')
                             ->label('Amount capturable')
-                            ->state(fn (array $record): ?float => isset($record['amount_capturable'])
-                                ? $record['amount_capturable'] / 100
-                                : null)
-                            ->money(fn (array $record): ?string => Str::lower($record['currency'] ?? 'usd'))
+                            ->state(fn (?array $record): ?float => $this->extractStripeAmount($record, 'amount_capturable'))
+                            ->money(fn (?array $record): ?string => $this->resolveStripeCurrency($record))
                             ->inlineLabel()
                             ->placeholder('No amount capturable'),
                         TextEntry::make('payment_method_types')
                             ->label('Payment method types')
-                            ->state(fn (array $record): ?string => isset($record['payment_method_types'])
-                                ? implode(', ', $record['payment_method_types'])
-                                : null)
+                            ->state(fn (?array $record): ?string => value(function () use ($record): ?string {
+                                $types = Arr::get($record ?? [], 'payment_method_types');
+
+                                if (! is_array($types) || $types === []) {
+                                    return null;
+                                }
+
+                                return implode(', ', $types);
+                            }))
                             ->inlineLabel()
                             ->placeholder('No payment methods'),
                         TextEntry::make('created')

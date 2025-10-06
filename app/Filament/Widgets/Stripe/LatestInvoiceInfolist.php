@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets\Stripe;
 
 use App\Filament\Widgets\BaseSchemaWidget;
+use App\Filament\Widgets\Stripe\Concerns\InterpretsStripeAmounts;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use Filament\Actions\Action;
 use Filament\Infolists\Components\TextEntry;
@@ -10,7 +11,6 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Stripe\Exception\ApiErrorException;
@@ -19,6 +19,7 @@ use Stripe\StripeObject;
 class LatestInvoiceInfolist extends BaseSchemaWidget
 {
     use InteractsWithDashboardContext;
+    use InterpretsStripeAmounts;
 
     /**
      * @throws ApiErrorException
@@ -132,26 +133,20 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                             ->since(),
                         TextEntry::make('total')
                             ->label('Total')
-                            ->state(fn (array $record): ?float => isset($record['total'])
-                                ? $record['total'] / 100
-                                : null)
-                            ->money(fn (array $record): ?string => Str::lower($record['currency'] ?? 'usd'))
+                            ->state(fn (?array $record): ?float => $this->extractStripeAmount($record, 'total'))
+                            ->money(fn (?array $record): ?string => $this->resolveStripeCurrency($record))
                             ->inlineLabel()
                             ->placeholder('No total'),
                         TextEntry::make('amount_paid')
                             ->label('Amount paid')
-                            ->state(fn (array $record): ?float => isset($record['amount_paid'])
-                                ? $record['amount_paid'] / 100
-                                : null)
-                            ->money(fn (array $record): ?string => Str::lower($record['currency'] ?? 'usd'))
+                            ->state(fn (?array $record): ?float => $this->extractStripeAmount($record, 'amount_paid'))
+                            ->money(fn (?array $record): ?string => $this->resolveStripeCurrency($record))
                             ->inlineLabel()
                             ->placeholder('No amount paid'),
                         TextEntry::make('amount_remaining')
                             ->label('Amount remaining')
-                            ->state(fn (array $record): ?float => isset($record['amount_remaining'])
-                                ? $record['amount_remaining'] / 100
-                                : null)
-                            ->money(fn (array $record): ?string => Str::lower($record['currency'] ?? 'usd'))
+                            ->state(fn (?array $record): ?float => $this->extractStripeAmount($record, 'amount_remaining'))
+                            ->money(fn (?array $record): ?string => $this->resolveStripeCurrency($record))
                             ->inlineLabel()
                             ->placeholder('No amount remaining'),
                         TextEntry::make('collection_method')
@@ -164,7 +159,7 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                             ->label('Hosted invoice URL')
                             ->inlineLabel()
                             ->placeholder('No hosted URL')
-                            ->url(fn (array $record): ?string => $record['hosted_invoice_url'] ?? null)
+                            ->url(fn (?array $record): ?string => Arr::get($record ?? [], 'hosted_invoice_url'))
                             ->openUrlInNewTab(),
                     ]),
             ]);
