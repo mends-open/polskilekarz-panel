@@ -2,6 +2,8 @@
 
 namespace App\Filament\Widgets\Stripe\Concerns;
 
+use App\Jobs\Chatwoot\CreateInvoiceShortLink;
+use Filament\Notifications\Notification;
 use Stripe\Exception\ApiErrorException;
 use Stripe\StripeObject;
 
@@ -93,5 +95,55 @@ trait InteractsWithStripeInvoices
         }
 
         return $value;
+    }
+
+    protected function sendHostedInvoiceLink(?array $invoice): void
+    {
+        $invoiceUrl = data_get($invoice ?? [], 'hosted_invoice_url');
+
+        if (blank($invoiceUrl)) {
+            Notification::make()
+                ->title('Invoice link unavailable')
+                ->body('We could not find a hosted invoice URL on the invoice.')
+                ->warning()
+                ->send();
+
+            return;
+        }
+
+        $this->sendInvoiceLinkToChatwoot($invoiceUrl);
+    }
+
+    protected function sendInvoiceLinkToChatwoot(string $url): void
+    {
+        $context = $this->chatwootContext();
+
+        $accountId = $context->accountId;
+        $userId = $context->currentUserId;
+        $conversationId = $context->conversationId;
+
+        if (! $accountId || ! $userId || ! $conversationId) {
+            Notification::make()
+                ->title('Missing Chatwoot context')
+                ->body('Unable to send the invoice link because the Chatwoot context is incomplete.')
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        CreateInvoiceShortLink::dispatch(
+            url: $url,
+            accountId: $accountId,
+            conversationId: $conversationId,
+            impersonatorId: $userId,
+            notifiableId: auth()->id(),
+        );
+
+        Notification::make()
+            ->title('Sending invoice link')
+            ->body('We are preparing the invoice link and will send it to the conversation shortly.')
+            ->info()
+            ->send();
     }
 }

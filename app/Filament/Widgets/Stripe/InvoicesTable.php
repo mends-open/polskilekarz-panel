@@ -6,11 +6,9 @@ namespace App\Filament\Widgets\Stripe;
 use App\Filament\Widgets\BaseTableWidget;
 use App\Filament\Widgets\Stripe\Concerns\HasStripeInvoiceForm;
 use App\Filament\Widgets\Stripe\Concerns\InteractsWithStripeInvoices;
-use App\Jobs\Chatwoot\CreateInvoiceShortLink;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
-use Filament\Notifications\Notification;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\Layout\Panel;
 use Filament\Tables\Columns\Layout\Split;
@@ -39,24 +37,14 @@ class InvoicesTable extends BaseTableWidget
         return $this->dashboardContextIsReady();
     }
 
-    #[On('reset')]
-    public function resetComponent(): void
+    #[On('stripe.invoices.refresh')]
+    public function refreshInvoices(): void
     {
         $this->resetTable();
         $this->resetErrorBag();
         $this->resetValidation();
-        $this->resetStripeInvoiceCaches();
-    }
-
-    private function refreshTable(): void
-    {
-        $this->resetComponent();
-    }
-
-    #[Computed(persist: true)]
-    public function stripePrices(): array
-    {
-        return $this->getStripePrices();
+        unset($this->customerInvoices);
+        unset($this->stripePriceCollection, $this->stripeProductCollection);
     }
 
     public function table(Table $table): Table
@@ -164,7 +152,7 @@ class InvoicesTable extends BaseTableWidget
                     ->disabled(fn () => ! $this->hasCustomerInvoices())
                     ->action(fn () => $this->sendLatestInvoice()),
                 Action::make('reset')
-                    ->action(fn () => $this->refreshTable())
+                    ->action(fn () => $this->refreshInvoices())
                     ->hiddenLabel()
                     ->icon(Heroicon::OutlinedArrowPath)
                     ->link(),
@@ -184,7 +172,7 @@ class InvoicesTable extends BaseTableWidget
                             return $this->getInvoiceFormDefaults(is_array($record) ? $record : null);
                         }),
                     Action::make('sendInvoiceShortUrl')
-                        ->action(fn ($record) => $this->sendShortUrl($record['hosted_invoice_url']))
+                        ->action(fn ($record) => $this->sendInvoiceRecordLink($record))
                         ->label('Send')
                         ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
                         ->color('warning')
@@ -200,40 +188,6 @@ class InvoicesTable extends BaseTableWidget
                 ]),
             ])
             ->toolbarActions([]);
-    }
-
-    private function sendShortUrl(string $url): void
-    {
-        $context = $this->chatwootContext();
-
-        $account = $context->accountId;
-        $user = $context->currentUserId;
-        $conversation = $context->conversationId;
-
-        if (! $account || ! $user || ! $conversation) {
-            Notification::make()
-                ->title('Missing Chatwoot context')
-                ->body('Unable to send the invoice link because the Chatwoot context is incomplete.')
-                ->danger()
-                ->send();
-
-            return;
-        }
-
-        CreateInvoiceShortLink::dispatch(
-            url: $url,
-            accountId: $account,
-            conversationId: $conversation,
-            impersonatorId: $user,
-            notifiableId: auth()->id(),
-        );
-
-        Notification::make()
-            ->title('Sending invoice link')
-            ->body('We are preparing the invoice link and will send it to the conversation shortly.')
-            ->info()
-            ->send();
-
     }
 
     /**
@@ -257,26 +211,16 @@ class InvoicesTable extends BaseTableWidget
         }
     }
 
-    #[On('stripe.invoices.mount-action')]
-    public function mountInvoiceAction(string $action): void
-    {
-        if (! in_array($action, ['create', 'duplicateLatest', 'sendLatest'], true)) {
-            return;
-        }
-
-        $this->mountTableAction($action);
-    }
-
     #[On('stripe.set-context')]
     public function refreshContext(): void
     {
-        $this->resetTable();
+        $this->refreshInvoices();
     }
 
 
     protected function afterInvoiceFormHandled(): void
     {
-        $this->refreshTable();
+        $this->refreshInvoices();
     }
 
     private function sendLatestInvoice(): void
@@ -287,19 +231,7 @@ class InvoicesTable extends BaseTableWidget
             return;
         }
 
-        $invoiceUrl = data_get($latest, 'hosted_invoice_url');
-
-        if (blank($invoiceUrl)) {
-            Notification::make()
-                ->title('Invoice link unavailable')
-                ->body('We could not find a hosted invoice URL on the latest invoice.')
-                ->warning()
-                ->send();
-
-            return;
-        }
-
-        $this->sendShortUrl($invoiceUrl);
+        $this->sendHostedInvoiceLink($latest);
     }
 
     /**
@@ -321,6 +253,19 @@ class InvoicesTable extends BaseTableWidget
         }
 
         return $invoice !== [] ? $invoice : null;
+    }
+
+    private function sendInvoiceRecordLink($record): void
+    {
+        if ($record instanceof StripeObject) {
+            $record = $this->normalizeStripeObject($record);
+        }
+
+        if (! is_array($record)) {
+            return;
+        }
+
+        $this->sendHostedInvoiceLink($record);
     }
 
 }

@@ -52,23 +52,22 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
         return $this->dashboardContextIsReady();
     }
 
-    #[On('reset')]
-    public function resetComponent(): void
+    protected function afterInvoiceFormHandled(): void
     {
-        $this->reset();
-        $this->resetStripeInvoiceCaches();
+        $this->refreshLatestInvoice();
+    }
+
+    #[On('stripe.invoices.refresh')]
+    public function refreshLatestInvoice(): void
+    {
+        unset($this->latestInvoice);
+        unset($this->stripePriceCollection, $this->stripeProductCollection);
     }
 
     #[On('stripe.set-context')]
     public function refreshContext(): void
     {
-        $this->reset();
-        $this->resetStripeInvoiceCaches();
-    }
-
-    protected function afterInvoiceFormHandled(): void
-    {
-        $this->resetComponent();
+        $this->refreshLatestInvoice();
     }
 
     /**
@@ -101,7 +100,7 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                             ->outlined()
                             ->color(blank($invoice) ? 'gray' : 'warning')
                             ->disabled(blank($invoice))
-                            ->action(fn () => $this->dispatch('stripe.invoices.mount-action', 'sendLatest')),
+                            ->action(fn () => $this->sendHostedInvoiceLink($invoice)),
                         Action::make('openInvoice')
                             ->label('Open')
                             ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
@@ -109,7 +108,7 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                             ->openUrlInNewTab()
                             ->hidden(blank($hostedUrl)),
                         Action::make('reset')
-                            ->action(fn () => $this->resetComponent())
+                            ->action(fn () => $this->refreshLatestInvoice())
                             ->hiddenLabel()
                             ->icon(Heroicon::OutlinedArrowPath)
                             ->link(),

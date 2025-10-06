@@ -53,8 +53,4 @@ class Payments extends Dashboard
         ];
     }
 
-    protected function afterInvoiceFormHandled(): void
-    {
-        $this->resetStripeInvoiceCaches();
-    }
 }

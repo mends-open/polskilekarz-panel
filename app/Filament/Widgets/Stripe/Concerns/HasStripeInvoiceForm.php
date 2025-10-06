@@ -11,7 +11,6 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
-use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Illuminate\Http\Client\ConnectionException;
@@ -21,19 +20,10 @@ use Illuminate\Support\Fluent;
 use Illuminate\Support\Str;
 use Stripe\Exception\ApiErrorException;
 use Stripe\StripeObject;
+use Livewire\Attributes\Computed;
 
 trait HasStripeInvoiceForm
 {
-    protected ?Collection $stripePriceCollectionCache = null;
-
-    protected ?Collection $stripeProductCollectionCache = null;
-
-    protected function resetStripeInvoiceCaches(): void
-    {
-        $this->stripePriceCollectionCache = null;
-        $this->stripeProductCollectionCache = null;
-    }
-
     /**
      * @throws ApiErrorException
      */
@@ -56,41 +46,6 @@ trait HasStripeInvoiceForm
     protected function getCreateInvoiceForm(): array
     {
         return [
-            Grid::make()
-                ->schema([
-                    TextEntry::make('line_items_summary')
-                        ->label('Summary')
-                        ->columnSpanFull()
-                        ->state(fn (Get $get): string => value(function () use ($get): string {
-                            $lineItems = $this->normalizeLineItemsState(
-                                is_array($get('line_items')) ? $get('line_items') : [],
-                            );
-
-                            if ($lineItems === []) {
-                                return 'No products selected yet.';
-                            }
-
-                            $lines = collect($lineItems)
-                                ->map(function (array $item): string {
-                                    $priceId = $item['price'] ?? null;
-                                    $quantity = $item['quantity'] ?? 1;
-                                    $price = $this->resolvePrice($priceId);
-
-                                    if (! $price) {
-                                        return '—';
-                                    }
-
-                                    $productName = $this->resolveProductName($price);
-                                    $amount = $this->formatLineItemSubtotal($priceId, max(1, (int) $quantity));
-
-                                    return sprintf('%s ×%d — %s', $productName, $quantity, $amount);
-                                })
-                                ->all();
-
-                            return implode(PHP_EOL, $lines);
-                        })),
-                ])
-                ->columns(1),
             Repeater::make('line_items')
                 ->compact()
                 ->label('Products')
@@ -220,13 +175,10 @@ trait HasStripeInvoiceForm
             ->all();
     }
 
+    #[Computed(persist: true)]
     protected function stripePriceCollection(): Collection
     {
-        if ($this->stripePriceCollectionCache instanceof Collection) {
-            return $this->stripePriceCollectionCache;
-        }
-
-        return $this->stripePriceCollectionCache = collect($this->getStripePrices())
+        return collect($this->getStripePrices())
             ->filter(fn (array $price): bool => (bool) data_get($price, 'active', true))
             ->filter(fn (array $price): bool => (bool) data_get($price, 'product.active', true))
             ->filter(fn (array $price): bool => is_string(data_get($price, 'id')) && data_get($price, 'id') !== '')
@@ -239,13 +191,10 @@ trait HasStripeInvoiceForm
             ->keyBy('id');
     }
 
+    #[Computed(persist: true)]
     protected function stripeProductCollection(): Collection
     {
-        if ($this->stripeProductCollectionCache instanceof Collection) {
-            return $this->stripeProductCollectionCache;
-        }
-
-        return $this->stripeProductCollectionCache = $this->stripePriceCollection()
+        return $this->stripePriceCollection()
             ->groupBy(fn (array $price): ?string => $price['product_id'] ?? null)
             ->filter(fn (Collection $prices, ?string $productId): bool => is_string($productId) && $productId !== '')
             ->mapWithKeys(function (Collection $prices, string $productId): array {
@@ -745,7 +694,7 @@ trait HasStripeInvoiceForm
             ->info()
             ->send();
 
-        $this->dispatch('reset');
+        $this->dispatch('stripe.invoices.refresh');
 
         $this->afterInvoiceFormHandled();
     }
