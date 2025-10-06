@@ -65,21 +65,21 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                     ->headerActions([
                         $this->configureInvoiceFormAction(
                             Action::make('createInvoice')
-                                ->label('Create')
+                                ->label('Create New')
                                 ->icon(Heroicon::OutlinedDocumentPlus)
                                 ->outlined()
                                 ->color('success')
                                 ->modalHeading('Create invoice')
                         ),
                         Action::make('sendLatest')
-                            ->label('Send')
+                            ->label('Send Latest')
                             ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
                             ->outlined()
                             ->color(blank($data) ? 'gray' : 'warning')
                             ->disabled(blank($data))
                             ->action(fn () => $this->sendHostedInvoiceLink($invoice)),
                         Action::make('openInvoice')
-                            ->label('Open')
+                            ->label('Open Latest')
                             ->outlined()
                             ->color(blank($data) ? 'gray' : 'primary')
                             ->disabled(blank($data))
