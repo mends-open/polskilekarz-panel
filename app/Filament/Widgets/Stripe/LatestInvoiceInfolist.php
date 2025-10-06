@@ -50,7 +50,9 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
 
     public function schema(Schema $schema): Schema
     {
-        $data = $this->latestInvoice;
+        $invoice = $this->latestInvoice;
+        $data = $this->stripePayload($invoice);
+        $hasInvoice = $invoice !== null;
         $currency = (string) data_get($data, 'currency');
         $divideBy = $currency === '' ? 100 : $this->currencyDivisor($currency);
         $decimalPlaces = $currency === '' ? 2 : $this->currencyDecimalPlaces($currency);
@@ -62,27 +64,27 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                     ->columns(2)
                     ->headerActions([
                         $this->configureInvoiceFormAction(
-                            Action::make('duplicateLatest')
-                                ->label('Duplicate')
-                                ->icon(Heroicon::OutlinedDocumentDuplicate)
+                            Action::make('createInvoice')
+                                ->label('Create')
+                                ->icon(Heroicon::OutlinedDocumentPlus)
+                                ->color('success')
                                 ->outlined()
-                                ->color(blank($data) ? 'gray' : 'primary')
-                                ->disabled(blank($data))
-                                ->modalHeading('Duplicate latest invoice')
-                        )->fillForm(fn () => $this->getInvoiceFormDefaults(blank($data) ? null : $data)),
+                                ->modalIcon(Heroicon::OutlinedDocumentPlus)
+                                ->modalHeading('Create invoice')
+                        ),
                         Action::make('sendLatest')
                             ->requiresConfirmation()
                             ->label('Send')
                             ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
                             ->outlined()
-                            ->color(blank($data) ? 'gray' : 'warning')
-                            ->disabled(blank($data))
-                            ->action(fn () => $this->sendHostedInvoiceLink($data)),
+                            ->color($hasInvoice ? 'warning' : 'gray')
+                            ->disabled(! $hasInvoice)
+                            ->action(fn () => $this->sendHostedInvoiceLink($invoice)),
                         Action::make('openInvoice')
                             ->label('Open')
                             ->outlined()
-                            ->color(blank($data) ? 'gray' : 'primary')
-                            ->disabled(blank($data))
+                            ->color($hasInvoice ? 'primary' : 'gray')
+                            ->disabled(! $hasInvoice)
                             ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
                             ->url(data_get($data, 'hosted_invoice_url'))
                             ->openUrlInNewTab()

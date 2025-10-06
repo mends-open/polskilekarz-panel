@@ -20,7 +20,6 @@ use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Stripe\Exception\ApiErrorException;
-use Stripe\StripeObject;
 
 class InvoicesTable extends BaseTableWidget
 {
@@ -137,30 +136,6 @@ class InvoicesTable extends BaseTableWidget
             ])
             ->filters([])
             ->headerActions([
-                $this->configureInvoiceFormAction(
-                    Action::make('create')
-                        ->icon(Heroicon::OutlinedDocumentPlus)
-                        ->color('success')
-                        ->outlined()
-                        ->visible(false)
-                        ->modalIcon(Heroicon::OutlinedDocumentPlus)
-                        ->modalHeading('Create invoice')
-                ),
-                $this->configureInvoiceFormAction(
-                    Action::make('duplicateLatest')
-                        ->icon(Heroicon::OutlinedDocumentDuplicate)
-                        ->outlined()
-                        ->visible(false)
-                        ->color(fn () => $this->hasCustomerInvoices() ? 'primary' : 'gray')
-                        ->disabled(fn () => ! $this->hasCustomerInvoices())
-                        ->modalIcon(Heroicon::OutlinedDocumentDuplicate)
-                        ->modalHeading('Duplicate latest invoice')
-                )
-                    ->fillForm(function () {
-                        $invoice = $this->latestCustomerInvoice();
-
-                        return $this->getInvoiceFormDefaults($invoice);
-                    }),
                 Action::make('sendLatest')
                     ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
                     ->outlined()
@@ -185,13 +160,7 @@ class InvoicesTable extends BaseTableWidget
                             ->label('Duplicate')
                             ->icon(Heroicon::OutlinedDocumentDuplicate)
                     )
-                        ->fillForm(function ($record): array {
-                            if ($record instanceof StripeObject) {
-                                $record = $this->normalizeStripeObject($record);
-                            }
-
-                            return $this->getInvoiceFormDefaults(is_array($record) ? $record : null);
-                        }),
+                        ->fillForm(fn ($record): array => $this->getInvoiceFormDefaults($this->stripePayload($record))),
                     Action::make('sendInvoiceShortUrl')
                         ->action(fn ($record) => $this->sendInvoiceRecordLink($record))
                         ->label('Send')
@@ -224,7 +193,7 @@ class InvoicesTable extends BaseTableWidget
         }
 
         try {
-            return $this->fetchStripeInvoices($customerId);
+            return array_map(fn ($invoice) => $this->stripePayload($invoice), $this->fetchStripeInvoices($customerId));
         } catch (ApiErrorException $exception) {
             report($exception);
 
@@ -272,19 +241,15 @@ class InvoicesTable extends BaseTableWidget
             return null;
         }
 
-        return $invoice !== [] ? $invoice : null;
+        if (! $invoice) {
+            return null;
+        }
+
+        return $this->stripePayload($invoice);
     }
 
     private function sendInvoiceRecordLink($record): void
     {
-        if ($record instanceof StripeObject) {
-            $record = $this->normalizeStripeObject($record);
-        }
-
-        if (! is_array($record)) {
-            return;
-        }
-
         $this->sendHostedInvoiceLink($record);
     }
 }

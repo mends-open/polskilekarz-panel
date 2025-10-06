@@ -34,6 +34,20 @@ class ContactIdentifierSynchronizer
         $customerId = $this->findCustomerId($contactId);
 
         if ($customerId === null) {
+            $contact = $this->getContact($accountId, $contactId);
+
+            if ($contact === null) {
+                return null;
+            }
+
+            $customerId = $this->createCustomerFromContact($accountId, $contactId, $contact);
+
+            if ($customerId === null) {
+                return null;
+            }
+        }
+
+        if ($customerId === null) {
             return null;
         }
 
@@ -203,5 +217,63 @@ class ContactIdentifierSynchronizer
 
             return null;
         }
+    }
+
+    private function createCustomerFromContact(int $accountId, int $contactId, array $contact): ?string
+    {
+        $payload = $this->prepareCustomerPayload($accountId, $contactId, $contact);
+
+        if ($payload === []) {
+            return null;
+        }
+
+        try {
+            $customer = $this->stripe->customers->create($payload);
+        } catch (ApiErrorException $exception) {
+            Log::warning('Failed to create Stripe customer while syncing Chatwoot identifier.', [
+                'account_id' => $accountId,
+                'contact_id' => $contactId,
+                'exception' => $exception->getMessage(),
+            ]);
+
+            return null;
+        }
+
+        $customerId = Arr::get($customer->toArray(), 'id');
+
+        return $this->normalizeIdentifier($customerId);
+    }
+
+    private function prepareCustomerPayload(int $accountId, int $contactId, array $contact): array
+    {
+        $metadata = array_filter([
+            'chatwoot_account_id' => (string) $accountId,
+            'chatwoot_contact_id' => (string) $contactId,
+        ]);
+
+        $country = $this->resolveCountryCode($contact);
+
+        $payload = [
+            'name' => Arr::get($contact, 'name'),
+            'email' => Arr::get($contact, 'email'),
+            'phone' => Arr::get($contact, 'phone_number'),
+            'address' => $country ? ['country' => $country] : [],
+            'metadata' => $metadata,
+        ];
+
+        return array_filter($payload, function ($value) {
+            if (is_array($value)) {
+                return array_filter($value) !== [];
+            }
+
+            return filled($value);
+        });
+    }
+
+    private function resolveCountryCode(array $contact): ?string
+    {
+        $country = strtoupper((string) Arr::get($contact, 'additional_attributes.country_code', ''));
+
+        return preg_match('/^[A-Z]{2}$/', $country) ? $country : null;
     }
 }

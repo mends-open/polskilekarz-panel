@@ -22,7 +22,7 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
         public readonly int|string $accountId,
         public readonly int|string $contactId,
         public readonly int|string $impersonatorId,
-        public readonly string $customerId,
+        public readonly ?string $customerId,
         public readonly ?int $notifiableId,
     ) {}
 
@@ -34,27 +34,25 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
             ->contacts()
             ->get($this->accountId, $this->contactId)['payload'];
 
-        $payload = array_filter([
-            'name' => data_get($contact, 'name'),
-            'email' => data_get($contact, 'email'),
-            'phone' => data_get($contact, 'phone_number'),
-        ], fn ($value) => filled($value));
+        $payload = $this->prepareCustomerPayload($contact);
 
-        if ($payload === []) {
+        if ($this->customerId) {
+            stripe()->customers->update($this->customerId, $payload);
+
             $this->notify(
-                title: 'No contact details to sync',
-                body: 'The Chatwoot contact does not have any details to copy to the Stripe customer.',
-                status: 'warning',
+                title: 'Stripe customer updated',
+                body: 'The Stripe customer was updated with the Chatwoot contact details.',
+                status: 'success',
             );
 
             return;
         }
 
-        stripe()->customers->update($this->customerId, $payload);
+        stripe()->customers->create($payload);
 
         $this->notify(
-            title: 'Stripe customer updated',
-            body: 'The Stripe customer was updated with the Chatwoot contact details.',
+            title: 'Stripe customer created',
+            body: 'A new Stripe customer was created from the Chatwoot contact details.',
             status: 'success',
         );
     }
@@ -106,5 +104,38 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
         }
 
         return User::find($this->notifiableId);
+    }
+
+    private function prepareCustomerPayload(array $contact): array
+    {
+        $metadata = array_filter([
+            'chatwoot_account_id' => (string) $this->accountId,
+            'chatwoot_contact_id' => (string) $this->contactId,
+        ]);
+
+        $country = $this->resolveCountryCode($contact);
+
+        $payload = [
+            'name' => data_get($contact, 'name'),
+            'email' => data_get($contact, 'email'),
+            'phone' => data_get($contact, 'phone_number'),
+            'address' => $country ? ['country' => $country] : [],
+            'metadata' => $metadata,
+        ];
+
+        return array_filter($payload, function ($value) {
+            if (is_array($value)) {
+                return array_filter($value) !== [];
+            }
+
+            return filled($value);
+        });
+    }
+
+    private function resolveCountryCode(array $contact): ?string
+    {
+        $country = strtoupper((string) data_get($contact, 'additional_attributes.country_code', ''));
+
+        return preg_match('/^[A-Z]{2}$/', $country) ? $country : null;
     }
 }

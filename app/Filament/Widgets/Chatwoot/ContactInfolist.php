@@ -72,8 +72,7 @@ class ContactInfolist extends BaseSchemaWidget
 
         $syncReady = $chatwootContext->accountId !== null
             && $chatwootContext->contactId !== null
-            && $chatwootContext->currentUserId !== null
-            && $stripeContext->hasCustomer();
+            && $chatwootContext->currentUserId !== null;
 
         return $schema
             ->state($this->chatwootContact())
@@ -129,16 +128,6 @@ class ContactInfolist extends BaseSchemaWidget
         $contactId = $chatwootContext->contactId;
         $impersonatorId = $chatwootContext->currentUserId;
 
-        if (! $customerId) {
-            Notification::make()
-                ->title('Missing Stripe context')
-                ->body('We could not find the Stripe customer to update. Please select a customer first.')
-                ->danger()
-                ->send();
-
-            return;
-        }
-
         if (! $accountId || ! $contactId || ! $impersonatorId) {
             Notification::make()
                 ->title('Missing Chatwoot context')
@@ -159,7 +148,9 @@ class ContactInfolist extends BaseSchemaWidget
 
         Notification::make()
             ->title('Syncing customer details')
-            ->body('We are fetching the Chatwoot contact details and updating the Stripe customer.')
+            ->body($customerId
+                ? 'We are fetching the Chatwoot contact details and updating the Stripe customer.'
+                : 'We are creating or updating the Stripe customer with the Chatwoot contact details.')
             ->info()
             ->send();
 

@@ -17,6 +17,7 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
+use Stripe\Customer;
 use Stripe\Exception\ApiErrorException;
 
 class CustomerInfolist extends BaseSchemaWidget
@@ -42,13 +43,13 @@ class CustomerInfolist extends BaseSchemaWidget
      * @throws ApiErrorException
      */
     #[Computed(persist: true)]
-    protected function stripeCustomer(): array
+    protected function stripeCustomer(): ?Customer
     {
         $customerId = $this->stripeContext()->customerId;
 
         return $customerId
-            ? stripe()->customers->retrieve($customerId)->toArray()
-            : [];
+            ? stripe()->customers->retrieve($customerId)
+            : null;
     }
 
     /**
@@ -64,8 +65,10 @@ class CustomerInfolist extends BaseSchemaWidget
             && $chatwootContext->conversationId !== null
             && $chatwootContext->currentUserId !== null;
 
+        $customer = $this->stripeCustomer;
+
         return $schema
-            ->state($this->stripeCustomer)
+            ->state($customer?->toArray() ?? [])
             ->components([
                 Section::make('customer')
                     ->headerActions([
@@ -104,11 +107,11 @@ class CustomerInfolist extends BaseSchemaWidget
                         TextEntry::make('phone')
                             ->inlineLabel()
                             ->placeholder('No phone'),
-                        TextEntry::make('currency')
-                            ->state(fn ($record) => Str::upper(Arr::get($record, 'currency')))
+                        TextEntry::make('address.country')
+                            ->state(fn ($record) => Str::upper((string) Arr::get($record, 'address.country')))
                             ->inlineLabel()
                             ->badge()
-                            ->placeholder('No currency'),
+                            ->placeholder('No country'),
                     ]),
             ]);
     }

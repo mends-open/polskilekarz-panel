@@ -756,7 +756,7 @@ trait HasStripeInvoiceForm
             return [];
         }
 
-        $normalized = $this->normalizeStripeObject($lineItems);
+        $normalized = $this->stripePayload($lineItems);
 
         $lines = data_get($normalized, 'data', []);
 

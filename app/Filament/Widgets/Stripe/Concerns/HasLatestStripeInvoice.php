@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets\Stripe\Concerns;
 
 use Livewire\Attributes\Computed;
+use Stripe\StripeObject;
 
 use function rescue;
 
@@ -13,7 +14,7 @@ trait HasLatestStripeInvoice
     protected ?array $latestInvoicePayloadCache = null;
 
     #[Computed(persist: true)]
-    protected function latestInvoice(): array
+    protected function latestInvoice(): ?StripeObject
     {
         return $this->latestInvoicePayload()['invoice'];
     }
@@ -43,7 +44,7 @@ trait HasLatestStripeInvoice
         }
 
         $empty = [
-            'invoice' => [],
+            'invoice' => null,
             'lines' => [],
             'payments' => [],
         ];
@@ -57,7 +58,7 @@ trait HasLatestStripeInvoice
         return $this->latestInvoicePayloadCache = rescue(function () use ($customerId, $empty) {
             $invoice = $this->latestStripeInvoice($customerId);
 
-            if ($invoice === []) {
+            if (! $invoice instanceof StripeObject) {
                 return $empty;
             }
 
