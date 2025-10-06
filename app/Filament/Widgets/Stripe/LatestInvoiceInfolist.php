@@ -7,6 +7,7 @@ use App\Filament\Widgets\Stripe\Concerns\InterpretsStripeAmounts;
 use App\Filament\Widgets\Stripe\Concerns\HasStripeInvoiceForm;
 use App\Filament\Widgets\Stripe\Concerns\InteractsWithStripeInvoices;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
+use App\Support\Filament\Concerns\FormatsBadgeMoney;
 use Filament\Actions\Action;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\RepeatableEntry\TableColumn;
@@ -25,6 +26,7 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
     use InterpretsStripeAmounts;
     use HasStripeInvoiceForm;
     use InteractsWithStripeInvoices;
+    use FormatsBadgeMoney;
 
     protected int|string|array $columnSpan = 'full';
 
@@ -141,16 +143,25 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                             ->date()
                             ->inlineLabel(),
 
-                        TextEntry::make('total')
-                            ->label('Total')
+                        $this->formatBadgeMoney(
+                            TextEntry::make('total')
+                                ->label('Total'),
+                            fn (TextEntry $entry) => $this->resolveEntryCurrency($entry),
+                        )
                             ->inlineLabel(),
 
-                        TextEntry::make('amount_paid')
-                            ->label('Amount Paid')
+                        $this->formatBadgeMoney(
+                            TextEntry::make('amount_paid')
+                                ->label('Amount Paid'),
+                            fn (TextEntry $entry) => $this->resolveEntryCurrency($entry),
+                        )
                             ->inlineLabel(),
 
-                        TextEntry::make('amount_remaining')
-                            ->label('Amount Remaining')
+                        $this->formatBadgeMoney(
+                            TextEntry::make('amount_remaining')
+                                ->label('Amount Remaining'),
+                            fn (TextEntry $entry) => $this->resolveEntryCurrency($entry),
+                        )
                             ->inlineLabel(),
 
                         TextEntry::make('collection_method')
@@ -169,7 +180,10 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                                 TextEntry::make('description'),
                                 TextEntry::make('pricing.unit_amount_decimal'),
                                 TextEntry::make('quantity'),
-                                TextEntry::make('amount'),
+                                $this->formatBadgeMoney(
+                                    TextEntry::make('amount'),
+                                    fn (TextEntry $entry) => $this->resolveEntryCurrency($entry),
+                                ),
                             ]),
                         RepeatableEntry::make('payments.data')
                             ->hiddenLabel()
@@ -197,12 +211,44 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                                         'failed' => 'danger',
                                         default => 'gray',
                                     }),
-                                TextEntry::make('amount_paid'),
+                                $this->formatBadgeMoney(
+                                    TextEntry::make('amount_paid'),
+                                    fn (TextEntry $entry) => $this->resolveEntryCurrency($entry),
+                                ),
                                 TextEntry::make('currency'),
                                 TextEntry::make('created')
                                     ->since(),
                             ]),
                     ]),
             ]);
+    }
+
+    protected function resolveEntryCurrency(TextEntry $entry, ?string $nestedPath = null): ?string
+    {
+        $record = $entry->getRecord();
+
+        if (is_array($record)) {
+            if ($nestedPath !== null) {
+                $nested = data_get($record, $nestedPath);
+
+                if (is_array($nested)) {
+                    $nestedCurrency = $this->resolveStripeCurrency($nested, null);
+
+                    if ($nestedCurrency) {
+                        return $nestedCurrency;
+                    }
+                } elseif (is_string($nested) && $nested !== '') {
+                    return $this->resolveStripeCurrency(null, $nested);
+                }
+            }
+
+            $currency = $this->resolveStripeCurrency($record, null);
+
+            if ($currency) {
+                return $currency;
+            }
+        }
+
+        return $this->resolveStripeCurrency($this->latestInvoice());
     }
 }

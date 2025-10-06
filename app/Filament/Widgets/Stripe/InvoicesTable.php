@@ -7,6 +7,7 @@ use App\Filament\Widgets\BaseTableWidget;
 use App\Filament\Widgets\Stripe\Concerns\HasStripeInvoiceForm;
 use App\Filament\Widgets\Stripe\Concerns\InteractsWithStripeInvoices;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
+use App\Support\Filament\Concerns\FormatsBadgeMoney;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Support\Icons\Heroicon;
@@ -25,6 +26,7 @@ class InvoicesTable extends BaseTableWidget
     use InteractsWithDashboardContext;
     use HasStripeInvoiceForm;
     use InteractsWithStripeInvoices;
+    use FormatsBadgeMoney;
 
     protected int|string|array $columnSpan = 'full';
 
@@ -77,9 +79,10 @@ class InvoicesTable extends BaseTableWidget
                             ->badge(),
                     ])->space(2),
                     Stack::make([
-                        TextColumn::make('total')
-                            ->badge()
-                            ->money(fn ($record) => $record['currency'], 100)
+                        $this->formatBadgeMoney(
+                            TextColumn::make('total'),
+                            fn ($record) => $record['currency'],
+                        )
                             ->color(fn ($record) => match ($record['status']) {
                                 'paid' => 'success',                     // ✅ money in
                                 'open', 'draft', 'uncollectible' => 'danger', // ❌ not collected
@@ -107,10 +110,11 @@ class InvoicesTable extends BaseTableWidget
                         TextColumn::make('lines.data.*.quantity')
                             ->prefix('x')
                             ->listWithLineBreaks(),
-                        TextColumn::make('lines.data.*.amount')
-                            ->listWithLineBreaks()
-                            ->money(fn ($record) => $record['currency'], 100)
-                            ->badge(),
+                        $this->formatBadgeMoney(
+                            TextColumn::make('lines.data.*.amount')
+                                ->listWithLineBreaks(),
+                            fn ($record) => $record['currency'],
+                        ),
                     ]),
                 ])->collapsible(),
             ])
