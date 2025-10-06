@@ -24,6 +24,8 @@ use Stripe\StripeObject;
 
 trait HasStripeInvoiceForm
 {
+    use HandlesCurrencyDecimals;
+
     protected function getStripePrices(): array
     {
         try {
@@ -418,7 +420,13 @@ trait HasStripeInvoiceForm
         $currency = (string) data_get($price, 'currency');
         $unitAmount = (int) data_get($price, 'unit_amount', 0);
 
-        return $this->formatCurrencyAmount($unitAmount * max(1, $quantity), $currency);
+        if ($currency === '') {
+            return '—';
+        }
+
+        $quantity = max(1, $quantity);
+
+        return $this->formatCurrencyAmount($unitAmount * $quantity, $currency);
     }
 
     protected function formatPriceAmount(array $price): string
@@ -426,23 +434,22 @@ trait HasStripeInvoiceForm
         $currency = (string) data_get($price, 'currency');
         $amount = (int) data_get($price, 'unit_amount', 0);
 
+        if ($currency === '') {
+            return '—';
+        }
+
         return $this->formatCurrencyAmount($amount, $currency);
     }
 
     protected function formatCurrencyAmount(int $amount, string $currency): string
     {
-        $currency = Str::upper($currency);
+        $currency = Str::lower($currency);
 
         if ($currency === '') {
             return '—';
         }
 
-        $decimals = StripeCurrency::isZeroDecimal($currency) ? 0 : 2;
-        $divisor = $decimals === 0 ? 1 : 100;
-        $value = $amount / $divisor;
-        $formatted = number_format($value, $decimals, '.', ' ');
-
-        return sprintf('%s %s', $formatted, $currency);
+        return $this->formatCurrencyForDisplay($amount, $currency);
     }
 
     protected function sanitizeLineItemsForState(array $lineItems): array

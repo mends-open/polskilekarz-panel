@@ -85,9 +85,9 @@ class InvoicesTable extends BaseTableWidget
                             ->badge()
                             ->money(
                                 currency: fn ($record) => $record['currency'],
-                                divideBy: fn ($record) => $this->isZeroDecimal($record['currency']) ? 1 : 100,
+                                divideBy: fn ($record) => $this->currencyDivisor($record['currency']),
                                 locale: config('app.locale'),
-                                decimalPlaces: fn ($record) => $this->isZeroDecimal($record['currency']) ? 0 : 2,
+                                decimalPlaces: fn ($record) => $this->currencyDecimalPlaces($record['currency']),
                             )
                             ->color(fn ($record) => match ($record['status']) {
                                 'paid' => 'success',                     // ✅ money in
@@ -127,9 +127,9 @@ class InvoicesTable extends BaseTableWidget
                             ->listWithLineBreaks()
                             ->money(
                                 currency: fn ($record) => $record['currency'],
-                                divideBy: fn ($record) => $this->isZeroDecimal($record['currency']) ? 1 : 100,
+                                divideBy: fn ($record) => $this->currencyDivisor($record['currency']),
                                 locale: config('app.locale'),
-                                decimalPlaces: fn ($record) => $this->isZeroDecimal($record['currency']) ? 0 : 2,
+                                decimalPlaces: fn ($record) => $this->currencyDecimalPlaces($record['currency']),
                             )
                             ->badge(),
                     ]),

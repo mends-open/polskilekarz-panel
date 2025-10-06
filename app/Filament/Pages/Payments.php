@@ -8,6 +8,8 @@ use App\Filament\Widgets\Stripe\Concerns\InteractsWithStripeInvoices;
 use App\Filament\Widgets\Stripe\CustomerInfolist;
 use App\Filament\Widgets\Stripe\InvoicesTable;
 use App\Filament\Widgets\Stripe\LatestInvoiceInfolist;
+use App\Filament\Widgets\Stripe\LatestInvoiceLinesTable;
+use App\Filament\Widgets\Stripe\LatestInvoicePaymentsTable;
 use App\Filament\Widgets\Stripe\PaymentsTable;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use Filament\Actions\Action;
@@ -45,6 +47,8 @@ class Payments extends Dashboard
             ContactInfolist::class,
             CustomerInfolist::class,
             LatestInvoiceInfolist::class,
+            LatestInvoiceLinesTable::class,
+            LatestInvoicePaymentsTable::class,
             InvoicesTable::class,
             PaymentsTable::class,
         ];

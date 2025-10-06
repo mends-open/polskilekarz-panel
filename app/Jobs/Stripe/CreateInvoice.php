@@ -3,7 +3,7 @@
 namespace App\Jobs\Stripe;
 
 use App\Models\User;
-use App\Support\Stripe\Currency as StripeCurrency;
+use App\Support\Stripe\Currency;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Illuminate\Bus\Queueable;
@@ -144,7 +144,7 @@ class CreateInvoice implements ShouldQueue
         }
 
         $currency = strtoupper($currency);
-        $divisor = StripeCurrency::isZeroDecimal($currency) ? 1 : 100;
+        $divisor = Currency::divisor($currency);
 
         return Number::currency($amount / $divisor, $currency);
     }
