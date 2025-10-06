@@ -5,19 +5,23 @@ namespace App\Filament\Widgets\Stripe;
 use App\Filament\Widgets\BaseTableWidget;
 use App\Filament\Widgets\Stripe\Concerns\HandlesCurrencyDecimals;
 use App\Filament\Widgets\Stripe\Concerns\HasLatestStripeInvoice;
+use App\Filament\Widgets\Stripe\Concerns\HasStripeInvoiceForm;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use Filament\Actions\Action;
+use Illuminate\Support\Str;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\Layout\Split;
 use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Livewire\Attributes\On;
+use Stripe\StripeObject;
 
 class LatestInvoiceLinesTable extends BaseTableWidget
 {
     use HandlesCurrencyDecimals;
     use HasLatestStripeInvoice;
+    use HasStripeInvoiceForm;
     use InteractsWithDashboardContext;
 
     protected int|string|array $columnSpan = 'full';
@@ -54,10 +58,10 @@ class LatestInvoiceLinesTable extends BaseTableWidget
                             ->label('Unit Price')
                             ->badge()
                             ->money(
-                                currency: fn ($record) => $record['currency'],
-                                divideBy: fn ($record) => $this->currencyDivisor($record['currency']),
+                                currency: fn ($record) => data_get($record, 'currency'),
+                                divideBy: fn ($record) => $this->currencyDivisor((string) data_get($record, 'currency', '')),
                                 locale: config('app.locale'),
-                                decimalPlaces: fn ($record) => $this->currencyDecimalPlaces($record['currency']),
+                                decimalPlaces: fn ($record) => $this->currencyDecimalPlaces((string) data_get($record, 'currency', '')),
                             ),
                         TextColumn::make('quantity')
                             ->label('Qty')
@@ -71,15 +75,32 @@ class LatestInvoiceLinesTable extends BaseTableWidget
                             ->badge()
                             ->color('primary')
                             ->money(
-                                currency: fn ($record) => $record['currency'],
-                                divideBy: fn ($record) => $this->currencyDivisor($record['currency']),
+                                currency: fn ($record) => data_get($record, 'currency'),
+                                divideBy: fn ($record) => $this->currencyDivisor((string) data_get($record, 'currency', '')),
                                 locale: config('app.locale'),
-                                decimalPlaces: fn ($record) => $this->currencyDecimalPlaces($record['currency']),
+                                decimalPlaces: fn ($record) => $this->currencyDecimalPlaces((string) data_get($record, 'currency', '')),
                         ),
                     ])
                 ]),
             ])
             ->headerActions([
+                $this->configureInvoiceFormAction(
+                    Action::make('duplicateLatestInvoice')
+                        ->label('Duplicate')
+                        ->icon(Heroicon::OutlinedDocumentDuplicate)
+                        ->outlined()
+                        ->color($this->latestInvoice ? 'primary' : 'gray')
+                        ->disabled(! $this->latestInvoice)
+                        ->modalHeading('Duplicate latest invoice')
+                )->fillForm(function (): array {
+                    $invoice = $this->latestInvoice;
+
+                    if (! $invoice instanceof StripeObject) {
+                        return [];
+                    }
+
+                    return $this->getInvoiceFormDefaults($invoice->toArray());
+                }),
                 Action::make('refresh')
                     ->action(fn () => $this->refreshLines())
                     ->hiddenLabel()
@@ -90,8 +111,9 @@ class LatestInvoiceLinesTable extends BaseTableWidget
 
     protected function resolveLineItems(): array
     {
-        return $this->latestInvoiceLines ?? [];
-
+        return collect($this->latestInvoiceLines ?? [])
+            ->map(fn ($line) => $this->formatLineItem($line))
+            ->all();
     }
 
     private function refreshLines(): void
@@ -112,5 +134,39 @@ class LatestInvoiceLinesTable extends BaseTableWidget
     public function refreshContext(): void
     {
         $this->refreshLines();
+    }
+
+    private function formatLineItem(StripeObject|array|null $line): array
+    {
+        $payload = $line instanceof StripeObject
+            ? $line->toArray()
+            : (array) ($line ?? []);
+
+        $description = $payload['description']
+            ?? data_get($payload, 'price.product.name')
+            ?? data_get($payload, 'price.nickname')
+            ?? data_get($payload, 'price.id');
+
+        if (is_string($description)) {
+            $payload['description'] = $description;
+        }
+
+        $amount = $payload['amount']
+            ?? data_get($payload, 'amount_excluding_tax')
+            ?? data_get($payload, 'price.unit_amount');
+
+        if (is_numeric($amount)) {
+            $payload['amount'] = $amount;
+        }
+
+        $currency = $payload['currency'] ?? data_get($payload, 'price.currency');
+
+        if (! is_string($currency) || $currency === '') {
+            $currency = (string) config('cashier.currency', 'usd');
+        }
+
+        $payload['currency'] = Str::lower($currency);
+
+        return $payload;
     }
 }

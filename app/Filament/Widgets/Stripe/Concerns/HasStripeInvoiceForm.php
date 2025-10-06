@@ -755,12 +755,18 @@ trait HasStripeInvoiceForm
             return [];
         }
 
-        $normalized = $this->normalizeStripeObject($lineItems);
+        $lines = [];
 
-        $lines = data_get($normalized, 'data', []);
+        if (method_exists($lineItems, 'autoPagingIterator')) {
+            foreach ($lineItems->autoPagingIterator() as $line) {
+                $lines[] = $line instanceof StripeObject ? $line->toArray() : (array) $line;
+            }
 
-        if (! is_array($lines)) {
-            $lines = [];
+            return $lines;
+        }
+
+        foreach ($lineItems->data ?? [] as $line) {
+            $lines[] = $line instanceof StripeObject ? $line->toArray() : (array) $line;
         }
 
         return $lines;
@@ -836,6 +842,12 @@ trait HasStripeInvoiceForm
                 'chatwoot_contact_id' => (string) $contactId,
             ],
         ], fn ($value) => filled($value));
+
+        $country = Str::upper((string) data_get($contact, 'additional_attributes.country_code', ''));
+
+        if ($country !== '') {
+            $payload['address'] = ['country' => $country];
+        }
 
         try {
             $customer = stripe()->customers->create($payload);
