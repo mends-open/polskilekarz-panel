@@ -39,7 +39,11 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
 
         try {
             return $this->latestStripeInvoice($customerId, [
-                'expand' => ['data.lines', 'data.payments'],
+                'expand' => [
+                    'data.lines',
+                    'data.payments',
+                    'data.payments.data.payment'
+                ],
             ]);
         } catch (ApiErrorException $e) {
             report($e);
@@ -71,7 +75,7 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
 
     public function schema(Schema $schema): Schema
     {
-        $invoice = $this->latestInvoice();
+        $invoice = $this->latestInvoice;
         $hostedUrl = Arr::get($invoice, 'hosted_invoice_url');
 
         return $schema
@@ -89,7 +93,6 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                                 ->disabled(blank($invoice))
                                 ->modalHeading('Duplicate latest invoice')
                         )->fillForm(fn() => $this->getInvoiceFormDefaults(blank($invoice) ? null : $invoice)),
-
                         Action::make('sendLatest')
                             ->requiresConfirmation()
                             ->label('Send')
@@ -98,7 +101,6 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                             ->color(blank($invoice) ? 'gray' : 'warning')
                             ->disabled(blank($invoice))
                             ->action(fn() => $this->sendHostedInvoiceLink($invoice)),
-
                         Action::make('openInvoice')
                             ->label('Open')
                             ->outlined()
@@ -108,7 +110,6 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                             ->url($hostedUrl)
                             ->openUrlInNewTab()
                             ->hidden(blank($hostedUrl)),
-
                         Action::make('reset')
                             ->action(fn() => $this->refreshLatestInvoice())
                             ->hiddenLabel()
@@ -120,7 +121,6 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                             ->badge()
                             ->color('gray')
                             ->inlineLabel(),
-
                         TextEntry::make('status')
                             ->badge()
                             ->color(fn(?string $state) => match ($state) {
@@ -132,40 +132,41 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                                 default => 'secondary',
                             })
                             ->inlineLabel(),
-
                         TextEntry::make('created')
                             ->since()
                             ->inlineLabel(),
-
                         TextEntry::make('due_date')
-                            ->date()
+                            ->since()
                             ->inlineLabel(),
-
                         TextEntry::make('total')
                             ->label('Total')
                             ->inlineLabel(),
-
                         TextEntry::make('amount_paid')
                             ->label('Amount Paid')
                             ->inlineLabel(),
-
                         TextEntry::make('amount_remaining')
                             ->label('Amount Remaining')
                             ->inlineLabel(),
-
                         TextEntry::make('collection_method')
                             ->inlineLabel(),
                         RepeatableEntry::make('lines.data')
                             ->hiddenLabel()
                             ->columnSpanFull()
                             ->table([
+                                TableColumn::make('product_id'),
+                                TableColumn::make('price_id'),
                                 TableColumn::make('description'),
                                 TableColumn::make('pricing.unit_amount_decimal'),
                                 TableColumn::make('quantity'),
                                 TableColumn::make('amount'),
-
                             ])
                             ->schema([
+                                TextEntry::make('pricing.price_details.product')
+                                    ->badge()
+                                    ->color('gray'),
+                                TextEntry::make('pricing.price_details.price')
+                                    ->badge()
+                                    ->color('gray'),
                                 TextEntry::make('description'),
                                 TextEntry::make('pricing.unit_amount_decimal'),
                                 TextEntry::make('quantity'),
@@ -176,7 +177,7 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                             ->columnSpanFull()
                             ->table([
                                 TableColumn::make('id'),
-                                TableColumn::make('type'),
+                                TableColumn::make('payment_intent_id'),
                                 TableColumn::make('status'),
                                 TableColumn::make('amount_paid'),
                                 TableColumn::make('currency'),
@@ -187,7 +188,8 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                                     ->badge()
                                     ->color('gray')
                                     ->copyable(),
-                                TextEntry::make('payment.type')
+                                TextEntry::make('payment.payment_intent')
+                                    ->color('gray')
                                     ->badge(),
                                 TextEntry::make('status')
                                     ->badge()

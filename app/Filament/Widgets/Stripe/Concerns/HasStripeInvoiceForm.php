@@ -24,9 +24,6 @@ use Livewire\Attributes\Computed;
 
 trait HasStripeInvoiceForm
 {
-    /**
-     * @throws ApiErrorException
-     */
     protected function getStripePrices(): array
     {
         try {
@@ -641,11 +638,14 @@ trait HasStripeInvoiceForm
     {
         return $action
             ->modalSubmitActionLabel('Create invoice')
-            ->form($this->getCreateInvoiceForm())
-            ->mutateFormDataUsing(fn (array $data): array => $this->prepareInvoiceFormData($data))
+            ->schema($this->getCreateInvoiceForm())
+            ->mutateDataUsing(fn (array $data): array => $this->prepareInvoiceFormData($data))
             ->action(fn (array $data) => $this->handleCreateInvoice($data));
     }
 
+    /**
+     * @throws ApiErrorException
+     */
     protected function handleCreateInvoice(array $data): void
     {
         $data = $this->prepareInvoiceFormData($data);
