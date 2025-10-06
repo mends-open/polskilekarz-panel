@@ -44,6 +44,8 @@ class InvoicesTable extends BaseTableWidget
 
     protected int|string|array $columnSpan = 'full';
 
+    public $tableRecordsPerPage = 3;
+
     protected static ?string $heading = 'Invoices';
 
     private ?Collection $stripePriceCollectionCache = null;

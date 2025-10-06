@@ -26,6 +26,8 @@ class PaymentsTable extends BaseTableWidget
 
     protected int|string|array $columnSpan = 'full';
 
+    public $tableRecordsPerPage = 3;
+
     protected static ?string $heading = 'Payments';
 
     /**
