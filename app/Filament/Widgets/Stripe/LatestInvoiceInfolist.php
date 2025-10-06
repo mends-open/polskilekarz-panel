@@ -4,8 +4,8 @@ namespace App\Filament\Widgets\Stripe;
 
 use App\Filament\Widgets\BaseSchemaWidget;
 use App\Filament\Widgets\Stripe\Concerns\HandlesCurrencyDecimals;
+use App\Filament\Widgets\Stripe\Concerns\HasLatestStripeInvoice;
 use App\Filament\Widgets\Stripe\Concerns\HasStripeInvoiceForm;
-use App\Filament\Widgets\Stripe\Concerns\InteractsWithStripeInvoices;
 use App\Filament\Widgets\Stripe\Concerns\InterpretsStripeAmounts;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use Filament\Actions\Action;
@@ -13,43 +13,18 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
-use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
-use Stripe\Exception\ApiErrorException;
+use Stripe\StripeObject;
 
 class LatestInvoiceInfolist extends BaseSchemaWidget
 {
     use HandlesCurrencyDecimals;
+    use HasLatestStripeInvoice;
     use HasStripeInvoiceForm;
     use InteractsWithDashboardContext;
-    use InteractsWithStripeInvoices;
     use InterpretsStripeAmounts;
 
     protected int|string|array $columnSpan = 'full';
-
-    #[Computed(persist: true)]
-    protected function latestInvoice(): array
-    {
-        $customerId = (string) $this->stripeContext()->customerId;
-
-        if ($customerId === '') {
-            return [];
-        }
-
-        try {
-            return $this->latestStripeInvoice($customerId, [
-                'expand' => [
-                    'data.lines',
-                    'data.payments',
-                    'data.payments.data.payment',
-                ],
-            ]);
-        } catch (ApiErrorException $e) {
-            report($e);
-
-            return [];
-        }
-    }
 
     public function isReady(): bool
     {
@@ -64,7 +39,8 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
     #[On('stripe.invoices.refresh')]
     public function refreshLatestInvoice(): void
     {
-        unset($this->latestInvoice, $this->stripePriceCollection, $this->stripeProductCollection);
+        $this->clearLatestInvoiceCache();
+        unset($this->stripePriceCollection, $this->stripeProductCollection);
     }
 
     #[On('stripe.set-context')]
@@ -75,7 +51,11 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
 
     public function schema(Schema $schema): Schema
     {
-        $data = $this->latestInvoice;
+        $invoice = $this->latestInvoice;
+        $data = $invoice instanceof StripeObject ? $invoice->toArray() : [];
+        $currency = (string) data_get($data, 'currency');
+        $divideBy = $currency === '' ? 100 : $this->currencyDivisor($currency);
+        $decimalPlaces = $currency === '' ? 2 : $this->currencyDecimalPlaces($currency);
 
         return $schema
             ->state($data)
@@ -84,31 +64,29 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                     ->columns(2)
                     ->headerActions([
                         $this->configureInvoiceFormAction(
-                            Action::make('duplicateLatest')
-                                ->label('Duplicate')
-                                ->icon(Heroicon::OutlinedDocumentDuplicate)
+                            Action::make('createInvoice')
+                                ->label('Create')
+                                ->icon(Heroicon::OutlinedDocumentPlus)
                                 ->outlined()
-                                ->color(blank($data) ? 'gray' : 'primary')
-                                ->disabled(blank($data))
-                                ->modalHeading('Duplicate latest invoice')
-                        )->fillForm(fn () => $this->getInvoiceFormDefaults(blank($data) ? null : $data)),
+                                ->color('success')
+                                ->modalHeading('Create invoice')
+                        ),
                         Action::make('sendLatest')
-                            ->requiresConfirmation()
                             ->label('Send')
                             ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
                             ->outlined()
                             ->color(blank($data) ? 'gray' : 'warning')
                             ->disabled(blank($data))
-                            ->action(fn () => $this->sendHostedInvoiceLink($data)),
+                            ->action(fn () => $this->sendHostedInvoiceLink($invoice)),
                         Action::make('openInvoice')
                             ->label('Open')
                             ->outlined()
                             ->color(blank($data) ? 'gray' : 'primary')
                             ->disabled(blank($data))
                             ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
-                            ->url($data['hosted_invoice_url'])
+                            ->url(data_get($data, 'hosted_invoice_url'))
                             ->openUrlInNewTab()
-                            ->hidden(blank($data['hosted_invoice_url'])),
+                            ->hidden(blank(data_get($data, 'hosted_invoice_url'))),
                         Action::make('reset')
                             ->action(fn () => $this->refreshLatestInvoice())
                             ->hiddenLabel()
@@ -123,11 +101,10 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                         TextEntry::make('status')
                             ->badge()
                             ->color(fn (?string $state) => match ($state) {
-                                'draft' => 'gray',
+                                'draft', 'void' => 'gray',
                                 'open' => 'warning',
                                 'paid' => 'success',
                                 'uncollectible' => 'danger',
-                                'void' => 'gray',
                                 default => 'secondary',
                             })
                             ->inlineLabel(),
@@ -142,20 +119,20 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                             ->inlineLabel()
                             ->badge()
                             ->money(
-                                currency: $data['currency'],
-                                divideBy: $this->isZeroDecimal($data['currency']) ? 1 : 100,
+                                currency: $currency,
+                                divideBy: $divideBy,
                                 locale: config('app.locale'),
-                                decimalPlaces: $this->isZeroDecimal($data['currency']) ? 0 : 2,
+                                decimalPlaces: $decimalPlaces,
                             ),
                         TextEntry::make('amount_paid')
                             ->label('Amount Paid')
                             ->inlineLabel()
                             ->color('success')
                             ->money(
-                                currency: $data['currency'],
-                                divideBy: $this->isZeroDecimal($data['currency']) ? 1 : 100,
+                                currency: $currency,
+                                divideBy: $divideBy,
                                 locale: config('app.locale'),
-                                decimalPlaces: $this->isZeroDecimal($data['currency']) ? 0 : 2,
+                                decimalPlaces: $decimalPlaces,
                             )
                             ->badge(),
                         TextEntry::make('amount_remaining')
@@ -163,10 +140,10 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                             ->color('danger')
                             ->inlineLabel()
                             ->money(
-                                currency: $data['currency'],
-                                divideBy: $this->isZeroDecimal($data['currency']) ? 1 : 100,
+                                currency: $currency,
+                                divideBy: $divideBy,
                                 locale: config('app.locale'),
-                                decimalPlaces: $this->isZeroDecimal($data['currency']) ? 0 : 2,
+                                decimalPlaces: $decimalPlaces,
                             )
                             ->badge(),
                         TextEntry::make('collection_method')

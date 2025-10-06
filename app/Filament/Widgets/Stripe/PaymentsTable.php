@@ -17,8 +17,6 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
-use Psr\Container\ContainerExceptionInterface;
-use Psr\Container\NotFoundExceptionInterface;
 use Stripe\Exception\ApiErrorException;
 use Stripe\StripeObject;
 
@@ -83,9 +81,9 @@ class PaymentsTable extends BaseTableWidget
                             ->badge()
                             ->money(
                                 currency: fn ($record) => $record['currency'],
-                                divideBy: fn ($record) => $this->isZeroDecimal($record['currency']) ? 1 : 100,
+                                divideBy: fn ($record) => $this->currencyDivisor($record['currency']),
                                 locale: config('app.locale'),
-                                decimalPlaces: fn ($record) => $this->isZeroDecimal($record['currency']) ? 0 : 2,
+                                decimalPlaces: fn ($record) => $this->currencyDecimalPlaces($record['currency']),
                             )
                             ->color(fn ($record) => match ($record['status']) {
                                 'succeeded' => 'success',   // ✅ received
@@ -141,9 +139,7 @@ class PaymentsTable extends BaseTableWidget
     }
 
     /**
-     * @throws ContainerExceptionInterface
      * @throws ApiErrorException
-     * @throws NotFoundExceptionInterface
      */
     #[Computed(persist: true)]
     private function customerPayments(): array

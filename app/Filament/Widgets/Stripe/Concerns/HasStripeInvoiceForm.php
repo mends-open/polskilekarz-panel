@@ -24,6 +24,8 @@ use Stripe\StripeObject;
 
 trait HasStripeInvoiceForm
 {
+    use HandlesCurrencyDecimals;
+
     protected function getStripePrices(): array
     {
         try {
@@ -44,7 +46,6 @@ trait HasStripeInvoiceForm
     {
         return [
             Repeater::make('line_items')
-                ->compact()
                 ->label('Products')
                 ->reorderable(false)
                 ->required()
@@ -418,7 +419,13 @@ trait HasStripeInvoiceForm
         $currency = (string) data_get($price, 'currency');
         $unitAmount = (int) data_get($price, 'unit_amount', 0);
 
-        return $this->formatCurrencyAmount($unitAmount * max(1, $quantity), $currency);
+        if ($currency === '') {
+            return '—';
+        }
+
+        $quantity = max(1, $quantity);
+
+        return $this->formatCurrencyAmount($unitAmount * $quantity, $currency);
     }
 
     protected function formatPriceAmount(array $price): string
@@ -426,23 +433,22 @@ trait HasStripeInvoiceForm
         $currency = (string) data_get($price, 'currency');
         $amount = (int) data_get($price, 'unit_amount', 0);
 
+        if ($currency === '') {
+            return '—';
+        }
+
         return $this->formatCurrencyAmount($amount, $currency);
     }
 
     protected function formatCurrencyAmount(int $amount, string $currency): string
     {
-        $currency = Str::upper($currency);
+        $currency = Str::lower($currency);
 
         if ($currency === '') {
             return '—';
         }
 
-        $decimals = StripeCurrency::isZeroDecimal($currency) ? 0 : 2;
-        $divisor = $decimals === 0 ? 1 : 100;
-        $value = $amount / $divisor;
-        $formatted = number_format($value, $decimals, '.', ' ');
-
-        return sprintf('%s %s', $formatted, $currency);
+        return $this->formatCurrencyForDisplay($amount, $currency);
     }
 
     protected function sanitizeLineItemsForState(array $lineItems): array
@@ -749,12 +755,18 @@ trait HasStripeInvoiceForm
             return [];
         }
 
-        $normalized = $this->normalizeStripeObject($lineItems);
+        $lines = [];
 
-        $lines = data_get($normalized, 'data', []);
+        if (method_exists($lineItems, 'autoPagingIterator')) {
+            foreach ($lineItems->autoPagingIterator() as $line) {
+                $lines[] = $line instanceof StripeObject ? $line->toArray() : (array) $line;
+            }
 
-        if (! is_array($lines)) {
-            $lines = [];
+            return $lines;
+        }
+
+        foreach ($lineItems->data ?? [] as $line) {
+            $lines[] = $line instanceof StripeObject ? $line->toArray() : (array) $line;
         }
 
         return $lines;
@@ -830,6 +842,12 @@ trait HasStripeInvoiceForm
                 'chatwoot_contact_id' => (string) $contactId,
             ],
         ], fn ($value) => filled($value));
+
+        $country = Str::upper((string) data_get($contact, 'additional_attributes.country_code', ''));
+
+        if ($country !== '') {
+            $payload['address'] = ['country' => $country];
+        }
 
         try {
             $customer = stripe()->customers->create($payload);

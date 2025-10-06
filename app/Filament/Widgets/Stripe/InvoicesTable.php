@@ -85,9 +85,9 @@ class InvoicesTable extends BaseTableWidget
                             ->badge()
                             ->money(
                                 currency: fn ($record) => $record['currency'],
-                                divideBy: fn ($record) => $this->isZeroDecimal($record['currency']) ? 1 : 100,
+                                divideBy: fn ($record) => $this->currencyDivisor($record['currency']),
                                 locale: config('app.locale'),
-                                decimalPlaces: fn ($record) => $this->isZeroDecimal($record['currency']) ? 0 : 2,
+                                decimalPlaces: fn ($record) => $this->currencyDecimalPlaces($record['currency']),
                             )
                             ->color(fn ($record) => match ($record['status']) {
                                 'paid' => 'success',                     // ✅ money in
@@ -127,9 +127,9 @@ class InvoicesTable extends BaseTableWidget
                             ->listWithLineBreaks()
                             ->money(
                                 currency: fn ($record) => $record['currency'],
-                                divideBy: fn ($record) => $this->isZeroDecimal($record['currency']) ? 1 : 100,
+                                divideBy: fn ($record) => $this->currencyDivisor($record['currency']),
                                 locale: config('app.locale'),
-                                decimalPlaces: fn ($record) => $this->isZeroDecimal($record['currency']) ? 0 : 2,
+                                decimalPlaces: fn ($record) => $this->currencyDecimalPlaces($record['currency']),
                             )
                             ->badge(),
                     ]),
@@ -137,30 +137,6 @@ class InvoicesTable extends BaseTableWidget
             ])
             ->filters([])
             ->headerActions([
-                $this->configureInvoiceFormAction(
-                    Action::make('create')
-                        ->icon(Heroicon::OutlinedDocumentPlus)
-                        ->color('success')
-                        ->outlined()
-                        ->visible(false)
-                        ->modalIcon(Heroicon::OutlinedDocumentPlus)
-                        ->modalHeading('Create invoice')
-                ),
-                $this->configureInvoiceFormAction(
-                    Action::make('duplicateLatest')
-                        ->icon(Heroicon::OutlinedDocumentDuplicate)
-                        ->outlined()
-                        ->visible(false)
-                        ->color(fn () => $this->hasCustomerInvoices() ? 'primary' : 'gray')
-                        ->disabled(fn () => ! $this->hasCustomerInvoices())
-                        ->modalIcon(Heroicon::OutlinedDocumentDuplicate)
-                        ->modalHeading('Duplicate latest invoice')
-                )
-                    ->fillForm(function () {
-                        $invoice = $this->latestCustomerInvoice();
-
-                        return $this->getInvoiceFormDefaults($invoice);
-                    }),
                 Action::make('sendLatest')
                     ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
                     ->outlined()
@@ -187,7 +163,7 @@ class InvoicesTable extends BaseTableWidget
                     )
                         ->fillForm(function ($record): array {
                             if ($record instanceof StripeObject) {
-                                $record = $this->normalizeStripeObject($record);
+                                $record = $record->toArray();
                             }
 
                             return $this->getInvoiceFormDefaults(is_array($record) ? $record : null);
@@ -211,9 +187,6 @@ class InvoicesTable extends BaseTableWidget
             ->toolbarActions([]);
     }
 
-    /**
-     * @throws ApiErrorException
-     */
     #[Computed(persist: true)]
     private function customerInvoices(): array
     {
@@ -224,7 +197,10 @@ class InvoicesTable extends BaseTableWidget
         }
 
         try {
-            return $this->fetchStripeInvoices($customerId);
+            return array_map(
+                fn (StripeObject $invoice) => $invoice->toArray(),
+                $this->fetchStripeInvoices($customerId)
+            );
         } catch (ApiErrorException $exception) {
             report($exception);
 
@@ -254,9 +230,6 @@ class InvoicesTable extends BaseTableWidget
         $this->sendHostedInvoiceLink($latest);
     }
 
-    /**
-     * @throws ApiErrorException
-     */
     private function hasCustomerInvoices(): bool
     {
         return $this->customerInvoices() !== [];
@@ -272,13 +245,17 @@ class InvoicesTable extends BaseTableWidget
             return null;
         }
 
-        return $invoice !== [] ? $invoice : null;
+        if (! $invoice instanceof StripeObject) {
+            return null;
+        }
+
+        return $invoice->toArray();
     }
 
     private function sendInvoiceRecordLink($record): void
     {
         if ($record instanceof StripeObject) {
-            $record = $this->normalizeStripeObject($record);
+            $record = $record->toArray();
         }
 
         if (! is_array($record)) {

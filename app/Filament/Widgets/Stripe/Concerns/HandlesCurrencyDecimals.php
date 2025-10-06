@@ -2,36 +2,37 @@
 
 namespace App\Filament\Widgets\Stripe\Concerns;
 
-use Illuminate\Support\Str;
+use App\Support\Stripe\Currency;
 
 trait HandlesCurrencyDecimals
 {
-    /**
-     * List of zero-decimal currencies as defined by Stripe.
-     *
-     * @link https://stripe.com/docs/currencies#zero-decimal
-     */
-    protected const array ZERO_DECIMAL_CURRENCIES = [
-        'bif',
-        'clp',
-        'djf',
-        'gnf',
-        'jpy',
-        'kmf',
-        'krw',
-        'mga',
-        'pyg',
-        'rwf',
-        'ugx',
-        'vnd',
-        'vuv',
-        'xaf',
-        'xof',
-        'xpf',
-    ];
-
     protected function isZeroDecimal(string $currency): bool
     {
-        return in_array(Str::lower($currency), self::ZERO_DECIMAL_CURRENCIES, true);
+        return Currency::isZeroDecimal($currency);
+    }
+
+    protected function currencyDecimalPlaces(string $currency): int
+    {
+        return Currency::decimalPlaces($currency);
+    }
+
+    protected function currencyDivisor(string $currency): int
+    {
+        return Currency::divisor($currency);
+    }
+
+    protected function normalizeStripeAmount(int|float $amount, string $currency): float
+    {
+        return Currency::toFloat($amount, $currency);
+    }
+
+    protected function convertToStripeAmount(float $amount, string $currency): int
+    {
+        return Currency::fromFloat($amount, $currency);
+    }
+
+    protected function formatCurrencyForDisplay(int $amount, string $currency, string $decimalSeparator = '.', string $thousandsSeparator = ' '): string
+    {
+        return Currency::format($amount, $currency, $decimalSeparator, $thousandsSeparator);
     }
 }

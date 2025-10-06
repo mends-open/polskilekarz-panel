@@ -28,13 +28,13 @@ trait InteractsWithStripeInvoices
                 return [];
             }
 
-            return [$this->normalizeStripeInvoice($invoice)];
+            return [$invoice];
         }
 
         $invoices = [];
 
         foreach ($response->autoPagingIterator() as $invoice) {
-            $invoices[] = $this->normalizeStripeInvoice($invoice);
+            $invoices[] = $invoice;
         }
 
         return $invoices;
@@ -43,63 +43,83 @@ trait InteractsWithStripeInvoices
     /**
      * @throws ApiErrorException
      */
-    protected function latestStripeInvoice(?string $customerId, array $parameters = []): array
+    protected function latestStripeInvoice(?string $customerId, array $parameters = []): ?StripeObject
     {
         if (! is_string($customerId) || $customerId === '') {
-            return [];
+            return null;
         }
 
         $parameters['limit'] = 1;
 
         $invoices = $this->fetchStripeInvoices($customerId, $parameters);
 
-        return $invoices[0] ?? [];
+        return $invoices[0] ?? null;
     }
 
-    protected function normalizeStripeInvoice(mixed $invoice): array
+    /**
+     * @throws ApiErrorException
+     */
+    protected function latestStripeInvoiceLines(string $invoiceId, array $parameters = []): array
     {
-        $normalized = $this->normalizeStripeObject($invoice);
+        $parameters = array_merge([
+            'limit' => $parameters['limit'] ?? 100,
+        ], $parameters);
 
-        $normalized['lines']['data'] = collect(data_get($normalized, 'lines.data', []))
-            ->map(function (array $line): array {
-                $line['description'] = $line['description']
-                    ?? data_get($line, 'price.product.name')
-                    ?? data_get($line, 'price.nickname')
-                    ?? data_get($line, 'price.id');
+        $response = stripe()->invoices->allLines($invoiceId, $parameters);
 
-                $line['amount'] = $line['amount']
-                    ?? data_get($line, 'amount_excluding_tax')
-                    ?? data_get($line, 'price.unit_amount');
+        $lines = [];
 
-                return $line;
-            })
-            ->all();
-
-        return $normalized;
-    }
-
-    protected function normalizeStripeObject(mixed $value): array
-    {
-        if ($value instanceof StripeObject) {
-            $value = $value->toArray();
-        }
-
-        if (! is_array($value)) {
-            return [];
-        }
-
-        foreach ($value as $key => $item) {
-            if ($item instanceof StripeObject || is_array($item)) {
-                $value[$key] = $this->normalizeStripeObject($item);
+        if (method_exists($response, 'autoPagingIterator')) {
+            foreach ($response->autoPagingIterator() as $line) {
+                $lines[] = $line;
             }
+
+            return $lines;
         }
 
-        return $value;
+        foreach ($response->data ?? [] as $line) {
+            $lines[] = $line;
+        }
+
+        return $lines;
     }
 
-    protected function sendHostedInvoiceLink(?array $invoice): void
+    /**
+     * @throws ApiErrorException
+     */
+    protected function latestStripeInvoicePayments(string $invoiceId, array $parameters = []): array
     {
-        $invoiceUrl = data_get($invoice ?? [], 'hosted_invoice_url');
+        $parameters = array_merge([
+            'invoice' => $invoiceId,
+            'limit' => $parameters['limit'] ?? 100,
+        ], $parameters);
+
+        $response = stripe()->invoicePayments->all($parameters);
+
+        $payments = [];
+
+        if (method_exists($response, 'autoPagingIterator')) {
+            foreach ($response->autoPagingIterator() as $payment) {
+                $payments[] = $payment;
+            }
+
+            return $payments;
+        }
+
+        foreach ($response->data ?? [] as $payment) {
+            $payments[] = $payment;
+        }
+
+        return $payments;
+    }
+
+    protected function sendHostedInvoiceLink(StripeObject|array|null $invoice): void
+    {
+        $payload = $invoice instanceof StripeObject
+            ? $invoice->toArray()
+            : ($invoice ?? []);
+
+        $invoiceUrl = data_get($payload, 'hosted_invoice_url');
 
         if (blank($invoiceUrl)) {
             Notification::make()

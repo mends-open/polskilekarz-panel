@@ -15,18 +15,12 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
-use Psr\Container\ContainerExceptionInterface;
-use Psr\Container\NotFoundExceptionInterface;
 use Stripe\Exception\ApiErrorException;
 
 class CustomerInfolist extends BaseSchemaWidget
 {
     use InteractsWithDashboardContext;
 
-    /**
-     * @throws ContainerExceptionInterface
-     * @throws NotFoundExceptionInterface
-     */
     public function isReady(): bool
     {
         return $this->dashboardContextIsReady();
@@ -51,11 +45,6 @@ class CustomerInfolist extends BaseSchemaWidget
             : [];
     }
 
-    /**
-     * @throws ContainerExceptionInterface
-     * @throws ApiErrorException
-     * @throws NotFoundExceptionInterface
-     */
     public function schema(Schema $schema): Schema
     {
         $chatwootContext = $this->chatwootContext();
@@ -104,11 +93,11 @@ class CustomerInfolist extends BaseSchemaWidget
                         TextEntry::make('phone')
                             ->inlineLabel()
                             ->placeholder('No phone'),
-                        TextEntry::make('currency')
-                            ->state(fn ($record) => Str::upper(Arr::get($record, 'currency')))
+                        TextEntry::make('address.country')
+                            ->label('Country')
                             ->inlineLabel()
                             ->badge()
-                            ->placeholder('No currency'),
+                            ->placeholder('No country'),
                     ]),
             ]);
     }
