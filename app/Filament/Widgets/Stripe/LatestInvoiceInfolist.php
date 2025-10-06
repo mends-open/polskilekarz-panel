@@ -185,30 +185,9 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                                 TableColumn::make('product_id'),
                                 TableColumn::make('price_id'),
                                 TableColumn::make('description'),
-                                TableColumn::make('pricing.unit_amount_decimal')
-                                    ->badge()
-                                    ->money(
-                                        currency: $this->moneyCurrency(
-                                            fallback: fn ($record) => data_get($record, 'pricing.currency')
-                                                ?? data_get($this->latestInvoice, 'currency'),
-                                        ),
-                                        divideBy: $this->moneyDivideBy(),
-                                        locale: $this->moneyLocale(),
-                                        decimalPlaces: $this->moneyDecimalPlaces(),
-                                    ),
+                                TableColumn::make('pricing.unit_amount_decimal'),
                                 TableColumn::make('quantity'),
-                                TableColumn::make('amount')
-                                    ->badge()
-                                    ->money(
-                                        currency: $this->moneyCurrency(
-                                            fallback: fn ($record) => data_get($record, 'currency')
-                                                ?? data_get($record, 'pricing.currency')
-                                                ?? data_get($this->latestInvoice, 'currency'),
-                                        ),
-                                        divideBy: $this->moneyDivideBy(),
-                                        locale: $this->moneyLocale(),
-                                        decimalPlaces: $this->moneyDecimalPlaces(),
-                                    ),
+                                TableColumn::make('amount'),
                             ])
                             ->schema([
                                 TextEntry::make('pricing.price_details.product')
@@ -250,14 +229,7 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                                 TableColumn::make('id'),
                                 TableColumn::make('payment_intent_id'),
                                 TableColumn::make('status'),
-                                TableColumn::make('amount_paid')
-                                    ->badge()
-                                    ->money(
-                                        currency: $this->moneyCurrency('currency'),
-                                        divideBy: $this->moneyDivideBy(),
-                                        locale: $this->moneyLocale(),
-                                        decimalPlaces: $this->moneyDecimalPlaces(),
-                                    ),
+                                TableColumn::make('amount_paid'),
                                 TableColumn::make('currency'),
                                 TableColumn::make('created'),
                             ])
