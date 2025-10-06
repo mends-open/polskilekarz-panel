@@ -9,6 +9,7 @@ use App\Filament\Widgets\Stripe\Concerns\HasStripeInvoiceForm;
 use App\Filament\Widgets\Stripe\Concerns\InterpretsStripeAmounts;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use Filament\Actions\Action;
+use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -101,11 +102,10 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                         TextEntry::make('status')
                             ->badge()
                             ->color(fn (?string $state) => match ($state) {
-                                'draft' => 'gray',
+                                'draft', 'void' => 'gray',
                                 'open' => 'warning',
                                 'paid' => 'success',
                                 'uncollectible' => 'danger',
-                                'void' => 'gray',
                                 default => 'secondary',
                             })
                             ->inlineLabel(),

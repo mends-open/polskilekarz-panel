@@ -211,9 +211,6 @@ class InvoicesTable extends BaseTableWidget
             ->toolbarActions([]);
     }
 
-    /**
-     * @throws ApiErrorException
-     */
     #[Computed(persist: true)]
     private function customerInvoices(): array
     {
@@ -254,9 +251,6 @@ class InvoicesTable extends BaseTableWidget
         $this->sendHostedInvoiceLink($latest);
     }
 
-    /**
-     * @throws ApiErrorException
-     */
     private function hasCustomerInvoices(): bool
     {
         return $this->customerInvoices() !== [];

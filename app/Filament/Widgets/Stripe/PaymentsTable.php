@@ -17,8 +17,6 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
-use Psr\Container\ContainerExceptionInterface;
-use Psr\Container\NotFoundExceptionInterface;
 use Stripe\Exception\ApiErrorException;
 use Stripe\StripeObject;
 
@@ -141,9 +139,7 @@ class PaymentsTable extends BaseTableWidget
     }
 
     /**
-     * @throws ContainerExceptionInterface
      * @throws ApiErrorException
-     * @throws NotFoundExceptionInterface
      */
     #[Computed(persist: true)]
     private function customerPayments(): array

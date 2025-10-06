@@ -46,7 +46,6 @@ trait HasStripeInvoiceForm
     {
         return [
             Repeater::make('line_items')
-                ->compact()
                 ->label('Products')
                 ->reorderable(false)
                 ->required()
