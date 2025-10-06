@@ -1022,6 +1022,7 @@ class InvoicesTable extends BaseTableWidget
                         ->icon(Heroicon::OutlinedDocumentPlus)
                         ->color('success')
                         ->outlined()
+                        ->visible(false)
                         ->modalIcon(Heroicon::OutlinedDocumentPlus)
                         ->modalHeading('Create invoice')
                 ),
@@ -1029,6 +1030,7 @@ class InvoicesTable extends BaseTableWidget
                     Action::make('duplicateLatest')
                         ->icon(Heroicon::OutlinedDocumentDuplicate)
                         ->outlined()
+                        ->visible(false)
                         ->color(fn () => $this->hasCustomerInvoices() ? 'primary' : 'gray')
                         ->disabled(fn () => ! $this->hasCustomerInvoices())
                         ->modalIcon(Heroicon::OutlinedDocumentDuplicate)
@@ -1042,6 +1044,7 @@ class InvoicesTable extends BaseTableWidget
                 Action::make('sendLatest')
                     ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
                     ->outlined()
+                    ->visible(false)
                     ->requiresConfirmation()
                     ->modalIcon(Heroicon::OutlinedExclamationTriangle)
                     ->modalHeading('Send latest invoice link?')
@@ -1146,6 +1149,16 @@ class InvoicesTable extends BaseTableWidget
         }
 
         return $invoices;
+    }
+
+    #[On('stripe.invoices.mount-action')]
+    public function mountInvoiceAction(string $action): void
+    {
+        if (! in_array($action, ['create', 'duplicateLatest', 'sendLatest'], true)) {
+            return;
+        }
+
+        $this->mountTableAction($action);
     }
 
     #[On('stripe.set-context')]

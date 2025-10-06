@@ -4,6 +4,8 @@ namespace App\Filament\Pages;
 
 use App\Filament\Widgets\Chatwoot\ContactInfolist;
 use App\Filament\Widgets\Stripe\CustomerInfolist;
+use App\Filament\Widgets\Stripe\LatestInvoiceInfolist;
+use App\Filament\Widgets\Stripe\LatestPaymentInfolist;
 use App\Filament\Widgets\Stripe\InvoicesTable;
 use App\Filament\Widgets\Stripe\PaymentsTable;
 use Filament\Pages\Dashboard;
@@ -26,6 +28,8 @@ class Payments extends Dashboard
         return [
             ContactInfolist::class,
             CustomerInfolist::class,
+            LatestInvoiceInfolist::class,
+            LatestPaymentInfolist::class,
             InvoicesTable::class,
             PaymentsTable::class,
         ];
