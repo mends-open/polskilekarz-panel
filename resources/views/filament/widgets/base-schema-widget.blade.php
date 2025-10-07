@@ -1,4 +1,4 @@
-<x-filament-widgets::widget>
+<x-filament-widgets::widget wire:poll>
     <div>
         @if ($this->isReady() && isset($this->schema))
             {{ $this->schema }}
