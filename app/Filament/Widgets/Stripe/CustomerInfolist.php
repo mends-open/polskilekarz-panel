@@ -85,7 +85,8 @@ class CustomerInfolist extends BaseSchemaWidget
                             ->label(__('filament.widgets.stripe.customer_infolist.fields.id.label'))
                             ->badge()
                             ->color('gray')
-                            ->inlineLabel(),
+                            ->inlineLabel()
+                            ->placeholder(__('filament.widgets.common.placeholders.id')),
                         TextEntry::make('name')
                             ->label(__('filament.widgets.stripe.customer_infolist.fields.name.label'))
                             ->inlineLabel()

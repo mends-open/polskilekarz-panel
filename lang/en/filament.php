@@ -4,11 +4,27 @@ return [
     'widgets' => [
         'common' => [
             'placeholders' => [
+                'blank' => ' ',
+                'id' => 'No ID',
                 'name' => 'No name',
                 'created_at' => 'No creation date',
                 'email' => 'No email',
                 'phone' => 'No phone',
                 'country' => 'No country',
+                'status' => 'No status',
+                'due_date' => 'No due date',
+                'total' => 'No total',
+                'amount_paid' => 'No amount paid',
+                'amount_remaining' => 'No amount remaining',
+                'currency' => 'No currency',
+                'number' => 'No number',
+                'description' => 'No description',
+                'unit_price' => 'No unit price',
+                'quantity' => 'No quantity',
+                'subtotal' => 'No subtotal',
+                'payment_method' => 'No payment method',
+                'price' => 'No price',
+                'product' => 'No product',
             ],
         ],
         'chatwoot' => [
@@ -113,6 +129,10 @@ return [
                     ],
                     'send_latest' => [
                         'label' => 'Send Latest',
+                        'modal' => [
+                            'heading' => 'Send latest invoice link?',
+                            'description' => 'We will send the latest invoice link to the active Chatwoot conversation.',
+                        ],
                     ],
                     'open_latest' => [
                         'label' => 'Open Latest',
@@ -147,6 +167,10 @@ return [
             ],
             'invoices_table' => [
                 'heading' => 'Invoices',
+                'empty_state' => [
+                    'heading' => 'No invoices',
+                    'description' => 'This customer has no invoices yet.',
+                ],
                 'columns' => [
                     'id' => [
                         'label' => 'ID',
@@ -203,6 +227,10 @@ return [
             ],
             'latest_invoice_lines_table' => [
                 'heading' => 'Latest Invoice Items',
+                'empty_state' => [
+                    'heading' => 'No line items',
+                    'description' => 'The latest invoice does not include any line items.',
+                ],
                 'columns' => [
                     'price' => [
                         'label' => 'Price ID',
@@ -235,6 +263,10 @@ return [
             ],
             'payments_table' => [
                 'heading' => 'Payments',
+                'empty_state' => [
+                    'heading' => 'No payments',
+                    'description' => 'This customer has no payments yet.',
+                ],
                 'columns' => [
                     'id' => [
                         'label' => 'ID',

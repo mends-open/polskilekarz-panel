@@ -44,26 +44,33 @@ class LatestInvoiceLinesTable extends BaseTableWidget
             ->heading(__('filament.widgets.stripe.latest_invoice_lines_table.heading'))
             ->paginated(false)
             ->records(fn () => $this->resolveLineItems())
+            ->emptyStateIcon(Heroicon::OutlinedClipboardDocumentList)
+            ->emptyStateHeading(__('filament.widgets.stripe.latest_invoice_lines_table.empty_state.heading'))
+            ->emptyStateDescription(__('filament.widgets.stripe.latest_invoice_lines_table.empty_state.description'))
             ->columns([
                 Split::make([
                     Stack::make([
                         TextColumn::make('pricing.price_details.price')
                             ->label(__('filament.widgets.stripe.latest_invoice_lines_table.columns.price.label'))
+                            ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->badge()
                             ->color('gray'),
                         TextColumn::make('pricing.price_details.product')
                             ->label(__('filament.widgets.stripe.latest_invoice_lines_table.columns.product.label'))
+                            ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->badge()
                             ->color('gray'),
                     ])->space(2),
                     Stack::make([
                         TextColumn::make('description')
                             ->label(__('filament.widgets.stripe.latest_invoice_lines_table.columns.description.label'))
+                            ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->wrap(),
                     ]),
                     Stack::make([
                         TextColumn::make('pricing.unit_amount_decimal')
                             ->label(__('filament.widgets.stripe.latest_invoice_lines_table.columns.unit_amount.label'))
+                            ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->badge()
                             ->money(
                                 currency: fn ($record) => data_get($record, 'currency'),
@@ -73,6 +80,7 @@ class LatestInvoiceLinesTable extends BaseTableWidget
                             ),
                         TextColumn::make('quantity')
                             ->label(__('filament.widgets.stripe.latest_invoice_lines_table.columns.quantity.label'))
+                            ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->badge()
                             ->color('gray')
                             ->prefix(__('filament.widgets.stripe.latest_invoice_lines_table.columns.quantity.prefix')),
@@ -80,6 +88,7 @@ class LatestInvoiceLinesTable extends BaseTableWidget
                     Stack::make([
                         TextColumn::make('amount')
                             ->label(__('filament.widgets.stripe.latest_invoice_lines_table.columns.amount.label'))
+                            ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->badge()
                             ->color('primary')
                             ->money(
