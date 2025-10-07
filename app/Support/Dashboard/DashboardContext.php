@@ -36,16 +36,45 @@ class DashboardContext
 
     public function markReady(bool $ready = true): void
     {
-        $this->session->put(self::READY_KEY, $ready);
+        if (! $ready) {
+            $this->session->put(self::READY_KEY, false);
+
+            return;
+        }
+
+        $this->session->put(self::READY_KEY, $this->chatwootContextIsUsable());
     }
 
     public function isReady(): bool
     {
-        return (bool) $this->session->get(self::READY_KEY, false);
+        $ready = (bool) $this->session->get(self::READY_KEY, false);
+
+        if ($ready && $this->chatwootContextIsUsable()) {
+            return true;
+        }
+
+        if (! $ready && $this->chatwootContextIsUsable()) {
+            $this->markReady();
+
+            return true;
+        }
+
+        return false;
     }
 
     public function reset(): void
     {
         $this->session->forget([self::READY_KEY, self::CHATWOOT_KEY, self::STRIPE_KEY]);
+    }
+
+    private function chatwootContextIsUsable(): bool
+    {
+        $chatwootContext = $this->chatwoot();
+
+        if ($chatwootContext->isEmpty()) {
+            return false;
+        }
+
+        return $chatwootContext->hasContact();
     }
 }

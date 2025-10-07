@@ -53,7 +53,9 @@ class ContactInfolist extends BaseSchemaWidget
      */
     public function isReady(): bool
     {
-        return $this->dashboardContextIsReady();
+        return $this->dashboardContextIsReady(
+            fn (): bool => $this->chatwootContext()->canImpersonate(),
+        );
     }
 
     #[On('reset')]
