@@ -55,17 +55,21 @@ trait HasStripeInvoiceForm
                 ->hiddenLabel()
                 ->table([
                     TableColumn::make('Product')
-                        ->width('45%'),
+                        ->width('45%')
+                        ->markAsRequired(),
                     TableColumn::make('Price')
-                        ->width('25%'),
+                        ->width('25%')
+                        ->markAsRequired(),
                     TableColumn::make('Quantity')
-                        ->width('10%'),
+                        ->width('10%')
+                        ->markAsRequired(),
                     TableColumn::make('Subtotal')
                         ->width('20%'),
                 ])
                 ->schema([
                     Select::make('product')
                         ->label('Product')
+                        ->hiddenLabel()
                         ->options(fn (): array => $this->getProductOptions())
                         ->searchable()
                         ->debounce()
@@ -79,6 +83,7 @@ trait HasStripeInvoiceForm
                         ->placeholder('Select a product'),
                     Select::make('price')
                         ->label('Price')
+                        ->hiddenLabel()
                         ->native(false)
                         ->searchable()
                         ->debounce()
@@ -109,6 +114,7 @@ trait HasStripeInvoiceForm
                         ->placeholder('Select a price'),
                     TextInput::make('quantity')
                         ->label('Quantity')
+                        ->hiddenLabel()
                         ->numeric()
                         ->integer()
                         ->minValue(1)
@@ -117,6 +123,7 @@ trait HasStripeInvoiceForm
                         ->required(),
                     TextEntry::make('subtotal')
                         ->label('Subtotal')
+                        ->hiddenLabel()
                         ->state(function (Get $get): string {
                             $priceState = $get('price');
                             $priceId = is_string($priceState) ? $priceState : null;

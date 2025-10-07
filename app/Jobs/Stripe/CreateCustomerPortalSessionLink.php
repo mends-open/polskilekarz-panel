@@ -34,7 +34,7 @@ class CreateCustomerPortalSessionLink implements ShouldQueue
     /**
      * @throws ApiErrorException
      */
-    public function handle(LinkShortener $shortener, StripeClient $stripe): void
+    public function handle(LinkShortener $shortener): void
     {
         $config = config('stripe.customer_portal', []);
 
@@ -44,7 +44,7 @@ class CreateCustomerPortalSessionLink implements ShouldQueue
             'locale' => Arr::get($config, 'locale', 'auto'),
         ], static fn ($value) => $value !== null && $value !== '');
 
-        $session = $stripe->billingPortal->sessions->create($payload);
+        $session = stripe()->billingPortal->sessions->create($payload);
 
         $shortUrl = $shortener->shorten($session->url);
 
