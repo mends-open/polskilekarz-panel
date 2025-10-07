@@ -3,51 +3,57 @@
 namespace App\Support\Dashboard;
 
 use Illuminate\Contracts\Session\Session;
+use Illuminate\Session\SessionManager;
 
 class DashboardContext
 {
-    private const string READY_KEY = 'ready';
+    private const string READY_KEY = 'dashboard.ready';
 
-    private const string CHATWOOT_KEY = 'chatwoot';
+    private const string CHATWOOT_KEY = 'dashboard.chatwoot';
 
-    private const string STRIPE_KEY = 'stripe';
+    private const string STRIPE_KEY = 'dashboard.stripe';
 
-    public function __construct(private readonly Session $session) {}
+    public function __construct(private readonly SessionManager $sessionManager) {}
+
+    private function session(): Session
+    {
+        return $this->sessionManager->driver();
+    }
 
     public function storeChatwoot(ChatwootContext $context): void
     {
-        $this->session->put(self::CHATWOOT_KEY, $context->toArray());
+        $this->session()->put(self::CHATWOOT_KEY, $context->toArray());
     }
 
     public function chatwoot(): ChatwootContext
     {
-        return ChatwootContext::fromArray($this->session->get(self::CHATWOOT_KEY, []));
+        return ChatwootContext::fromArray($this->session()->get(self::CHATWOOT_KEY, []));
     }
 
     public function storeStripe(StripeContext $context): void
     {
-        $this->session->put(self::STRIPE_KEY, $context->toArray());
+        $this->session()->put(self::STRIPE_KEY, $context->toArray());
     }
 
     public function stripe(): StripeContext
     {
-        return StripeContext::fromArray($this->session->get(self::STRIPE_KEY, []));
+        return StripeContext::fromArray($this->session()->get(self::STRIPE_KEY, []));
     }
 
     public function markReady(bool $ready = true): void
     {
         if (! $ready) {
-            $this->session->put(self::READY_KEY, false);
+            $this->session()->put(self::READY_KEY, false);
 
             return;
         }
 
-        $this->session->put(self::READY_KEY, $this->chatwootContextIsUsable());
+        $this->session()->put(self::READY_KEY, $this->chatwootContextIsUsable());
     }
 
     public function isReady(): bool
     {
-        $ready = (bool) $this->session->get(self::READY_KEY, false);
+        $ready = (bool) $this->session()->get(self::READY_KEY, false);
 
         if ($ready && $this->chatwootContextIsUsable()) {
             return true;
@@ -64,7 +70,7 @@ class DashboardContext
 
     public function reset(): void
     {
-        $this->session->forget([self::READY_KEY, self::CHATWOOT_KEY, self::STRIPE_KEY]);
+        $this->session()->forget([self::READY_KEY, self::CHATWOOT_KEY, self::STRIPE_KEY]);
     }
 
     private function chatwootContextIsUsable(): bool

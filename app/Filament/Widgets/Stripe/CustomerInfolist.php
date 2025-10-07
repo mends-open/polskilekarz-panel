@@ -12,6 +12,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Js;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Stripe\Exception\ApiErrorException;
@@ -77,8 +78,7 @@ class CustomerInfolist extends BaseSchemaWidget
                             ->outlined()
                             ->color($customerReady ? 'primary' : 'gray')
                             ->disabled(! $customerReady)
-                            ->url($this->getCustomerPortalLink())
-                            ->openUrlInNewTab(),
+                            ->action(fn () => $this->openCustomerPortal()),
                         Action::make('reset')
                             ->action(fn () => $this->reset())
                             ->hiddenLabel()
@@ -164,7 +164,18 @@ class CustomerInfolist extends BaseSchemaWidget
         $this->reset();
     }
 
-    protected function getCustomerPortalLink(): ?string
+    protected function openCustomerPortal(): void
+    {
+        $url = $this->createCustomerPortalSessionUrl();
+
+        if (! $url) {
+            return;
+        }
+
+        $this->js(sprintf("window.open(%s, '_blank')", Js::from($url)));
+    }
+
+    protected function createCustomerPortalSessionUrl(): ?string
     {
         $customerId = $this->stripeContext()->customerId;
 
