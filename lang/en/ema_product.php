@@ -3,8 +3,8 @@
 return [
     'label' => 'EMA product',
     'plural' => 'EMA products',
-    'route_of_administration' => [
-        0 => 'Unspecified',
+    'routes_of_administration' => [
+        0 => 'Not specified',
         1 => 'Auricular',
         2 => 'Buccal',
         3 => 'Cutaneous',

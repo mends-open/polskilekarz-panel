@@ -3,8 +3,8 @@
 return [
     'label' => 'Wpis',
     'plural' => 'Wpisy',
-    'type' => [
-        0 => 'Nieokreślony',
+    'types' => [
+        0 => 'Nie określono',
         1 => 'Zadanie',
         2 => 'Notatka',
         3 => 'Ostrzeżenie',

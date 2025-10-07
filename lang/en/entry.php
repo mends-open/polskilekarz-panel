@@ -3,8 +3,8 @@
 return [
     'label' => 'Entry',
     'plural' => 'Entries',
-    'type' => [
-        0 => 'Unspecified',
+    'types' => [
+        0 => 'Not specified',
         1 => 'Task',
         2 => 'Note',
         3 => 'Warning',

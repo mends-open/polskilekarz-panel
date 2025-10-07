@@ -3,14 +3,14 @@
 return [
     'label' => 'Patient',
     'plural' => 'Patients',
-    'gender' => [
+    'genders' => [
         0 => 'Male',
         1 => 'Female',
         2 => 'Other',
         3 => 'Unknown',
     ],
-    'identifier' => [
-        0 => 'Unspecified',
+    'identifiers' => [
+        0 => 'Not specified',
         1 => 'Identity document',
         2 => 'Passport',
         3 => "Driver's license",
@@ -24,18 +24,57 @@ return [
         11 => 'Codice Fiscale',
     ],
     'fields' => [
-        'first_name' => 'First name',
-        'last_name' => 'Last name',
-        'birth_date' => 'Birth date',
-        'gender' => 'Gender',
-        'addresses' => 'Addresses',
-        'line1' => 'Line 1',
-        'city' => 'City',
-        'postal_code' => 'Postal code',
-        'country' => 'Country',
-        'identifiers' => 'Identifiers',
-        'created_at' => 'Created at',
-        'updated_at' => 'Updated at',
-        'deleted_at' => 'Deleted at',
+        'first_name' => [
+            'label' => 'First name',
+            'description' => 'Patient given name.',
+        ],
+        'last_name' => [
+            'label' => 'Last name',
+            'description' => 'Patient family name.',
+        ],
+        'birth_date' => [
+            'label' => 'Birth date',
+            'description' => 'Patient date of birth.',
+        ],
+        'gender' => [
+            'label' => 'Gender',
+            'description' => 'Administrative gender of the patient.',
+        ],
+        'addresses' => [
+            'label' => 'Addresses',
+            'description' => 'List of addresses stored for the patient.',
+        ],
+        'line1' => [
+            'label' => 'Line 1',
+            'description' => 'Primary address line.',
+        ],
+        'city' => [
+            'label' => 'City',
+            'description' => 'City or locality of the address.',
+        ],
+        'postal_code' => [
+            'label' => 'Postal code',
+            'description' => 'Postal code of the address.',
+        ],
+        'country' => [
+            'label' => 'Country',
+            'description' => 'Country of the address.',
+        ],
+        'identifiers' => [
+            'label' => 'Identifiers',
+            'description' => 'Identifiers assigned to the patient.',
+        ],
+        'created_at' => [
+            'label' => 'Created at',
+            'description' => 'Date and time when the patient record was created.',
+        ],
+        'updated_at' => [
+            'label' => 'Updated at',
+            'description' => 'Date and time of the last update.',
+        ],
+        'deleted_at' => [
+            'label' => 'Deleted at',
+            'description' => 'Date and time when the patient was deleted.',
+        ],
     ],
 ];

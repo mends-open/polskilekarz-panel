@@ -79,10 +79,10 @@ class ContactInfolist extends BaseSchemaWidget
         return $schema
             ->state($this->chatwootContact())
             ->components([
-                Section::make('contact')
+                Section::make(__('filament.widgets.chatwoot.contact_infolist.heading'))
                     ->headerActions([
                         Action::make('syncCustomerFromContact')
-                            ->label('Sync customer')
+                            ->label(__('filament.widgets.chatwoot.contact_infolist.actions.sync_customer'))
                             ->icon(Heroicon::OutlinedArrowDownOnSquareStack)
                             ->outlined()
                             ->color($syncReady ? 'primary' : 'gray')
@@ -101,21 +101,21 @@ class ContactInfolist extends BaseSchemaWidget
                             ->inlineLabel(),
                         TextEntry::make('name')
                             ->inlineLabel()
-                            ->placeholder('No name'),
+                            ->placeholder(__('filament.widgets.chatwoot.contact_infolist.placeholders.name')),
                         TextEntry::make('created_at')
                             ->inlineLabel()
-                            ->placeholder('No created')
+                            ->placeholder(__('filament.widgets.chatwoot.contact_infolist.placeholders.created_at'))
                             ->since(),
                         TextEntry::make('email')
                             ->inlineLabel()
-                            ->placeholder('No email'),
+                            ->placeholder(__('filament.widgets.chatwoot.contact_infolist.placeholders.email')),
                         TextEntry::make('phone_number')
                             ->inlineLabel()
-                            ->placeholder('No phone'),
+                            ->placeholder(__('filament.widgets.chatwoot.contact_infolist.placeholders.phone_number')),
                         TextEntry::make('additional_attributes.country_code')
                             ->inlineLabel()
                             ->badge()
-                            ->placeholder('No created'),
+                            ->placeholder(__('filament.widgets.chatwoot.contact_infolist.placeholders.country_code')),
                     ]),
             ]);
     }
@@ -132,8 +132,8 @@ class ContactInfolist extends BaseSchemaWidget
 
         if (! $accountId || ! $contactId || ! $impersonatorId) {
             Notification::make()
-                ->title('Missing Chatwoot context')
-                ->body('We could not find the Chatwoot contact details. Please open this widget from a Chatwoot conversation.')
+                ->title(__('filament.widgets.chatwoot.contact_infolist.notifications.missing_context.title'))
+                ->body(__('filament.widgets.chatwoot.contact_infolist.notifications.missing_context.body'))
                 ->danger()
                 ->send();
 
@@ -150,8 +150,8 @@ class ContactInfolist extends BaseSchemaWidget
             report($exception);
 
             Notification::make()
-                ->title('Failed to load Chatwoot contact')
-                ->body('We were unable to load the Chatwoot contact details. Please try again.')
+                ->title(__('filament.widgets.stripe.notifications.create_customer.load_contact_failed.title'))
+                ->body(__('filament.widgets.stripe.notifications.create_customer.load_contact_failed.body'))
                 ->danger()
                 ->send();
 
@@ -186,8 +186,8 @@ class ContactInfolist extends BaseSchemaWidget
                 report($exception);
 
                 Notification::make()
-                    ->title('Failed to create Stripe customer')
-                    ->body('We were unable to create a Stripe customer from the Chatwoot contact. Please try again.')
+                    ->title(__('filament.widgets.stripe.notifications.create_customer.failed.title'))
+                    ->body(__('filament.widgets.stripe.notifications.create_customer.failed.body'))
                     ->danger()
                     ->send();
 
@@ -197,8 +197,8 @@ class ContactInfolist extends BaseSchemaWidget
             $this->dashboardContext()->storeStripe(new StripeContext($customer->id));
 
             Notification::make()
-                ->title('Stripe customer created')
-                ->body('A Stripe customer was created from the Chatwoot contact details.')
+                ->title(__('filament.widgets.stripe.notifications.create_customer.success.title'))
+                ->body(__('filament.widgets.stripe.notifications.create_customer.success.body'))
                 ->success()
                 ->send();
 
@@ -209,8 +209,8 @@ class ContactInfolist extends BaseSchemaWidget
 
         if ($payload === []) {
             Notification::make()
-                ->title('No contact details to sync')
-                ->body('The Chatwoot contact does not have any details to copy to the Stripe customer.')
+                ->title(__('filament.widgets.chatwoot.contact_infolist.notifications.no_contact_details.title'))
+                ->body(__('filament.widgets.chatwoot.contact_infolist.notifications.no_contact_details.body'))
                 ->warning()
                 ->send();
 
@@ -226,8 +226,8 @@ class ContactInfolist extends BaseSchemaWidget
         );
 
         Notification::make()
-            ->title('Syncing customer details')
-            ->body('We are fetching the Chatwoot contact details and updating the Stripe customer.')
+            ->title(__('filament.widgets.chatwoot.contact_infolist.notifications.syncing_customer.title'))
+            ->body(__('filament.widgets.chatwoot.contact_infolist.notifications.syncing_customer.body'))
             ->info()
             ->send();
 

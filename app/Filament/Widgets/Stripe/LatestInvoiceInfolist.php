@@ -60,26 +60,26 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
         return $schema
             ->state($data)
             ->components([
-                Section::make('Latest Invoice')
+                Section::make(__('filament.widgets.stripe.latest_invoice_infolist.heading'))
                     ->columns(2)
                     ->headerActions([
                         $this->configureInvoiceFormAction(
                             Action::make('createInvoice')
-                                ->label('Create New')
+                                ->label(__('filament.widgets.stripe.latest_invoice_infolist.actions.create_new'))
                                 ->icon(Heroicon::OutlinedDocumentPlus)
                                 ->outlined()
                                 ->color('success')
-                                ->modalHeading('Create invoice')
+                                ->modalHeading(__('filament.widgets.stripe.latest_invoice_infolist.modals.create_invoice'))
                         ),
                         Action::make('sendLatest')
-                            ->label('Send Latest')
+                            ->label(__('filament.widgets.stripe.latest_invoice_infolist.actions.send_latest'))
                             ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
                             ->outlined()
                             ->color(blank($data) ? 'gray' : 'warning')
                             ->disabled(blank($data))
                             ->action(fn () => $this->sendHostedInvoiceLink($invoice)),
                         Action::make('openInvoice')
-                            ->label('Open Latest')
+                            ->label(__('filament.widgets.stripe.latest_invoice_infolist.actions.open_latest'))
                             ->outlined()
                             ->color(blank($data) ? 'gray' : 'primary')
                             ->disabled(blank($data))
@@ -115,7 +115,7 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                             ->since()
                             ->inlineLabel(),
                         TextEntry::make('total')
-                            ->label('Total')
+                            ->label(__('filament.widgets.stripe.latest_invoice_infolist.fields.total'))
                             ->inlineLabel()
                             ->badge()
                             ->money(
@@ -125,7 +125,7 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                                 decimalPlaces: $decimalPlaces,
                             ),
                         TextEntry::make('amount_paid')
-                            ->label('Amount Paid')
+                            ->label(__('filament.widgets.stripe.latest_invoice_infolist.fields.amount_paid'))
                             ->inlineLabel()
                             ->color('success')
                             ->money(
@@ -136,7 +136,7 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                             )
                             ->badge(),
                         TextEntry::make('amount_remaining')
-                            ->label('Amount Remaining')
+                            ->label(__('filament.widgets.stripe.latest_invoice_infolist.fields.amount_remaining'))
                             ->color('danger')
                             ->inlineLabel()
                             ->money(

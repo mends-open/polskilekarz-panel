@@ -123,8 +123,8 @@ trait InteractsWithStripeInvoices
 
         if (blank($invoiceUrl)) {
             Notification::make()
-                ->title('Invoice link unavailable')
-                ->body('We could not find a hosted invoice URL on the invoice.')
+                ->title(__('filament.widgets.stripe.notifications.invoice_link_unavailable.title'))
+                ->body(__('filament.widgets.stripe.notifications.invoice_link_unavailable.body'))
                 ->warning()
                 ->send();
 
@@ -144,8 +144,8 @@ trait InteractsWithStripeInvoices
 
         if (! $accountId || ! $userId || ! $conversationId) {
             Notification::make()
-                ->title('Missing Chatwoot context')
-                ->body('Unable to send the invoice link because the Chatwoot context is incomplete.')
+                ->title(__('filament.widgets.stripe.notifications.missing_chatwoot_context.title'))
+                ->body(__('filament.widgets.stripe.notifications.missing_chatwoot_context.body'))
                 ->danger()
                 ->send();
 
@@ -161,8 +161,8 @@ trait InteractsWithStripeInvoices
         );
 
         Notification::make()
-            ->title('Sending invoice link')
-            ->body('We are preparing the invoice link and will send it to the conversation shortly.')
+            ->title(__('filament.widgets.stripe.notifications.sending_invoice_link.title'))
+            ->body(__('filament.widgets.stripe.notifications.sending_invoice_link.body'))
             ->info()
             ->send();
     }

@@ -642,7 +642,7 @@ trait HasStripeInvoiceForm
     protected function configureInvoiceFormAction(Action $action): Action
     {
         return $action
-            ->modalSubmitActionLabel('Create invoice')
+            ->modalSubmitActionLabel(__('filament.widgets.stripe.invoice_form.submit'))
             ->schema($this->getCreateInvoiceForm())
             ->mutateDataUsing(fn (array $data): array => $this->prepareInvoiceFormData($data))
             ->action(fn (array $data) => $this->handleCreateInvoice($data));
@@ -659,8 +659,8 @@ trait HasStripeInvoiceForm
 
         if ($lineItems === []) {
             Notification::make()
-                ->title('No products selected')
-                ->body('Please select at least one product and price to include on the invoice.')
+                ->title(__('filament.widgets.stripe.invoice_form.notifications.no_products.title'))
+                ->body(__('filament.widgets.stripe.invoice_form.notifications.no_products.body'))
                 ->danger()
                 ->send();
 
@@ -672,8 +672,8 @@ trait HasStripeInvoiceForm
 
         if ($currency === null) {
             Notification::make()
-                ->title('Mixed currencies selected')
-                ->body('All selected products must use the same currency. Please adjust your selection and try again.')
+                ->title(__('filament.widgets.stripe.invoice_form.notifications.mixed_currencies.title'))
+                ->body(__('filament.widgets.stripe.invoice_form.notifications.mixed_currencies.body'))
                 ->danger()
                 ->send();
 
@@ -694,8 +694,8 @@ trait HasStripeInvoiceForm
         );
 
         Notification::make()
-            ->title('Creating invoice')
-            ->body('We are preparing the invoice in Stripe. You will be notified once it is ready.')
+            ->title(__('filament.widgets.stripe.invoice_form.notifications.creating_invoice.title'))
+            ->body(__('filament.widgets.stripe.invoice_form.notifications.creating_invoice.body'))
             ->info()
             ->send();
 
@@ -814,8 +814,8 @@ trait HasStripeInvoiceForm
 
         if (! $accountId || ! $contactId || ! $impersonatorId) {
             Notification::make()
-                ->title('Missing Chatwoot context')
-                ->body('We need a Chatwoot contact to create a Stripe customer. Please open this widget from a Chatwoot conversation.')
+                ->title(__('filament.widgets.stripe.notifications.create_customer.missing_context.title'))
+                ->body(__('filament.widgets.stripe.notifications.create_customer.missing_context.body'))
                 ->danger()
                 ->send();
 
@@ -832,8 +832,8 @@ trait HasStripeInvoiceForm
             report($exception);
 
             Notification::make()
-                ->title('Failed to load Chatwoot contact')
-                ->body('We were unable to load the Chatwoot contact details. Please try again.')
+                ->title(__('filament.widgets.stripe.notifications.create_customer.load_contact_failed.title'))
+                ->body(__('filament.widgets.stripe.notifications.create_customer.load_contact_failed.body'))
                 ->danger()
                 ->send();
 
@@ -862,8 +862,8 @@ trait HasStripeInvoiceForm
             report($exception);
 
             Notification::make()
-                ->title('Failed to create Stripe customer')
-                ->body('We were unable to create a Stripe customer from the Chatwoot contact. Please try again.')
+                ->title(__('filament.widgets.stripe.notifications.create_customer.failed.title'))
+                ->body(__('filament.widgets.stripe.notifications.create_customer.failed.body'))
                 ->danger()
                 ->send();
 
@@ -873,8 +873,8 @@ trait HasStripeInvoiceForm
         $this->dashboardContext()->storeStripe(new StripeContext($customer->id));
 
         Notification::make()
-            ->title('Stripe customer created')
-            ->body('A Stripe customer was created from the Chatwoot contact.')
+            ->title(__('filament.widgets.stripe.notifications.create_customer.success.title'))
+            ->body(__('filament.widgets.stripe.notifications.create_customer.success.body'))
             ->success()
             ->send();
 

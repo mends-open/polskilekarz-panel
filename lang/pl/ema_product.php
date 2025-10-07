@@ -3,7 +3,7 @@
 return [
     'label' => 'Produkt EMA',
     'plural' => 'Produkty EMA',
-    'route_of_administration' => [
+    'routes_of_administration' => [
         0 => 'Nieokreślona',
         1 => 'Uszna',
         2 => 'Policzkowa',

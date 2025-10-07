@@ -33,7 +33,12 @@ class InvoicesTable extends BaseTableWidget
 
     public $tableRecordsPerPage = 3;
 
-    protected static ?string $heading = 'Invoices';
+    protected static ?string $heading = null;
+
+    protected function getHeading(): string
+    {
+        return __('filament.widgets.stripe.invoices_table.heading');
+    }
 
     public function isReady(): bool
     {
@@ -143,8 +148,8 @@ class InvoicesTable extends BaseTableWidget
                     ->visible(false)
                     ->requiresConfirmation()
                     ->modalIcon(Heroicon::OutlinedExclamationTriangle)
-                    ->modalHeading('Send latest invoice link?')
-                    ->modalDescription('We will send the latest invoice link to the active Chatwoot conversation.')
+                    ->modalHeading(__('filament.widgets.stripe.invoices_table.actions.send_latest.modal.heading'))
+                    ->modalDescription(__('filament.widgets.stripe.invoices_table.actions.send_latest.modal.description'))
                     ->color(fn () => $this->hasCustomerInvoices() ? 'warning' : 'gray')
                     ->disabled(fn () => ! $this->hasCustomerInvoices())
                     ->action(fn () => $this->sendLatestInvoice()),
@@ -158,7 +163,7 @@ class InvoicesTable extends BaseTableWidget
                 ActionGroup::make([
                     $this->configureInvoiceFormAction(
                         Action::make('duplicateInvoice')
-                            ->label('Duplicate')
+                            ->label(__('filament.widgets.stripe.invoices_table.actions.duplicate.label'))
                             ->icon(Heroicon::OutlinedDocumentDuplicate)
                     )
                         ->fillForm(function ($record): array {
@@ -170,17 +175,17 @@ class InvoicesTable extends BaseTableWidget
                         }),
                     Action::make('sendInvoiceShortUrl')
                         ->action(fn ($record) => $this->sendInvoiceRecordLink($record))
-                        ->label('Send')
+                        ->label(__('filament.widgets.stripe.invoices_table.actions.send.label'))
                         ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
                         ->color('warning')
                         ->requiresConfirmation()
                         ->modalIcon(Heroicon::OutlinedExclamationTriangle)
-                        ->modalHeading('Send invoice link?')
-                        ->modalDescription('We will send this invoice link to the current Chatwoot conversation.'),
+                        ->modalHeading(__('filament.widgets.stripe.invoices_table.actions.send.modal.heading'))
+                        ->modalDescription(__('filament.widgets.stripe.invoices_table.actions.send.modal.description')),
                     Action::make('openInvoiceUrl')
                         ->url(fn ($record) => $record['hosted_invoice_url'])
                         ->openUrlInNewTab()
-                        ->label('Open')
+                        ->label(__('filament.widgets.stripe.invoices_table.actions.open.label'))
                         ->icon(Heroicon::OutlinedEnvelopeOpen),
                 ]),
             ])
