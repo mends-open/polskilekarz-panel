@@ -26,6 +26,21 @@ return [
                         'label' => 'ID',
                         'placeholder' => 'No ID',
                     ],
+                    'name' => [
+                        'label' => 'Name',
+                    ],
+                    'created_at' => [
+                        'label' => 'Created',
+                    ],
+                    'email' => [
+                        'label' => 'Email',
+                    ],
+                    'phone_number' => [
+                        'label' => 'Phone',
+                    ],
+                    'country_code' => [
+                        'label' => 'Country',
+                    ],
                 ],
             ],
         ],
@@ -47,6 +62,21 @@ return [
                     ],
                 ],
                 'fields' => [
+                    'id' => [
+                        'label' => 'ID',
+                    ],
+                    'name' => [
+                        'label' => 'Name',
+                    ],
+                    'created' => [
+                        'label' => 'Created',
+                    ],
+                    'email' => [
+                        'label' => 'Email',
+                    ],
+                    'phone' => [
+                        'label' => 'Phone',
+                    ],
                     'address_country' => [
                         'label' => 'Country',
                     ],
@@ -71,6 +101,18 @@ return [
                     ],
                 ],
                 'fields' => [
+                    'id' => [
+                        'label' => 'ID',
+                    ],
+                    'status' => [
+                        'label' => 'Status',
+                    ],
+                    'created' => [
+                        'label' => 'Created',
+                    ],
+                    'due_date' => [
+                        'label' => 'Due date',
+                    ],
                     'total' => [
                         'label' => 'Total',
                     ],
@@ -80,13 +122,43 @@ return [
                     'amount_remaining' => [
                         'label' => 'Amount Remaining',
                     ],
+                    'collection_method' => [
+                        'label' => 'Collection method',
+                    ],
                 ],
             ],
             'invoices_table' => [
                 'heading' => 'Invoices',
                 'columns' => [
+                    'id' => [
+                        'label' => 'ID',
+                    ],
+                    'number' => [
+                        'label' => 'Number',
+                    ],
+                    'total' => [
+                        'label' => 'Total',
+                    ],
+                    'status' => [
+                        'label' => 'Status',
+                    ],
+                    'currency' => [
+                        'label' => 'Currency',
+                    ],
+                    'created' => [
+                        'label' => 'Created',
+                    ],
                     'lines' => [
-                        'quantity_prefix' => 'x',
+                        'description' => [
+                            'label' => 'Description',
+                        ],
+                        'quantity' => [
+                            'label' => 'Qty',
+                            'prefix' => 'x',
+                        ],
+                        'amount' => [
+                            'label' => 'Subtotal',
+                        ],
                     ],
                 ],
                 'actions' => [
@@ -114,6 +186,12 @@ return [
             'latest_invoice_lines_table' => [
                 'heading' => 'Latest Invoice Items',
                 'columns' => [
+                    'price' => [
+                        'label' => 'Price ID',
+                    ],
+                    'product' => [
+                        'label' => 'Product ID',
+                    ],
                     'description' => [
                         'label' => 'Description',
                     ],
@@ -139,6 +217,23 @@ return [
             ],
             'payments_table' => [
                 'heading' => 'Payments',
+                'columns' => [
+                    'id' => [
+                        'label' => 'ID',
+                    ],
+                    'amount' => [
+                        'label' => 'Amount',
+                    ],
+                    'status' => [
+                        'label' => 'Status',
+                    ],
+                    'payment_method_type' => [
+                        'label' => 'Payment method',
+                    ],
+                    'created' => [
+                        'label' => 'Created',
+                    ],
+                ],
                 'actions' => [
                     'open_receipt' => [
                         'label' => 'Open Receipt',

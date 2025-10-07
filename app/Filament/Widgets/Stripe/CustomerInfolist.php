@@ -86,20 +86,25 @@ class CustomerInfolist extends BaseSchemaWidget
                     ])
                     ->schema([
                         TextEntry::make('id')
+                            ->label(__('filament.widgets.stripe.customer_infolist.fields.id.label'))
                             ->badge()
                             ->color('gray')
                             ->inlineLabel(),
                         TextEntry::make('name')
+                            ->label(__('filament.widgets.stripe.customer_infolist.fields.name.label'))
                             ->inlineLabel()
                             ->placeholder(__('filament.widgets.common.placeholders.name')),
                         TextEntry::make('created')
+                            ->label(__('filament.widgets.stripe.customer_infolist.fields.created.label'))
                             ->inlineLabel()
                             ->placeholder(__('filament.widgets.common.placeholders.created_at'))
                             ->since(),
                         TextEntry::make('email')
+                            ->label(__('filament.widgets.stripe.customer_infolist.fields.email.label'))
                             ->inlineLabel()
                             ->placeholder(__('filament.widgets.common.placeholders.email')),
                         TextEntry::make('phone')
+                            ->label(__('filament.widgets.stripe.customer_infolist.fields.phone.label'))
                             ->inlineLabel()
                             ->placeholder(__('filament.widgets.common.placeholders.phone')),
                         TextEntry::make('address.country')

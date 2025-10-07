@@ -95,10 +95,12 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                     ])
                     ->schema([
                         TextEntry::make('id')
+                            ->label(__('filament.widgets.stripe.latest_invoice_infolist.fields.id.label'))
                             ->badge()
                             ->color('gray')
                             ->inlineLabel(),
                         TextEntry::make('status')
+                            ->label(__('filament.widgets.stripe.latest_invoice_infolist.fields.status.label'))
                             ->badge()
                             ->color(fn (?string $state) => match ($state) {
                                 'draft', 'void' => 'gray',
@@ -109,9 +111,11 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                             })
                             ->inlineLabel(),
                         TextEntry::make('created')
+                            ->label(__('filament.widgets.stripe.latest_invoice_infolist.fields.created.label'))
                             ->since()
                             ->inlineLabel(),
                         TextEntry::make('due_date')
+                            ->label(__('filament.widgets.stripe.latest_invoice_infolist.fields.due_date.label'))
                             ->since()
                             ->inlineLabel(),
                         TextEntry::make('total')
@@ -147,6 +151,7 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                             )
                             ->badge(),
                         TextEntry::make('collection_method')
+                            ->label(__('filament.widgets.stripe.latest_invoice_infolist.fields.collection_method.label'))
                             ->inlineLabel()
                             ->badge()
                             ->color(fn (?string $state) => match ($state) {

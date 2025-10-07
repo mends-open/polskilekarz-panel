@@ -80,13 +80,16 @@ class InvoicesTable extends BaseTableWidget
                 Split::make([
                     Stack::make([
                         TextColumn::make('id')
+                            ->label(__('filament.widgets.stripe.invoices_table.columns.id.label'))
                             ->color('gray')
                             ->badge(),
                         TextColumn::make('number')
+                            ->label(__('filament.widgets.stripe.invoices_table.columns.number.label'))
                             ->badge(),
                     ])->space(2),
                     Stack::make([
                         TextColumn::make('total')
+                            ->label(__('filament.widgets.stripe.invoices_table.columns.total.label'))
                             ->badge()
                             ->money(
                                 currency: fn ($record) => $record['currency'],
@@ -101,6 +104,7 @@ class InvoicesTable extends BaseTableWidget
                                 default => 'secondary',
                             }),
                         TextColumn::make('status')
+                            ->label(__('filament.widgets.stripe.invoices_table.columns.status.label'))
                             ->badge()
                             ->color(fn ($state) => match ($state) {
                                 'paid' => 'success',        // green
@@ -113,22 +117,27 @@ class InvoicesTable extends BaseTableWidget
                     ])->space(2),
                     Stack::make([
                         TextColumn::make('currency')
+                            ->label(__('filament.widgets.stripe.invoices_table.columns.currency.label'))
                             ->state(fn ($record) => Str::upper($record['currency']))
                             ->badge(),
                     ]),
                     Stack::make([
                         TextColumn::make('created')
+                            ->label(__('filament.widgets.stripe.invoices_table.columns.created.label'))
                             ->since(),
                     ]),
                 ]),
                 Panel::make([
                     Split::make([
                         TextColumn::make('lines.data.*.description')
+                            ->label(__('filament.widgets.stripe.invoices_table.columns.lines.description.label'))
                             ->listWithLineBreaks(),
                         TextColumn::make('lines.data.*.quantity')
-                            ->prefix(__('filament.widgets.stripe.invoices_table.columns.lines.quantity_prefix'))
+                            ->label(__('filament.widgets.stripe.invoices_table.columns.lines.quantity.label'))
+                            ->prefix(__('filament.widgets.stripe.invoices_table.columns.lines.quantity.prefix'))
                             ->listWithLineBreaks(),
                         TextColumn::make('lines.data.*.amount')
+                            ->label(__('filament.widgets.stripe.invoices_table.columns.lines.amount.label'))
                             ->listWithLineBreaks()
                             ->money(
                                 currency: fn ($record) => $record['currency'],

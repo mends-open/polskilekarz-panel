@@ -102,19 +102,24 @@ class ContactInfolist extends BaseSchemaWidget
                             ->color('gray')
                             ->inlineLabel(),
                         TextEntry::make('name')
+                            ->label(__('filament.widgets.chatwoot.contact_infolist.fields.name.label'))
                             ->inlineLabel()
                             ->placeholder(__('filament.widgets.common.placeholders.name')),
                         TextEntry::make('created_at')
+                            ->label(__('filament.widgets.chatwoot.contact_infolist.fields.created_at.label'))
                             ->inlineLabel()
                             ->placeholder(__('filament.widgets.common.placeholders.created_at'))
                             ->since(),
                         TextEntry::make('email')
+                            ->label(__('filament.widgets.chatwoot.contact_infolist.fields.email.label'))
                             ->inlineLabel()
                             ->placeholder(__('filament.widgets.common.placeholders.email')),
                         TextEntry::make('phone_number')
+                            ->label(__('filament.widgets.chatwoot.contact_infolist.fields.phone_number.label'))
                             ->inlineLabel()
                             ->placeholder(__('filament.widgets.common.placeholders.phone')),
                         TextEntry::make('additional_attributes.country_code')
+                            ->label(__('filament.widgets.chatwoot.contact_infolist.fields.country_code.label'))
                             ->inlineLabel()
                             ->badge()
                             ->placeholder(__('filament.widgets.common.placeholders.country')),

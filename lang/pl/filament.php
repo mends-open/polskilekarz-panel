@@ -26,6 +26,21 @@ return [
                         'label' => 'ID',
                         'placeholder' => 'Brak identyfikatora',
                     ],
+                    'name' => [
+                        'label' => 'Nazwa',
+                    ],
+                    'created_at' => [
+                        'label' => 'Utworzono',
+                    ],
+                    'email' => [
+                        'label' => 'Adres e-mail',
+                    ],
+                    'phone_number' => [
+                        'label' => 'Telefon',
+                    ],
+                    'country_code' => [
+                        'label' => 'Kraj',
+                    ],
                 ],
             ],
         ],
@@ -47,6 +62,21 @@ return [
                     ],
                 ],
                 'fields' => [
+                    'id' => [
+                        'label' => 'ID',
+                    ],
+                    'name' => [
+                        'label' => 'Nazwa',
+                    ],
+                    'created' => [
+                        'label' => 'Utworzono',
+                    ],
+                    'email' => [
+                        'label' => 'Adres e-mail',
+                    ],
+                    'phone' => [
+                        'label' => 'Telefon',
+                    ],
                     'address_country' => [
                         'label' => 'Kraj',
                     ],
@@ -71,6 +101,18 @@ return [
                     ],
                 ],
                 'fields' => [
+                    'id' => [
+                        'label' => 'ID',
+                    ],
+                    'status' => [
+                        'label' => 'Status',
+                    ],
+                    'created' => [
+                        'label' => 'Utworzono',
+                    ],
+                    'due_date' => [
+                        'label' => 'Termin płatności',
+                    ],
                     'total' => [
                         'label' => 'Suma',
                     ],
@@ -80,13 +122,43 @@ return [
                     'amount_remaining' => [
                         'label' => 'Pozostało do zapłaty',
                     ],
+                    'collection_method' => [
+                        'label' => 'Metoda pobrania płatności',
+                    ],
                 ],
             ],
             'invoices_table' => [
                 'heading' => 'Faktury',
                 'columns' => [
+                    'id' => [
+                        'label' => 'ID',
+                    ],
+                    'number' => [
+                        'label' => 'Numer',
+                    ],
+                    'total' => [
+                        'label' => 'Suma',
+                    ],
+                    'status' => [
+                        'label' => 'Status',
+                    ],
+                    'currency' => [
+                        'label' => 'Waluta',
+                    ],
+                    'created' => [
+                        'label' => 'Utworzono',
+                    ],
                     'lines' => [
-                        'quantity_prefix' => 'x',
+                        'description' => [
+                            'label' => 'Opis',
+                        ],
+                        'quantity' => [
+                            'label' => 'Ilość',
+                            'prefix' => 'x',
+                        ],
+                        'amount' => [
+                            'label' => 'Suma częściowa',
+                        ],
                     ],
                 ],
                 'actions' => [
@@ -114,6 +186,12 @@ return [
             'latest_invoice_lines_table' => [
                 'heading' => 'Pozycje najnowszej faktury',
                 'columns' => [
+                    'price' => [
+                        'label' => 'ID ceny',
+                    ],
+                    'product' => [
+                        'label' => 'ID produktu',
+                    ],
                     'description' => [
                         'label' => 'Opis',
                     ],
@@ -139,6 +217,23 @@ return [
             ],
             'payments_table' => [
                 'heading' => 'Płatności',
+                'columns' => [
+                    'id' => [
+                        'label' => 'ID',
+                    ],
+                    'amount' => [
+                        'label' => 'Kwota',
+                    ],
+                    'status' => [
+                        'label' => 'Status',
+                    ],
+                    'payment_method_type' => [
+                        'label' => 'Metoda płatności',
+                    ],
+                    'created' => [
+                        'label' => 'Utworzono',
+                    ],
+                ],
                 'actions' => [
                     'open_receipt' => [
                         'label' => 'Otwórz paragon',

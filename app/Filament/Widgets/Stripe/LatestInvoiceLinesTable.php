@@ -47,9 +47,11 @@ class LatestInvoiceLinesTable extends BaseTableWidget
                 Split::make([
                     Stack::make([
                         TextColumn::make('pricing.price_details.price')
+                            ->label(__('filament.widgets.stripe.latest_invoice_lines_table.columns.price.label'))
                             ->badge()
                             ->color('gray'),
                         TextColumn::make('pricing.price_details.product')
+                            ->label(__('filament.widgets.stripe.latest_invoice_lines_table.columns.product.label'))
                             ->badge()
                             ->color('gray'),
                     ])->space(2),
