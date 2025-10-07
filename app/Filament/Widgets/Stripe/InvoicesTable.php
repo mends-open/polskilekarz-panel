@@ -72,6 +72,8 @@ class InvoicesTable extends BaseTableWidget
             ->defaultPaginationPageOption(3)
             ->extremePaginationLinks()
             ->paginationPageOptions([3, 10, 25, 50])
+            ->emptyStateDescription('no invoices')
+            ->emptyStateHeading('no invoices')
             ->columns([
                 Split::make([
                     Stack::make([
