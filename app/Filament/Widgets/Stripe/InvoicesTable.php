@@ -33,13 +33,6 @@ class InvoicesTable extends BaseTableWidget
 
     public $tableRecordsPerPage = 3;
 
-    protected static ?string $heading = null;
-
-    protected function getHeading(): ?string
-    {
-        return __('filament.widgets.stripe.invoices_table.heading');
-    }
-
     public function isReady(): bool
     {
         return $this->dashboardContextIsReady();
@@ -58,6 +51,7 @@ class InvoicesTable extends BaseTableWidget
     public function table(Table $table): Table
     {
         return $table
+            ->heading(__('filament.widgets.stripe.invoices_table.heading'))
             ->records(function (int $page, int $recordsPerPage): LengthAwarePaginator {
                 $invoices = collect($this->customerInvoices());
 

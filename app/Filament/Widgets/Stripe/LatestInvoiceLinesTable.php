@@ -26,8 +26,6 @@ class LatestInvoiceLinesTable extends BaseTableWidget
 
     protected int|string|array $columnSpan = 'full';
 
-    protected static ?string $heading = null;
-
     protected function getHeading(): ?string
     {
         return __('filament.widgets.stripe.latest_invoice_lines_table.heading');
@@ -41,6 +39,7 @@ class LatestInvoiceLinesTable extends BaseTableWidget
     public function table(Table $table): Table
     {
         return $table
+            ->heading(__('filament.widgets.stripe.latest_invoice_lines_table.heading'))
             ->paginated(false)
             ->records(fn () => $this->resolveLineItems())
             ->columns([

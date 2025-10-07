@@ -29,13 +29,6 @@ class PaymentsTable extends BaseTableWidget
 
     public $tableRecordsPerPage = 3;
 
-    protected static ?string $heading = null;
-
-    protected function getHeading(): ?string
-    {
-        return __('filament.widgets.stripe.payments_table.heading');
-    }
-
     #[On('reset')]
     public function resetComponent(): void
     {
@@ -57,6 +50,7 @@ class PaymentsTable extends BaseTableWidget
     public function table(Table $table): Table
     {
         return $table
+            ->heading(__('filament.widgets.stripe.payments_table.heading'))
             ->records(function (int $page, int $recordsPerPage): LengthAwarePaginator {
                 $payments = collect($this->customerPayments());
 
