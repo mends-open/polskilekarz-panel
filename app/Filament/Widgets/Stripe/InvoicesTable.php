@@ -35,7 +35,9 @@ class InvoicesTable extends BaseTableWidget
 
     public function isReady(): bool
     {
-        return $this->dashboardContextIsReady();
+        return $this->dashboardContextIsReady(
+            fn (): bool => $this->chatwootContext()->hasContact(),
+        );
     }
 
     #[On('stripe.invoices.refresh')]

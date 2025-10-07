@@ -75,7 +75,9 @@ class ChatwootContextListener extends Component
             return;
         }
 
-        $this->dashboardContext->storeStripe(new StripeContext($identifier));
+        $stripeContext = new StripeContext($identifier);
+
+        $this->dashboardContext->storeStripe($stripeContext);
 
         $customerId = $identifier;
 
@@ -83,7 +85,9 @@ class ChatwootContextListener extends Component
             $customerId = $this->stripeCustomerFinder->findFallback($chatwootContext->contactId);
 
             if ($customerId !== null) {
-                $this->dashboardContext->storeStripe(new StripeContext($customerId));
+                $stripeContext = new StripeContext($customerId);
+
+                $this->dashboardContext->storeStripe($stripeContext);
 
                 SyncChatwootContactIdentifier::dispatch(
                     $chatwootContext->accountId,
@@ -93,7 +97,9 @@ class ChatwootContextListener extends Component
             }
         }
 
-        $this->dashboardContext->markReady();
+        $this->dashboardContext->markReady(
+            $this->shouldWidgetsBeReady($chatwootContext),
+        );
         $this->dispatch('reset');
     }
 
@@ -116,5 +122,18 @@ class ChatwootContextListener extends Component
     public static function hasContext(): bool
     {
         return ! app(DashboardContext::class)->chatwoot()->isEmpty();
+    }
+
+    private function shouldWidgetsBeReady(ChatwootContext $chatwootContext): bool
+    {
+        if ($chatwootContext->isEmpty()) {
+            return false;
+        }
+
+        if (! $chatwootContext->hasContact()) {
+            return false;
+        }
+
+        return true;
     }
 }
