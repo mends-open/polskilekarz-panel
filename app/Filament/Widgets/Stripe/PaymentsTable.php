@@ -70,17 +70,22 @@ class PaymentsTable extends BaseTableWidget
             })
             ->defaultPaginationPageOption(3)
             ->paginationPageOptions([3, 10, 25, 50])
+            ->emptyStateIcon(Heroicon::OutlinedCreditCard)
+            ->emptyStateHeading(__('filament.widgets.stripe.payments_table.empty_state.heading'))
+            ->emptyStateDescription(__('filament.widgets.stripe.payments_table.empty_state.description'))
             ->columns([
                 Split::make([
                     Stack::make([
                         TextColumn::make('id')
                             ->label(__('filament.widgets.stripe.payments_table.columns.id.label'))
+                            ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->color('gray')
                             ->badge(),
                     ])->space(2),
                     Stack::make([
                         TextColumn::make('amount')
                             ->label(__('filament.widgets.stripe.payments_table.columns.amount.label'))
+                            ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->badge()
                             ->money(
                                 currency: fn ($record) => $record['currency'],
@@ -94,7 +99,9 @@ class PaymentsTable extends BaseTableWidget
                             }),
                         TextColumn::make('status')
                             ->label(__('filament.widgets.stripe.payments_table.columns.status.label'))
+                            ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->badge()
+                            ->formatStateUsing(fn (?string $state) => $state ? __('filament.widgets.stripe.enums.payment_intent_statuses.' . $state) : null)
                             ->color(fn ($state) => match ($state) {
                                 'succeeded' => 'success',             // green
                                 'processing' => 'warning',            // yellow
@@ -106,6 +113,7 @@ class PaymentsTable extends BaseTableWidget
                     Stack::make([
                         TextColumn::make('payment_method.type')
                             ->label(__('filament.widgets.stripe.payments_table.columns.payment_method_type.label'))
+                            ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->badge()
                             ->state(function ($record) {
                                 $type = data_get($record, 'payment_method.type');
@@ -113,10 +121,20 @@ class PaymentsTable extends BaseTableWidget
                                 return $type ? Str::upper($type) : null;
                             })
                             ->color('warning'),
-                    ]),
+                        TextColumn::make('presentment_details.presentment_amount')
+                            ->placeholder(__('filament.widgets.common.placeholders.blank'))
+                            ->badge()
+                            ->money(
+                                currency: fn ($record) => $record['presentment_details']['presentment_currency'],
+                                divideBy: fn ($record) => $this->currencyDivisor($record['presentment_details']['presentment_currency']),
+                                locale: config('app.locale'),
+                                decimalPlaces: fn ($record) => $this->currencyDecimalPlaces($record['presentment_details']['presentment_currency']),
+                            ),
+                    ])->space(2),
                     Stack::make([
                         TextColumn::make('created')
                             ->label(__('filament.widgets.stripe.payments_table.columns.created.label'))
+                            ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->since(),
                     ])->space(2),
                 ]),

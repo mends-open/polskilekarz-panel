@@ -4,11 +4,27 @@ return [
     'widgets' => [
         'common' => [
             'placeholders' => [
+                'blank' => ' ',
+                'id' => 'Brak identyfikatora',
                 'name' => 'Brak nazwy',
                 'created_at' => 'Brak daty utworzenia',
                 'email' => 'Brak adresu e-mail',
                 'phone' => 'Brak telefonu',
                 'country' => 'Brak kraju',
+                'status' => 'Brak statusu',
+                'due_date' => 'Brak terminu płatności',
+                'total' => 'Brak sumy',
+                'amount_paid' => 'Brak kwoty zapłaconej',
+                'amount_remaining' => 'Brak kwoty do zapłaty',
+                'currency' => 'Brak waluty',
+                'number' => 'Brak numeru',
+                'description' => 'Brak opisu',
+                'unit_price' => 'Brak ceny jednostkowej',
+                'quantity' => 'Brak ilości',
+                'subtotal' => 'Brak sumy częściowej',
+                'payment_method' => 'Brak metody płatności',
+                'price' => 'Brak ceny',
+                'product' => 'Brak produktu',
             ],
         ],
         'chatwoot' => [
@@ -45,6 +61,24 @@ return [
             ],
         ],
         'stripe' => [
+            'enums' => [
+                'invoice_statuses' => [
+                    'draft' => 'Szkic',
+                    'open' => 'Otwarte',
+                    'paid' => 'Opłacone',
+                    'uncollectible' => 'Nieściągalne',
+                    'void' => 'Unieważnione',
+                ],
+                'payment_intent_statuses' => [
+                    'canceled' => 'Anulowano',
+                    'processing' => 'Przetwarzanie',
+                    'requires_action' => 'Wymaga działania',
+                    'requires_capture' => 'Wymaga przechwycenia',
+                    'requires_confirmation' => 'Wymaga potwierdzenia',
+                    'requires_payment_method' => 'Wymaga metody płatności',
+                    'succeeded' => 'Zakończono pomyślnie',
+                ],
+            ],
             'customer_infolist' => [
                 'section' => [
                     'title' => 'Klient',
@@ -84,7 +118,7 @@ return [
             ],
             'latest_invoice_infolist' => [
                 'section' => [
-                    'title' => 'Najnowsza faktura',
+                    'title' => 'Ostatnia faktura',
                 ],
                 'actions' => [
                     'create_invoice' => [
@@ -95,6 +129,10 @@ return [
                     ],
                     'send_latest' => [
                         'label' => 'Wyślij',
+                        'modal' => [
+                            'heading' => 'Wysłać link do ostatniej faktury?',
+                            'description' => 'Wyślemy link do ostatniej faktury w aktywnej konwersacji Chatwoot.',
+                        ],
                     ],
                     'open_latest' => [
                         'label' => 'Otwórz',
@@ -129,6 +167,10 @@ return [
             ],
             'invoices_table' => [
                 'heading' => 'Faktury',
+                'empty_state' => [
+                    'heading' => 'Brak faktur',
+                    'description' => 'Ten klient nie ma jeszcze żadnych faktur.',
+                ],
                 'columns' => [
                     'id' => [
                         'label' => 'ID',
@@ -164,8 +206,8 @@ return [
                 'actions' => [
                     'send_latest' => [
                         'modal' => [
-                            'heading' => 'Wysłać link do najnowszej faktury?',
-                            'description' => 'Wyślemy link do najnowszej faktury w aktywnej konwersacji Chatwoot.',
+                            'heading' => 'Wysłać link do ostatniej faktury?',
+                            'description' => 'Wyślemy link do ostatniej faktury w aktywnej konwersacji Chatwoot.',
                         ],
                     ],
                     'duplicate' => [
@@ -184,7 +226,11 @@ return [
                 ],
             ],
             'latest_invoice_lines_table' => [
-                'heading' => 'Pozycje najnowszej faktury',
+                'heading' => 'Pozycje ostatniej faktury',
+                'empty_state' => [
+                    'heading' => 'Brak pozycji',
+                    'description' => 'Ostatnia faktura nie zawiera żadnych pozycji.',
+                ],
                 'columns' => [
                     'price' => [
                         'label' => 'ID ceny',
@@ -210,13 +256,17 @@ return [
                     'duplicate' => [
                         'label' => 'Duplikuj',
                         'modal' => [
-                            'heading' => 'Zduplikować najnowszą fakturę?',
+                            'heading' => 'Zduplikować ostatnią fakturę?',
                         ],
                     ],
                 ],
             ],
             'payments_table' => [
                 'heading' => 'Płatności',
+                'empty_state' => [
+                    'heading' => 'Brak płatności',
+                    'description' => 'Ten klient nie ma jeszcze żadnych płatności.',
+                ],
                 'columns' => [
                     'id' => [
                         'label' => 'ID',
