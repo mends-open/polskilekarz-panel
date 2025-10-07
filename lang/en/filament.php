@@ -122,8 +122,8 @@ return [
                     'amount_remaining' => [
                         'label' => 'Amount Remaining',
                     ],
-                    'collection_method' => [
-                        'label' => 'Collection method',
+                    'currency' => [
+                        'label' => 'Currency',
                     ],
                 ],
             ],

@@ -13,6 +13,7 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Stripe\StripeObject;
 
@@ -152,15 +153,11 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                                 decimalPlaces: $decimalPlaces,
                             )
                             ->badge(),
-                        TextEntry::make('collection_method')
-                            ->label(__('filament.widgets.stripe.latest_invoice_infolist.fields.collection_method.label'))
+                        TextEntry::make('currency')
+                            ->label(__('filament.widgets.stripe.latest_invoice_infolist.fields.currency.label'))
                             ->inlineLabel()
+                            ->state(fn () => Str::upper($data['currency']))
                             ->badge()
-                            ->color(fn (?string $state) => match ($state) {
-                                'charge_automatically' => 'success',
-                                'send_invoice' => 'warning',
-                                default => 'secondary',
-                            }),
                     ]),
             ]);
     }

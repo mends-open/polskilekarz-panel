@@ -94,10 +94,10 @@ return [
                         ],
                     ],
                     'send_latest' => [
-                        'label' => 'Wyślij najnowszą',
+                        'label' => 'Wyślij',
                     ],
                     'open_latest' => [
-                        'label' => 'Otwórz najnowszą',
+                        'label' => 'Otwórz',
                     ],
                 ],
                 'fields' => [
@@ -120,10 +120,10 @@ return [
                         'label' => 'Zapłacono',
                     ],
                     'amount_remaining' => [
-                        'label' => 'Pozostało do zapłaty',
+                        'label' => 'Do zapłaty',
                     ],
-                    'collection_method' => [
-                        'label' => 'Metoda pobrania płatności',
+                    'currency' => [
+                        'label' => 'Waluta',
                     ],
                 ],
             ],

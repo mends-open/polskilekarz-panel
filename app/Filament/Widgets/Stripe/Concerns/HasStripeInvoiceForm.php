@@ -124,7 +124,7 @@ trait HasStripeInvoiceForm
                     TextEntry::make('subtotal')
                         ->label(__('filament.widgets.stripe.invoice_form.fields.subtotal.label'))
                         ->hiddenLabel()
-                        ->state(function (Get $get): string {
+                        ->state(function (Get $get): ?string {
                             $priceState = $get('price');
                             $priceId = is_string($priceState) ? $priceState : null;
                             $quantity = $this->normalizeQuantity($get('quantity'));
@@ -411,23 +411,23 @@ trait HasStripeInvoiceForm
             ->first()['id'] ?? null;
     }
 
-    protected function formatLineItemSubtotal(?string $priceId, int $quantity): string
+    protected function formatLineItemSubtotal(?string $priceId, int $quantity): ?string
     {
         if (! $priceId) {
-            return '—';
+            return null;
         }
 
         $price = $this->resolvePrice($priceId);
 
         if (! $price) {
-            return '—';
+            return null;
         }
 
         $currency = (string) data_get($price, 'currency');
         $unitAmount = (int) data_get($price, 'unit_amount', 0);
 
         if ($currency === '') {
-            return '—';
+            return null;
         }
 
         $quantity = max(1, $quantity);
@@ -435,24 +435,24 @@ trait HasStripeInvoiceForm
         return $this->formatCurrencyAmount($unitAmount * $quantity, $currency);
     }
 
-    protected function formatPriceAmount(array $price): string
+    protected function formatPriceAmount(array $price): ?string
     {
         $currency = (string) data_get($price, 'currency');
         $amount = (int) data_get($price, 'unit_amount', 0);
 
         if ($currency === '') {
-            return '—';
+            return null;
         }
 
         return $this->formatCurrencyAmount($amount, $currency);
     }
 
-    protected function formatCurrencyAmount(int $amount, string $currency): string
+    protected function formatCurrencyAmount(int $amount, string $currency): ?string
     {
         $currency = Str::lower($currency);
 
         if ($currency === '') {
-            return '—';
+            return null;
         }
 
         return $this->formatCurrencyForDisplay($amount, $currency);
