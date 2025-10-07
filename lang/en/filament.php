@@ -45,6 +45,24 @@ return [
             ],
         ],
         'stripe' => [
+            'enums' => [
+                'invoice_statuses' => [
+                    'draft' => 'Draft',
+                    'open' => 'Open',
+                    'paid' => 'Paid',
+                    'uncollectible' => 'Uncollectible',
+                    'void' => 'Void',
+                ],
+                'payment_intent_statuses' => [
+                    'canceled' => 'Canceled',
+                    'processing' => 'Processing',
+                    'requires_action' => 'Requires action',
+                    'requires_capture' => 'Requires capture',
+                    'requires_confirmation' => 'Requires confirmation',
+                    'requires_payment_method' => 'Requires payment method',
+                    'succeeded' => 'Succeeded',
+                ],
+            ],
             'customer_infolist' => [
                 'section' => [
                     'title' => 'Customer',

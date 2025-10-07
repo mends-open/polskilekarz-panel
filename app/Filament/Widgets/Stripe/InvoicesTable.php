@@ -102,6 +102,7 @@ class InvoicesTable extends BaseTableWidget
                         TextColumn::make('status')
                             ->label(__('filament.widgets.stripe.invoices_table.columns.status.label'))
                             ->badge()
+                            ->formatStateUsing(fn (?string $state) => $state ? __('filament.widgets.stripe.enums.invoice_statuses.' . $state) : null)
                             ->color(fn ($state) => match ($state) {
                                 'paid' => 'success',        // green
                                 'open' => 'info',           // blue

@@ -45,6 +45,24 @@ return [
             ],
         ],
         'stripe' => [
+            'enums' => [
+                'invoice_statuses' => [
+                    'draft' => 'Szkic',
+                    'open' => 'Otwarte',
+                    'paid' => 'Opłacone',
+                    'uncollectible' => 'Nieściągalne',
+                    'void' => 'Unieważnione',
+                ],
+                'payment_intent_statuses' => [
+                    'canceled' => 'Anulowano',
+                    'processing' => 'Przetwarzanie',
+                    'requires_action' => 'Wymaga działania',
+                    'requires_capture' => 'Wymaga przechwycenia',
+                    'requires_confirmation' => 'Wymaga potwierdzenia',
+                    'requires_payment_method' => 'Wymaga metody płatności',
+                    'succeeded' => 'Zakończono pomyślnie',
+                ],
+            ],
             'customer_infolist' => [
                 'section' => [
                     'title' => 'Klient',

@@ -100,6 +100,7 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                         TextEntry::make('status')
                             ->label(__('filament.widgets.stripe.latest_invoice_infolist.fields.status.label'))
                             ->badge()
+                            ->formatStateUsing(fn (?string $state) => $state ? __('filament.widgets.stripe.enums.invoice_statuses.' . $state) : null)
                             ->color(fn (?string $state) => match ($state) {
                                 'draft', 'void' => 'gray',
                                 'open' => 'warning',

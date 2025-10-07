@@ -95,6 +95,7 @@ class PaymentsTable extends BaseTableWidget
                         TextColumn::make('status')
                             ->label(__('filament.widgets.stripe.payments_table.columns.status.label'))
                             ->badge()
+                            ->formatStateUsing(fn (?string $state) => $state ? __('filament.widgets.stripe.enums.payment_intent_statuses.' . $state) : null)
                             ->color(fn ($state) => match ($state) {
                                 'succeeded' => 'success',             // green
                                 'processing' => 'warning',            // yellow
