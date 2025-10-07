@@ -118,7 +118,7 @@ return [
             ],
             'latest_invoice_infolist' => [
                 'section' => [
-                    'title' => 'Najnowsza faktura',
+                    'title' => 'Ostatnia faktura',
                 ],
                 'actions' => [
                     'create_invoice' => [
@@ -129,6 +129,10 @@ return [
                     ],
                     'send_latest' => [
                         'label' => 'Wyślij',
+                        'modal' => [
+                            'heading' => 'Wysłać link do ostatniej faktury?',
+                            'description' => 'Wyślemy link do ostatniej faktury w aktywnej konwersacji Chatwoot.',
+                        ],
                     ],
                     'open_latest' => [
                         'label' => 'Otwórz',
@@ -202,8 +206,8 @@ return [
                 'actions' => [
                     'send_latest' => [
                         'modal' => [
-                            'heading' => 'Wysłać link do najnowszej faktury?',
-                            'description' => 'Wyślemy link do najnowszej faktury w aktywnej konwersacji Chatwoot.',
+                            'heading' => 'Wysłać link do ostatniej faktury?',
+                            'description' => 'Wyślemy link do ostatniej faktury w aktywnej konwersacji Chatwoot.',
                         ],
                     ],
                     'duplicate' => [
@@ -222,10 +226,10 @@ return [
                 ],
             ],
             'latest_invoice_lines_table' => [
-                'heading' => 'Pozycje najnowszej faktury',
+                'heading' => 'Pozycje ostatniej faktury',
                 'empty_state' => [
                     'heading' => 'Brak pozycji',
-                    'description' => 'Najnowsza faktura nie zawiera żadnych pozycji.',
+                    'description' => 'Ostatnia faktura nie zawiera żadnych pozycji.',
                 ],
                 'columns' => [
                     'price' => [
@@ -252,7 +256,7 @@ return [
                     'duplicate' => [
                         'label' => 'Duplikuj',
                         'modal' => [
-                            'heading' => 'Zduplikować najnowszą fakturę?',
+                            'heading' => 'Zduplikować ostatnią fakturę?',
                         ],
                     ],
                 ],

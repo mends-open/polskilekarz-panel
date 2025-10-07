@@ -81,6 +81,10 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                             ->outlined()
                             ->color(blank($data) ? 'gray' : 'warning')
                             ->disabled(blank($data))
+                            ->requiresConfirmation()
+                            ->modalIcon(Heroicon::OutlinedExclamationTriangle)
+                            ->modalHeading(__('filament.widgets.stripe.latest_invoice_infolist.actions.send_latest.modal.heading'))
+                            ->modalDescription(__('filament.widgets.stripe.latest_invoice_infolist.actions.send_latest.modal.description'))
                             ->action(fn () => $this->sendHostedInvoiceLink($invoice)),
                         Action::make('openInvoice')
                             ->label(__('filament.widgets.stripe.latest_invoice_infolist.actions.open_latest.label'))

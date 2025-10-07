@@ -129,6 +129,10 @@ return [
                     ],
                     'send_latest' => [
                         'label' => 'Send Latest',
+                        'modal' => [
+                            'heading' => 'Send latest invoice link?',
+                            'description' => 'We will send the latest invoice link to the active Chatwoot conversation.',
+                        ],
                     ],
                     'open_latest' => [
                         'label' => 'Open Latest',
