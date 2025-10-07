@@ -4,11 +4,27 @@ return [
     'widgets' => [
         'common' => [
             'placeholders' => [
+                'blank' => ' ',
+                'id' => 'Brak identyfikatora',
                 'name' => 'Brak nazwy',
                 'created_at' => 'Brak daty utworzenia',
                 'email' => 'Brak adresu e-mail',
                 'phone' => 'Brak telefonu',
                 'country' => 'Brak kraju',
+                'status' => 'Brak statusu',
+                'due_date' => 'Brak terminu płatności',
+                'total' => 'Brak sumy',
+                'amount_paid' => 'Brak kwoty zapłaconej',
+                'amount_remaining' => 'Brak kwoty do zapłaty',
+                'currency' => 'Brak waluty',
+                'number' => 'Brak numeru',
+                'description' => 'Brak opisu',
+                'unit_price' => 'Brak ceny jednostkowej',
+                'quantity' => 'Brak ilości',
+                'subtotal' => 'Brak sumy częściowej',
+                'payment_method' => 'Brak metody płatności',
+                'price' => 'Brak ceny',
+                'product' => 'Brak produktu',
             ],
         ],
         'chatwoot' => [

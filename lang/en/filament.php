@@ -4,11 +4,27 @@ return [
     'widgets' => [
         'common' => [
             'placeholders' => [
+                'blank' => ' ',
+                'id' => 'No ID',
                 'name' => 'No name',
                 'created_at' => 'No creation date',
                 'email' => 'No email',
                 'phone' => 'No phone',
                 'country' => 'No country',
+                'status' => 'No status',
+                'due_date' => 'No due date',
+                'total' => 'No total',
+                'amount_paid' => 'No amount paid',
+                'amount_remaining' => 'No amount remaining',
+                'currency' => 'No currency',
+                'number' => 'No number',
+                'description' => 'No description',
+                'unit_price' => 'No unit price',
+                'quantity' => 'No quantity',
+                'subtotal' => 'No subtotal',
+                'payment_method' => 'No payment method',
+                'price' => 'No price',
+                'product' => 'No product',
             ],
         ],
         'chatwoot' => [
