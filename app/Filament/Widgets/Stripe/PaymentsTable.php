@@ -114,7 +114,15 @@ class PaymentsTable extends BaseTableWidget
                                 return $type ? Str::upper($type) : null;
                             })
                             ->color('warning'),
-                    ]),
+                        TextColumn::make('presentment_details.presentment_amount')
+                            ->badge()
+                            ->money(
+                                currency: fn ($record) => $record['presentment_details']['presentment_currency'],
+                                divideBy: fn ($record) => $this->currencyDivisor($record['presentment_details']['presentment_currency']),
+                                locale: config('app.locale'),
+                                decimalPlaces: fn ($record) => $this->currencyDecimalPlaces($record['presentment_details']['presentment_currency']),
+                            ),
+                    ])->space(2),
                     Stack::make([
                         TextColumn::make('created')
                             ->label(__('filament.widgets.stripe.payments_table.columns.created.label'))
