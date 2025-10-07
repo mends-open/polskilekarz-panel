@@ -276,4 +276,12 @@ return [
             ],
         ],
     ],
+    'pages' => [
+        'payments' => [
+            'title' => 'Płatności',
+            'navigation' => [
+                'label' => 'Płatności',
+            ],
+        ],
+    ],
 ];
