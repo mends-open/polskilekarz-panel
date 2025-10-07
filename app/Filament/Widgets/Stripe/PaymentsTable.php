@@ -44,7 +44,9 @@ class PaymentsTable extends BaseTableWidget
 
     public function isReady(): bool
     {
-        return $this->dashboardContextIsReady();
+        return $this->dashboardContextIsReady(
+            fn (): bool => $this->chatwootContext()->hasContact(),
+        );
     }
 
     public function table(Table $table): Table

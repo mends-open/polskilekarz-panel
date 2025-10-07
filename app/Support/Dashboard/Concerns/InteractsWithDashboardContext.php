@@ -23,8 +23,18 @@ trait InteractsWithDashboardContext
         return $this->dashboardContext()->stripe();
     }
 
-    protected function dashboardContextIsReady(): bool
+    protected function dashboardContextIsReady(callable ...$checks): bool
     {
-        return $this->dashboardContext()->isReady();
+        if (! $this->dashboardContext()->isReady()) {
+            return false;
+        }
+
+        foreach ($checks as $check) {
+            if ($check() !== true) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
