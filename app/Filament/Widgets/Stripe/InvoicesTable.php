@@ -72,8 +72,9 @@ class InvoicesTable extends BaseTableWidget
             ->defaultPaginationPageOption(3)
             ->extremePaginationLinks()
             ->paginationPageOptions([3, 10, 25, 50])
-            ->emptyStateDescription('no invoices')
-            ->emptyStateHeading('no invoices')
+            ->emptyStateIcon(Heroicon::OutlinedDocumentText)
+            ->emptyStateHeading(__('filament.widgets.stripe.invoices_table.empty_state.heading'))
+            ->emptyStateDescription(__('filament.widgets.stripe.invoices_table.empty_state.description'))
             ->columns([
                 Split::make([
                     Stack::make([

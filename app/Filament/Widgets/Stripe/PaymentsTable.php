@@ -70,6 +70,9 @@ class PaymentsTable extends BaseTableWidget
             })
             ->defaultPaginationPageOption(3)
             ->paginationPageOptions([3, 10, 25, 50])
+            ->emptyStateIcon(Heroicon::OutlinedCreditCard)
+            ->emptyStateHeading(__('filament.widgets.stripe.payments_table.empty_state.heading'))
+            ->emptyStateDescription(__('filament.widgets.stripe.payments_table.empty_state.description'))
             ->columns([
                 Split::make([
                     Stack::make([

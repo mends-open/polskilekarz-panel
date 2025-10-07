@@ -44,6 +44,9 @@ class LatestInvoiceLinesTable extends BaseTableWidget
             ->heading(__('filament.widgets.stripe.latest_invoice_lines_table.heading'))
             ->paginated(false)
             ->records(fn () => $this->resolveLineItems())
+            ->emptyStateIcon(Heroicon::OutlinedClipboardDocumentList)
+            ->emptyStateHeading(__('filament.widgets.stripe.latest_invoice_lines_table.empty_state.heading'))
+            ->emptyStateDescription(__('filament.widgets.stripe.latest_invoice_lines_table.empty_state.description'))
             ->columns([
                 Split::make([
                     Stack::make([

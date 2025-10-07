@@ -163,6 +163,10 @@ return [
             ],
             'invoices_table' => [
                 'heading' => 'Invoices',
+                'empty_state' => [
+                    'heading' => 'No invoices',
+                    'description' => 'This customer has no invoices yet.',
+                ],
                 'columns' => [
                     'id' => [
                         'label' => 'ID',
@@ -219,6 +223,10 @@ return [
             ],
             'latest_invoice_lines_table' => [
                 'heading' => 'Latest Invoice Items',
+                'empty_state' => [
+                    'heading' => 'No line items',
+                    'description' => 'The latest invoice does not include any line items.',
+                ],
                 'columns' => [
                     'price' => [
                         'label' => 'Price ID',
@@ -251,6 +259,10 @@ return [
             ],
             'payments_table' => [
                 'heading' => 'Payments',
+                'empty_state' => [
+                    'heading' => 'No payments',
+                    'description' => 'This customer has no payments yet.',
+                ],
                 'columns' => [
                     'id' => [
                         'label' => 'ID',

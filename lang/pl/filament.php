@@ -163,6 +163,10 @@ return [
             ],
             'invoices_table' => [
                 'heading' => 'Faktury',
+                'empty_state' => [
+                    'heading' => 'Brak faktur',
+                    'description' => 'Ten klient nie ma jeszcze żadnych faktur.',
+                ],
                 'columns' => [
                     'id' => [
                         'label' => 'ID',
@@ -219,6 +223,10 @@ return [
             ],
             'latest_invoice_lines_table' => [
                 'heading' => 'Pozycje najnowszej faktury',
+                'empty_state' => [
+                    'heading' => 'Brak pozycji',
+                    'description' => 'Najnowsza faktura nie zawiera żadnych pozycji.',
+                ],
                 'columns' => [
                     'price' => [
                         'label' => 'ID ceny',
@@ -251,6 +259,10 @@ return [
             ],
             'payments_table' => [
                 'heading' => 'Płatności',
+                'empty_state' => [
+                    'heading' => 'Brak płatności',
+                    'description' => 'Ten klient nie ma jeszcze żadnych płatności.',
+                ],
                 'columns' => [
                     'id' => [
                         'label' => 'ID',
