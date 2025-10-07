@@ -43,8 +43,8 @@ class CreateInvoiceShortLink implements ShouldQueue
         );
 
         $this->notify(
-            title: 'Invoice link shortened',
-            body: 'The invoice link has been shortened and will be delivered shortly.',
+            title: __('notifications.jobs.chatwoot.create_invoice_short_link.success.title'),
+            body: __('notifications.jobs.chatwoot.create_invoice_short_link.success.body'),
             status: 'success',
         );
     }
@@ -60,8 +60,8 @@ class CreateInvoiceShortLink implements ShouldQueue
         ]);
 
         $this->notify(
-            title: 'Failed to shorten invoice link',
-            body: 'We were unable to create a short link for the invoice. Please try again.',
+            title: __('notifications.jobs.chatwoot.create_invoice_short_link.failed.title'),
+            body: __('notifications.jobs.chatwoot.create_invoice_short_link.failed.body'),
             status: 'danger',
         );
     }

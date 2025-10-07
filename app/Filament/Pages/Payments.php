@@ -11,9 +11,9 @@ use App\Filament\Widgets\Stripe\LatestInvoiceInfolist;
 use App\Filament\Widgets\Stripe\LatestInvoiceLinesTable;
 use App\Filament\Widgets\Stripe\PaymentsTable;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
-use Filament\Actions\Action;
 use Filament\Pages\Dashboard;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Contracts\Support\Htmlable;
 
 class Payments extends Dashboard
 {
@@ -23,11 +23,19 @@ class Payments extends Dashboard
 
     protected static string|null|\BackedEnum $navigationIcon = Heroicon::OutlinedCreditCard;
 
-    protected static ?string $title = 'Payments';
-
     protected function getHeaderActions(): array
     {
         return [];
+    }
+
+    public function getTitle(): string|Htmlable
+    {
+        return __('filament.pages.payments.title');
+    }
+
+    public static function getNavigationLabel(): string
+    {
+        return __('filament.pages.payments.navigation.label');
     }
 
     public function getWidgets(): array

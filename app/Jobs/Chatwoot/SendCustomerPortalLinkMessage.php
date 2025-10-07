@@ -37,8 +37,8 @@ class SendCustomerPortalLinkMessage implements ShouldQueue
             ]);
 
         $this->notify(
-            title: 'Customer portal link sent',
-            body: 'The customer portal link was sent to the Chatwoot conversation.',
+            title: __('notifications.jobs.chatwoot.send_customer_portal_link_message.success.title'),
+            body: __('notifications.jobs.chatwoot.send_customer_portal_link_message.success.body'),
             status: 'success',
         );
     }
@@ -54,8 +54,8 @@ class SendCustomerPortalLinkMessage implements ShouldQueue
         ]);
 
         $this->notify(
-            title: 'Failed to send customer portal link',
-            body: 'We were unable to send the customer portal link to the Chatwoot conversation. Please try again.',
+            title: __('notifications.jobs.chatwoot.send_customer_portal_link_message.failed.title'),
+            body: __('notifications.jobs.chatwoot.send_customer_portal_link_message.failed.body'),
             status: 'danger',
         );
     }

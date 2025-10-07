@@ -49,8 +49,8 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
 
         if ($payload === []) {
             $this->notify(
-                title: 'No contact details to sync',
-                body: 'The Chatwoot contact does not have any details to copy to the Stripe customer.',
+                title: __('notifications.chatwoot.contact_infolist.nothing_to_sync.title'),
+                body: __('notifications.chatwoot.contact_infolist.nothing_to_sync.body'),
                 status: 'warning',
             );
 
@@ -60,8 +60,8 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
         stripe()->customers->update($this->customerId, $payload);
 
         $this->notify(
-            title: 'Stripe customer updated',
-            body: 'The Stripe customer was updated with the Chatwoot contact details.',
+            title: __('notifications.jobs.stripe.sync_customer_from_chatwoot_contact.updated.title'),
+            body: __('notifications.jobs.stripe.sync_customer_from_chatwoot_contact.updated.body'),
             status: 'success',
         );
     }
@@ -77,8 +77,8 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
         ]);
 
         $this->notify(
-            title: 'Failed to update Stripe customer',
-            body: 'We were unable to sync the Stripe customer with the Chatwoot contact. Please try again.',
+            title: __('notifications.jobs.stripe.sync_customer_from_chatwoot_contact.failed.title'),
+            body: __('notifications.jobs.stripe.sync_customer_from_chatwoot_contact.failed.body'),
             status: 'danger',
         );
     }

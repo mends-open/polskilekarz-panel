@@ -40,8 +40,8 @@ class SendInvoiceShortLinkMessage implements ShouldQueue
             ]);
 
         $this->notify(
-            title: 'Invoice link sent',
-            body: 'The shortened invoice link was sent to the Chatwoot conversation.',
+            title: __('notifications.jobs.chatwoot.send_invoice_short_link_message.success.title'),
+            body: __('notifications.jobs.chatwoot.send_invoice_short_link_message.success.body'),
             status: 'success',
         );
     }
@@ -57,8 +57,8 @@ class SendInvoiceShortLinkMessage implements ShouldQueue
         ]);
 
         $this->notify(
-            title: 'Failed to send invoice link',
-            body: 'We were unable to send the invoice link to the Chatwoot conversation. Please try again.',
+            title: __('notifications.jobs.chatwoot.send_invoice_short_link_message.failed.title'),
+            body: __('notifications.jobs.chatwoot.send_invoice_short_link_message.failed.body'),
             status: 'danger',
         );
     }

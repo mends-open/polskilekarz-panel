@@ -29,8 +29,6 @@ class PaymentsTable extends BaseTableWidget
 
     public $tableRecordsPerPage = 3;
 
-    protected static ?string $heading = 'Payments';
-
     #[On('reset')]
     public function resetComponent(): void
     {
@@ -52,6 +50,7 @@ class PaymentsTable extends BaseTableWidget
     public function table(Table $table): Table
     {
         return $table
+            ->heading(__('filament.widgets.stripe.payments_table.heading'))
             ->records(function (int $page, int $recordsPerPage): LengthAwarePaginator {
                 $payments = collect($this->customerPayments());
 
@@ -73,11 +72,13 @@ class PaymentsTable extends BaseTableWidget
                 Split::make([
                     Stack::make([
                         TextColumn::make('id')
+                            ->label(__('filament.widgets.stripe.payments_table.columns.id.label'))
                             ->color('gray')
                             ->badge(),
                     ])->space(2),
                     Stack::make([
                         TextColumn::make('amount')
+                            ->label(__('filament.widgets.stripe.payments_table.columns.amount.label'))
                             ->badge()
                             ->money(
                                 currency: fn ($record) => $record['currency'],
@@ -90,6 +91,7 @@ class PaymentsTable extends BaseTableWidget
                                 default => 'gray',          // ❌ not yet settled
                             }),
                         TextColumn::make('status')
+                            ->label(__('filament.widgets.stripe.payments_table.columns.status.label'))
                             ->badge()
                             ->color(fn ($state) => match ($state) {
                                 'succeeded' => 'success',             // green
@@ -101,6 +103,7 @@ class PaymentsTable extends BaseTableWidget
                     ])->space(2),
                     Stack::make([
                         TextColumn::make('payment_method.type')
+                            ->label(__('filament.widgets.stripe.payments_table.columns.payment_method_type.label'))
                             ->badge()
                             ->state(function ($record) {
                                 $type = data_get($record, 'payment_method.type');
@@ -111,6 +114,7 @@ class PaymentsTable extends BaseTableWidget
                     ]),
                     Stack::make([
                         TextColumn::make('created')
+                            ->label(__('filament.widgets.stripe.payments_table.columns.created.label'))
                             ->since(),
                     ])->space(2),
                 ]),
@@ -128,7 +132,7 @@ class PaymentsTable extends BaseTableWidget
                     Action::make('openPaymentUrl')
                         ->url(fn ($record) => $record['charges']['data'][0]['receipt_url'] ?? null)
                         ->openUrlInNewTab()
-                        ->label('Open Receipt')
+                        ->label(__('filament.widgets.stripe.payments_table.actions.open_receipt.label'))
                         ->icon(Heroicon::OutlinedEnvelopeOpen)
                         ->hidden(fn ($record) => blank(data_get($record, 'charges.data.0.receipt_url'))),
                 ]),

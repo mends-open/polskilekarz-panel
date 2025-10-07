@@ -12,7 +12,6 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Stripe\Exception\ApiErrorException;
@@ -57,21 +56,21 @@ class CustomerInfolist extends BaseSchemaWidget
         return $schema
             ->state($this->stripeCustomer)
             ->components([
-                Section::make('customer')
+                Section::make(__('filament.widgets.stripe.customer_infolist.section.title'))
                     ->headerActions([
                         Action::make('sendPortalLink')
-                            ->label('Send portal link')
+                            ->label(__('filament.widgets.stripe.customer_infolist.actions.send_portal_link.label'))
                             ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
                             ->outlined()
                             ->requiresConfirmation()
                             ->modalIcon(Heroicon::OutlinedExclamationTriangle)
-                            ->modalHeading('Send portal link?')
-                            ->modalDescription('We will create a Stripe customer portal session and send the short link in Chatwoot.')
+                            ->modalHeading(__('filament.widgets.stripe.customer_infolist.actions.send_portal_link.modal.heading'))
+                            ->modalDescription(__('filament.widgets.stripe.customer_infolist.actions.send_portal_link.modal.description'))
                             ->color($portalReady ? 'warning' : 'gray')
                             ->disabled(! $portalReady)
                             ->action(fn () => $this->sendCustomerPortalLink()),
                         Action::make('openPortal')
-                            ->label('Open portal')
+                            ->label(__('filament.widgets.stripe.customer_infolist.actions.open_portal.label'))
                             ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
                             ->outlined()
                             ->color($customerReady ? 'primary' : 'gray')
@@ -86,27 +85,32 @@ class CustomerInfolist extends BaseSchemaWidget
                     ])
                     ->schema([
                         TextEntry::make('id')
+                            ->label(__('filament.widgets.stripe.customer_infolist.fields.id.label'))
                             ->badge()
                             ->color('gray')
                             ->inlineLabel(),
                         TextEntry::make('name')
+                            ->label(__('filament.widgets.stripe.customer_infolist.fields.name.label'))
                             ->inlineLabel()
-                            ->placeholder('No name'),
+                            ->placeholder(__('filament.widgets.common.placeholders.name')),
                         TextEntry::make('created')
+                            ->label(__('filament.widgets.stripe.customer_infolist.fields.created.label'))
                             ->inlineLabel()
-                            ->placeholder('No created')
+                            ->placeholder(__('filament.widgets.common.placeholders.created_at'))
                             ->since(),
                         TextEntry::make('email')
+                            ->label(__('filament.widgets.stripe.customer_infolist.fields.email.label'))
                             ->inlineLabel()
-                            ->placeholder('No email'),
+                            ->placeholder(__('filament.widgets.common.placeholders.email')),
                         TextEntry::make('phone')
+                            ->label(__('filament.widgets.stripe.customer_infolist.fields.phone.label'))
                             ->inlineLabel()
-                            ->placeholder('No phone'),
+                            ->placeholder(__('filament.widgets.common.placeholders.phone')),
                         TextEntry::make('address.country')
-                            ->label('Country')
+                            ->label(__('filament.widgets.stripe.customer_infolist.fields.address_country.label'))
                             ->inlineLabel()
                             ->badge()
-                            ->placeholder('No country'),
+                            ->placeholder(__('filament.widgets.common.placeholders.country')),
                     ]),
             ]);
     }
@@ -123,8 +127,8 @@ class CustomerInfolist extends BaseSchemaWidget
 
         if (! $customerId) {
             Notification::make()
-                ->title('Missing Stripe customer')
-                ->body('We could not find the Stripe customer. Please select a customer first.')
+                ->title(__('notifications.stripe.customer_infolist.missing_customer.title'))
+                ->body(__('notifications.stripe.customer_infolist.missing_customer.body'))
                 ->danger()
                 ->send();
 
@@ -133,8 +137,8 @@ class CustomerInfolist extends BaseSchemaWidget
 
         if ($accountId === null || $conversationId === null || $impersonatorId === null) {
             Notification::make()
-                ->title('Missing Chatwoot context')
-                ->body('We need a Chatwoot conversation to send the portal link. Please open this widget from a Chatwoot conversation.')
+                ->title(__('notifications.stripe.customer_infolist.missing_chatwoot_context.title'))
+                ->body(__('notifications.stripe.customer_infolist.missing_chatwoot_context.body'))
                 ->danger()
                 ->send();
 
@@ -150,8 +154,8 @@ class CustomerInfolist extends BaseSchemaWidget
         );
 
         Notification::make()
-            ->title('Generating portal link')
-            ->body('We are generating a Stripe customer portal session and will send the link shortly.')
+            ->title(__('notifications.stripe.customer_infolist.generating_portal_link.title'))
+            ->body(__('notifications.stripe.customer_infolist.generating_portal_link.body'))
             ->info()
             ->send();
 
@@ -164,8 +168,8 @@ class CustomerInfolist extends BaseSchemaWidget
 
         if (! $customerId) {
             Notification::make()
-                ->title('Missing Stripe customer')
-                ->body('We could not find the Stripe customer. Please select a customer first.')
+                ->title(__('notifications.stripe.customer_infolist.missing_customer.title'))
+                ->body(__('notifications.stripe.customer_infolist.missing_customer.body'))
                 ->danger()
                 ->send();
 
@@ -184,8 +188,8 @@ class CustomerInfolist extends BaseSchemaWidget
             report($exception);
 
             Notification::make()
-                ->title('Failed to open portal')
-                ->body('We were unable to open the customer portal. Please try again.')
+                ->title(__('notifications.stripe.customer_infolist.open_portal_failed.title'))
+                ->body(__('notifications.stripe.customer_infolist.open_portal_failed.body'))
                 ->danger()
                 ->send();
 

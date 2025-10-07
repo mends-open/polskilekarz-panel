@@ -33,8 +33,6 @@ class InvoicesTable extends BaseTableWidget
 
     public $tableRecordsPerPage = 3;
 
-    protected static ?string $heading = 'Invoices';
-
     public function isReady(): bool
     {
         return $this->dashboardContextIsReady();
@@ -53,6 +51,7 @@ class InvoicesTable extends BaseTableWidget
     public function table(Table $table): Table
     {
         return $table
+            ->heading(__('filament.widgets.stripe.invoices_table.heading'))
             ->records(function (int $page, int $recordsPerPage): LengthAwarePaginator {
                 $invoices = collect($this->customerInvoices());
 
@@ -75,13 +74,16 @@ class InvoicesTable extends BaseTableWidget
                 Split::make([
                     Stack::make([
                         TextColumn::make('id')
+                            ->label(__('filament.widgets.stripe.invoices_table.columns.id.label'))
                             ->color('gray')
                             ->badge(),
                         TextColumn::make('number')
+                            ->label(__('filament.widgets.stripe.invoices_table.columns.number.label'))
                             ->badge(),
                     ])->space(2),
                     Stack::make([
                         TextColumn::make('total')
+                            ->label(__('filament.widgets.stripe.invoices_table.columns.total.label'))
                             ->badge()
                             ->money(
                                 currency: fn ($record) => $record['currency'],
@@ -96,6 +98,7 @@ class InvoicesTable extends BaseTableWidget
                                 default => 'secondary',
                             }),
                         TextColumn::make('status')
+                            ->label(__('filament.widgets.stripe.invoices_table.columns.status.label'))
                             ->badge()
                             ->color(fn ($state) => match ($state) {
                                 'paid' => 'success',        // green
@@ -108,22 +111,27 @@ class InvoicesTable extends BaseTableWidget
                     ])->space(2),
                     Stack::make([
                         TextColumn::make('currency')
+                            ->label(__('filament.widgets.stripe.invoices_table.columns.currency.label'))
                             ->state(fn ($record) => Str::upper($record['currency']))
                             ->badge(),
                     ]),
                     Stack::make([
                         TextColumn::make('created')
+                            ->label(__('filament.widgets.stripe.invoices_table.columns.created.label'))
                             ->since(),
                     ]),
                 ]),
                 Panel::make([
                     Split::make([
                         TextColumn::make('lines.data.*.description')
+                            ->label(__('filament.widgets.stripe.invoices_table.columns.lines.description.label'))
                             ->listWithLineBreaks(),
                         TextColumn::make('lines.data.*.quantity')
-                            ->prefix('x')
+                            ->label(__('filament.widgets.stripe.invoices_table.columns.lines.quantity.label'))
+                            ->prefix(__('filament.widgets.stripe.invoices_table.columns.lines.quantity.prefix'))
                             ->listWithLineBreaks(),
                         TextColumn::make('lines.data.*.amount')
+                            ->label(__('filament.widgets.stripe.invoices_table.columns.lines.amount.label'))
                             ->listWithLineBreaks()
                             ->money(
                                 currency: fn ($record) => $record['currency'],
@@ -143,8 +151,8 @@ class InvoicesTable extends BaseTableWidget
                     ->visible(false)
                     ->requiresConfirmation()
                     ->modalIcon(Heroicon::OutlinedExclamationTriangle)
-                    ->modalHeading('Send latest invoice link?')
-                    ->modalDescription('We will send the latest invoice link to the active Chatwoot conversation.')
+                    ->modalHeading(__('filament.widgets.stripe.invoices_table.actions.send_latest.modal.heading'))
+                    ->modalDescription(__('filament.widgets.stripe.invoices_table.actions.send_latest.modal.description'))
                     ->color(fn () => $this->hasCustomerInvoices() ? 'warning' : 'gray')
                     ->disabled(fn () => ! $this->hasCustomerInvoices())
                     ->action(fn () => $this->sendLatestInvoice()),
@@ -158,7 +166,7 @@ class InvoicesTable extends BaseTableWidget
                 ActionGroup::make([
                     $this->configureInvoiceFormAction(
                         Action::make('duplicateInvoice')
-                            ->label('Duplicate')
+                            ->label(__('filament.widgets.stripe.invoices_table.actions.duplicate.label'))
                             ->icon(Heroicon::OutlinedDocumentDuplicate)
                     )
                         ->fillForm(function ($record): array {
@@ -170,17 +178,17 @@ class InvoicesTable extends BaseTableWidget
                         }),
                     Action::make('sendInvoiceShortUrl')
                         ->action(fn ($record) => $this->sendInvoiceRecordLink($record))
-                        ->label('Send')
+                        ->label(__('filament.widgets.stripe.invoices_table.actions.send.label'))
                         ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)
                         ->color('warning')
                         ->requiresConfirmation()
                         ->modalIcon(Heroicon::OutlinedExclamationTriangle)
-                        ->modalHeading('Send invoice link?')
-                        ->modalDescription('We will send this invoice link to the current Chatwoot conversation.'),
+                        ->modalHeading(__('filament.widgets.stripe.invoices_table.actions.send.modal.heading'))
+                        ->modalDescription(__('filament.widgets.stripe.invoices_table.actions.send.modal.description')),
                     Action::make('openInvoiceUrl')
                         ->url(fn ($record) => $record['hosted_invoice_url'])
                         ->openUrlInNewTab()
-                        ->label('Open')
+                        ->label(__('filament.widgets.stripe.invoices_table.actions.open.label'))
                         ->icon(Heroicon::OutlinedEnvelopeOpen),
                 ]),
             ])
