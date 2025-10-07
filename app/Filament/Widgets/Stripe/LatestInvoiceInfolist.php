@@ -89,8 +89,7 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                             ->disabled(blank($data))
                             ->icon(Heroicon::OutlinedArrowTopRightOnSquare)
                             ->url(data_get($data, 'hosted_invoice_url'))
-                            ->openUrlInNewTab()
-                            ->hidden(blank(data_get($data, 'hosted_invoice_url'))),
+                            ->openUrlInNewTab(),
                     ])
                     ->schema([
                         TextEntry::make('id')
