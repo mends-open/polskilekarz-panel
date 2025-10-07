@@ -57,8 +57,8 @@ class CreateCustomerPortalSessionLink implements ShouldQueue
         );
 
         $this->notify(
-            title: 'Customer portal link generated',
-            body: 'The customer portal link was generated and will be sent shortly.',
+            title: __('notifications.jobs.stripe.create_customer_portal_session_link.success.title'),
+            body: __('notifications.jobs.stripe.create_customer_portal_session_link.success.body'),
             status: 'success',
         );
     }
@@ -74,8 +74,8 @@ class CreateCustomerPortalSessionLink implements ShouldQueue
         ]);
 
         $this->notify(
-            title: 'Failed to create customer portal link',
-            body: 'We were unable to generate the customer portal link. Please try again.',
+            title: __('notifications.jobs.stripe.create_customer_portal_session_link.failed.title'),
+            body: __('notifications.jobs.stripe.create_customer_portal_session_link.failed.body'),
             status: 'danger',
         );
     }

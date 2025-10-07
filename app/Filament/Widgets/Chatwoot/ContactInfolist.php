@@ -79,10 +79,10 @@ class ContactInfolist extends BaseSchemaWidget
         return $schema
             ->state($this->chatwootContact())
             ->components([
-                Section::make('contact')
+                Section::make(__('filament.widgets.chatwoot.contact_infolist.section.title'))
                     ->headerActions([
                         Action::make('syncCustomerFromContact')
-                            ->label('Sync customer')
+                            ->label(__('filament.widgets.chatwoot.contact_infolist.actions.sync_customer_from_contact.label'))
                             ->icon(Heroicon::OutlinedArrowDownOnSquareStack)
                             ->outlined()
                             ->color($syncReady ? 'primary' : 'gray')
@@ -96,28 +96,28 @@ class ContactInfolist extends BaseSchemaWidget
                     ])
                     ->schema([
                         TextEntry::make('id')
-                            ->label(__('filament.widgets.chatwoot.contact_infolist.id_label'))
-                            ->placeholder(__('filament.widgets.chatwoot.contact_infolist.id_placeholder'))
+                            ->label(__('filament.widgets.chatwoot.contact_infolist.fields.id.label'))
+                            ->placeholder(__('filament.widgets.chatwoot.contact_infolist.fields.id.placeholder'))
                             ->badge()
                             ->color('gray')
                             ->inlineLabel(),
                         TextEntry::make('name')
                             ->inlineLabel()
-                            ->placeholder('No name'),
+                            ->placeholder(__('filament.widgets.common.placeholders.name')),
                         TextEntry::make('created_at')
                             ->inlineLabel()
-                            ->placeholder('No created')
+                            ->placeholder(__('filament.widgets.common.placeholders.created_at'))
                             ->since(),
                         TextEntry::make('email')
                             ->inlineLabel()
-                            ->placeholder('No email'),
+                            ->placeholder(__('filament.widgets.common.placeholders.email')),
                         TextEntry::make('phone_number')
                             ->inlineLabel()
-                            ->placeholder('No phone'),
+                            ->placeholder(__('filament.widgets.common.placeholders.phone')),
                         TextEntry::make('additional_attributes.country_code')
                             ->inlineLabel()
                             ->badge()
-                            ->placeholder('No created'),
+                            ->placeholder(__('filament.widgets.common.placeholders.country')),
                     ]),
             ]);
     }
@@ -134,8 +134,8 @@ class ContactInfolist extends BaseSchemaWidget
 
         if (! $accountId || ! $contactId || ! $impersonatorId) {
             Notification::make()
-                ->title('Missing Chatwoot context')
-                ->body('We could not find the Chatwoot contact details. Please open this widget from a Chatwoot conversation.')
+                ->title(__('notifications.chatwoot.contact_infolist.missing_context.title'))
+                ->body(__('notifications.chatwoot.contact_infolist.missing_context.body'))
                 ->danger()
                 ->send();
 
@@ -152,8 +152,8 @@ class ContactInfolist extends BaseSchemaWidget
             report($exception);
 
             Notification::make()
-                ->title('Failed to load Chatwoot contact')
-                ->body('We were unable to load the Chatwoot contact details. Please try again.')
+                ->title(__('notifications.chatwoot.contact_infolist.load_failed.title'))
+                ->body(__('notifications.chatwoot.contact_infolist.load_failed.body'))
                 ->danger()
                 ->send();
 
@@ -188,8 +188,8 @@ class ContactInfolist extends BaseSchemaWidget
                 report($exception);
 
                 Notification::make()
-                    ->title('Failed to create Stripe customer')
-                    ->body('We were unable to create a Stripe customer from the Chatwoot contact. Please try again.')
+                    ->title(__('notifications.chatwoot.contact_infolist.create_customer_failed.title'))
+                    ->body(__('notifications.chatwoot.contact_infolist.create_customer_failed.body'))
                     ->danger()
                     ->send();
 
@@ -199,8 +199,8 @@ class ContactInfolist extends BaseSchemaWidget
             $this->dashboardContext()->storeStripe(new StripeContext($customer->id));
 
             Notification::make()
-                ->title('Stripe customer created')
-                ->body('A Stripe customer was created from the Chatwoot contact details.')
+                ->title(__('notifications.chatwoot.contact_infolist.customer_created.title'))
+                ->body(__('notifications.chatwoot.contact_infolist.customer_created.body'))
                 ->success()
                 ->send();
 
@@ -211,8 +211,8 @@ class ContactInfolist extends BaseSchemaWidget
 
         if ($payload === []) {
             Notification::make()
-                ->title('No contact details to sync')
-                ->body('The Chatwoot contact does not have any details to copy to the Stripe customer.')
+                ->title(__('notifications.chatwoot.contact_infolist.nothing_to_sync.title'))
+                ->body(__('notifications.chatwoot.contact_infolist.nothing_to_sync.body'))
                 ->warning()
                 ->send();
 
@@ -228,8 +228,8 @@ class ContactInfolist extends BaseSchemaWidget
         );
 
         Notification::make()
-            ->title('Syncing customer details')
-            ->body('We are fetching the Chatwoot contact details and updating the Stripe customer.')
+            ->title(__('notifications.chatwoot.contact_infolist.syncing.title'))
+            ->body(__('notifications.chatwoot.contact_infolist.syncing.body'))
             ->info()
             ->send();
 

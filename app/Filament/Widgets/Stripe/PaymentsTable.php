@@ -29,7 +29,12 @@ class PaymentsTable extends BaseTableWidget
 
     public $tableRecordsPerPage = 3;
 
-    protected static ?string $heading = 'Payments';
+    protected static ?string $heading = null;
+
+    protected function getHeading(): ?string
+    {
+        return __('filament.widgets.stripe.payments_table.heading');
+    }
 
     #[On('reset')]
     public function resetComponent(): void
@@ -128,7 +133,7 @@ class PaymentsTable extends BaseTableWidget
                     Action::make('openPaymentUrl')
                         ->url(fn ($record) => $record['charges']['data'][0]['receipt_url'] ?? null)
                         ->openUrlInNewTab()
-                        ->label('Open Receipt')
+                        ->label(__('filament.widgets.stripe.payments_table.actions.open_receipt.label'))
                         ->icon(Heroicon::OutlinedEnvelopeOpen)
                         ->hidden(fn ($record) => blank(data_get($record, 'charges.data.0.receipt_url'))),
                 ]),

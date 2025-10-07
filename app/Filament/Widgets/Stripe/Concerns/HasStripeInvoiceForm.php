@@ -46,29 +46,29 @@ trait HasStripeInvoiceForm
     {
         return [
             Repeater::make('line_items')
-                ->label('Products')
+                ->label(__('filament.widgets.stripe.invoice_form.repeater.label'))
                 ->reorderable(false)
                 ->required()
                 ->rules(['array', 'min:1'])
                 ->minItems(1)
-                ->validationAttribute('products')
+                ->validationAttribute(__('filament.widgets.stripe.invoice_form.repeater.validation_attribute'))
                 ->hiddenLabel()
                 ->table([
-                    TableColumn::make('Product')
+                    TableColumn::make(__('filament.widgets.stripe.invoice_form.table_columns.product'))
                         ->width('45%')
                         ->markAsRequired(),
-                    TableColumn::make('Price')
+                    TableColumn::make(__('filament.widgets.stripe.invoice_form.table_columns.price'))
                         ->width('25%')
                         ->markAsRequired(),
-                    TableColumn::make('Quantity')
+                    TableColumn::make(__('filament.widgets.stripe.invoice_form.table_columns.quantity'))
                         ->width('10%')
                         ->markAsRequired(),
-                    TableColumn::make('Subtotal')
+                    TableColumn::make(__('filament.widgets.stripe.invoice_form.table_columns.subtotal'))
                         ->width('20%'),
                 ])
                 ->schema([
                     Select::make('product')
-                        ->label('Product')
+                        ->label(__('filament.widgets.stripe.invoice_form.fields.product.label'))
                         ->hiddenLabel()
                         ->options(fn (): array => $this->getProductOptions())
                         ->searchable()
@@ -80,9 +80,9 @@ trait HasStripeInvoiceForm
                             $set('price', null);
                             $this->guardLineItemsCurrency($set, $get);
                         })
-                        ->placeholder('Select a product'),
+                        ->placeholder(__('filament.widgets.stripe.invoice_form.fields.product.placeholder')),
                     Select::make('price')
-                        ->label('Price')
+                        ->label(__('filament.widgets.stripe.invoice_form.fields.price.label'))
                         ->hiddenLabel()
                         ->native(false)
                         ->searchable()
@@ -111,9 +111,9 @@ trait HasStripeInvoiceForm
                         })
                         ->disabled(fn (Get $get): bool => ! is_string($get('product')) || $get('product') === '')
                         ->afterStateUpdated(fn (Set $set, Get $get) => $this->guardLineItemsCurrency($set, $get))
-                        ->placeholder('Select a price'),
+                        ->placeholder(__('filament.widgets.stripe.invoice_form.fields.price.placeholder')),
                     TextInput::make('quantity')
-                        ->label('Quantity')
+                        ->label(__('filament.widgets.stripe.invoice_form.fields.quantity.label'))
                         ->hiddenLabel()
                         ->numeric()
                         ->integer()
@@ -122,7 +122,7 @@ trait HasStripeInvoiceForm
                         ->debounce()
                         ->required(),
                     TextEntry::make('subtotal')
-                        ->label('Subtotal')
+                        ->label(__('filament.widgets.stripe.invoice_form.fields.subtotal.label'))
                         ->hiddenLabel()
                         ->state(function (Get $get): string {
                             $priceState = $get('price');
@@ -281,7 +281,7 @@ trait HasStripeInvoiceForm
             }
         }
 
-        return 'Product';
+        return __('filament.widgets.stripe.invoice_form.defaults.product_name');
     }
 
     protected function resolveProductDefaultPriceId(array $price): ?string
@@ -642,7 +642,7 @@ trait HasStripeInvoiceForm
     protected function configureInvoiceFormAction(Action $action): Action
     {
         return $action
-            ->modalSubmitActionLabel('Create invoice')
+            ->modalSubmitActionLabel(__('filament.widgets.stripe.invoice_form.actions.submit'))
             ->schema($this->getCreateInvoiceForm())
             ->mutateDataUsing(fn (array $data): array => $this->prepareInvoiceFormData($data))
             ->action(fn (array $data) => $this->handleCreateInvoice($data));
@@ -659,8 +659,8 @@ trait HasStripeInvoiceForm
 
         if ($lineItems === []) {
             Notification::make()
-                ->title('No products selected')
-                ->body('Please select at least one product and price to include on the invoice.')
+                ->title(__('notifications.stripe.invoice_form.no_products.title'))
+                ->body(__('notifications.stripe.invoice_form.no_products.body'))
                 ->danger()
                 ->send();
 
@@ -672,8 +672,8 @@ trait HasStripeInvoiceForm
 
         if ($currency === null) {
             Notification::make()
-                ->title('Mixed currencies selected')
-                ->body('All selected products must use the same currency. Please adjust your selection and try again.')
+                ->title(__('notifications.stripe.invoice_form.mixed_currencies.title'))
+                ->body(__('notifications.stripe.invoice_form.mixed_currencies.body'))
                 ->danger()
                 ->send();
 
@@ -694,8 +694,8 @@ trait HasStripeInvoiceForm
         );
 
         Notification::make()
-            ->title('Creating invoice')
-            ->body('We are preparing the invoice in Stripe. You will be notified once it is ready.')
+            ->title(__('notifications.stripe.invoice_form.creating_invoice.title'))
+            ->body(__('notifications.stripe.invoice_form.creating_invoice.body'))
             ->info()
             ->send();
 
@@ -814,8 +814,8 @@ trait HasStripeInvoiceForm
 
         if (! $accountId || ! $contactId || ! $impersonatorId) {
             Notification::make()
-                ->title('Missing Chatwoot context')
-                ->body('We need a Chatwoot contact to create a Stripe customer. Please open this widget from a Chatwoot conversation.')
+                ->title(__('notifications.stripe.invoice_form.missing_chatwoot_context.title'))
+                ->body(__('notifications.stripe.invoice_form.missing_chatwoot_context.body'))
                 ->danger()
                 ->send();
 
@@ -832,8 +832,8 @@ trait HasStripeInvoiceForm
             report($exception);
 
             Notification::make()
-                ->title('Failed to load Chatwoot contact')
-                ->body('We were unable to load the Chatwoot contact details. Please try again.')
+                ->title(__('notifications.chatwoot.contact_infolist.load_failed.title'))
+                ->body(__('notifications.chatwoot.contact_infolist.load_failed.body'))
                 ->danger()
                 ->send();
 
@@ -862,8 +862,8 @@ trait HasStripeInvoiceForm
             report($exception);
 
             Notification::make()
-                ->title('Failed to create Stripe customer')
-                ->body('We were unable to create a Stripe customer from the Chatwoot contact. Please try again.')
+                ->title(__('notifications.chatwoot.contact_infolist.create_customer_failed.title'))
+                ->body(__('notifications.chatwoot.contact_infolist.create_customer_failed.body'))
                 ->danger()
                 ->send();
 
@@ -873,8 +873,8 @@ trait HasStripeInvoiceForm
         $this->dashboardContext()->storeStripe(new StripeContext($customer->id));
 
         Notification::make()
-            ->title('Stripe customer created')
-            ->body('A Stripe customer was created from the Chatwoot contact.')
+            ->title(__('notifications.chatwoot.contact_infolist.customer_created.title'))
+            ->body(__('notifications.chatwoot.contact_infolist.customer_created.body'))
             ->success()
             ->send();
 

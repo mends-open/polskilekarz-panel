@@ -80,11 +80,18 @@ class CreateInvoice implements ShouldQueue
         $formattedTotal = $this->formatInvoiceTotal($finalized->total ?? null, $finalized->currency ?? null);
         $invoiceReference = $finalized->number ?? $finalized->id;
 
+        $body = $formattedTotal
+            ? __('notifications.jobs.stripe.create_invoice.success.with_total.body', [
+                'invoice' => $invoiceReference,
+                'amount' => $formattedTotal,
+            ])
+            : __('notifications.jobs.stripe.create_invoice.success.body', [
+                'invoice' => $invoiceReference,
+            ]);
+
         $this->notify(
-            title: 'Invoice created',
-            body: $formattedTotal
-                ? sprintf('Invoice %s for %s has been created.', $invoiceReference, $formattedTotal)
-                : sprintf('Invoice %s has been created.', $invoiceReference),
+            title: __('notifications.jobs.stripe.create_invoice.success.title'),
+            body: $body,
             status: 'success',
         );
     }
@@ -99,8 +106,8 @@ class CreateInvoice implements ShouldQueue
         ]);
 
         $this->notify(
-            title: 'Failed to create invoice',
-            body: 'We were unable to create the invoice in Stripe. Please try again.',
+            title: __('notifications.jobs.stripe.create_invoice.failed.title'),
+            body: __('notifications.jobs.stripe.create_invoice.failed.body'),
             status: 'danger',
         );
     }

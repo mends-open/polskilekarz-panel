@@ -26,7 +26,12 @@ class LatestInvoiceLinesTable extends BaseTableWidget
 
     protected int|string|array $columnSpan = 'full';
 
-    protected static ?string $heading = 'Latest Invoice Items';
+    protected static ?string $heading = null;
+
+    protected function getHeading(): ?string
+    {
+        return __('filament.widgets.stripe.latest_invoice_lines_table.heading');
+    }
 
     public function isReady(): bool
     {
@@ -50,12 +55,12 @@ class LatestInvoiceLinesTable extends BaseTableWidget
                     ])->space(2),
                     Stack::make([
                         TextColumn::make('description')
-                            ->label('Description')
+                            ->label(__('filament.widgets.stripe.latest_invoice_lines_table.columns.description.label'))
                             ->wrap(),
                     ]),
                     Stack::make([
                         TextColumn::make('pricing.unit_amount_decimal')
-                            ->label('Unit Price')
+                            ->label(__('filament.widgets.stripe.latest_invoice_lines_table.columns.unit_amount.label'))
                             ->badge()
                             ->money(
                                 currency: fn ($record) => data_get($record, 'currency'),
@@ -64,14 +69,14 @@ class LatestInvoiceLinesTable extends BaseTableWidget
                                 decimalPlaces: fn ($record) => $this->currencyDecimalPlaces((string) data_get($record, 'currency', '')),
                             ),
                         TextColumn::make('quantity')
-                            ->label('Qty')
+                            ->label(__('filament.widgets.stripe.latest_invoice_lines_table.columns.quantity.label'))
                             ->badge()
                             ->color('gray')
-                            ->prefix('x'),
+                            ->prefix(__('filament.widgets.stripe.latest_invoice_lines_table.columns.quantity.prefix')),
                     ])->space(2),
                     Stack::make([
                         TextColumn::make('amount')
-                            ->label('Subtotal')
+                            ->label(__('filament.widgets.stripe.latest_invoice_lines_table.columns.amount.label'))
                             ->badge()
                             ->color('primary')
                             ->money(
@@ -86,12 +91,12 @@ class LatestInvoiceLinesTable extends BaseTableWidget
             ->headerActions([
                 $this->configureInvoiceFormAction(
                     Action::make('duplicateLatestInvoice')
-                        ->label('Duplicate')
+                        ->label(__('filament.widgets.stripe.latest_invoice_lines_table.actions.duplicate.label'))
                         ->icon(Heroicon::OutlinedDocumentDuplicate)
                         ->outlined()
                         ->color($this->latestInvoice ? 'primary' : 'gray')
                         ->disabled(! $this->latestInvoice)
-                        ->modalHeading('Duplicate latest invoice')
+                        ->modalHeading(__('filament.widgets.stripe.latest_invoice_lines_table.actions.duplicate.modal.heading'))
                 )->fillForm(function (): array {
                     $invoice = $this->latestInvoice;
 

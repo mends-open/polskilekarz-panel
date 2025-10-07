@@ -4,27 +4,27 @@ return [
     'widgets' => [
         'common' => [
             'placeholders' => [
-                'name' => 'Brak nazwy',
-                'created_at' => 'Brak daty utworzenia',
-                'email' => 'Brak adresu e-mail',
-                'phone' => 'Brak telefonu',
-                'country' => 'Brak kraju',
+                'name' => 'No name',
+                'created_at' => 'No creation date',
+                'email' => 'No email',
+                'phone' => 'No phone',
+                'country' => 'No country',
             ],
         ],
         'chatwoot' => [
             'contact_infolist' => [
                 'section' => [
-                    'title' => 'Kontakt',
+                    'title' => 'Contact',
                 ],
                 'actions' => [
                     'sync_customer_from_contact' => [
-                        'label' => 'Synchronizuj klienta',
+                        'label' => 'Sync customer',
                     ],
                 ],
                 'fields' => [
                     'id' => [
                         'label' => 'ID',
-                        'placeholder' => 'Brak identyfikatora',
+                        'placeholder' => 'No ID',
                     ],
                 ],
             ],
@@ -32,58 +32,58 @@ return [
         'stripe' => [
             'customer_infolist' => [
                 'section' => [
-                    'title' => 'Klient',
+                    'title' => 'Customer',
                 ],
                 'actions' => [
                     'send_portal_link' => [
-                        'label' => 'Wyślij link do portalu',
+                        'label' => 'Send portal link',
                         'modal' => [
-                            'heading' => 'Wyślać link do portalu?',
-                            'description' => 'Utworzymy sesję portalu klienta Stripe i wyślemy skrócony link w Chatwoocie.',
+                            'heading' => 'Send portal link?',
+                            'description' => 'We will create a Stripe customer portal session and send the short link in Chatwoot.',
                         ],
                     ],
                     'open_portal' => [
-                        'label' => 'Otwórz portal',
+                        'label' => 'Open portal',
                     ],
                 ],
                 'fields' => [
                     'address_country' => [
-                        'label' => 'Kraj',
+                        'label' => 'Country',
                     ],
                 ],
             ],
             'latest_invoice_infolist' => [
                 'section' => [
-                    'title' => 'Najnowsza faktura',
+                    'title' => 'Latest Invoice',
                 ],
                 'actions' => [
                     'create_invoice' => [
-                        'label' => 'Utwórz nową',
+                        'label' => 'Create New',
                         'modal' => [
-                            'heading' => 'Utwórz fakturę',
+                            'heading' => 'Create invoice',
                         ],
                     ],
                     'send_latest' => [
-                        'label' => 'Wyślij najnowszą',
+                        'label' => 'Send Latest',
                     ],
                     'open_latest' => [
-                        'label' => 'Otwórz najnowszą',
+                        'label' => 'Open Latest',
                     ],
                 ],
                 'fields' => [
                     'total' => [
-                        'label' => 'Suma',
+                        'label' => 'Total',
                     ],
                     'amount_paid' => [
-                        'label' => 'Zapłacono',
+                        'label' => 'Amount Paid',
                     ],
                     'amount_remaining' => [
-                        'label' => 'Pozostało do zapłaty',
+                        'label' => 'Amount Remaining',
                     ],
                 ],
             ],
             'invoices_table' => [
-                'heading' => 'Faktury',
+                'heading' => 'Invoices',
                 'columns' => [
                     'lines' => [
                         'quantity_prefix' => 'x',
@@ -92,91 +92,91 @@ return [
                 'actions' => [
                     'send_latest' => [
                         'modal' => [
-                            'heading' => 'Wysłać link do najnowszej faktury?',
-                            'description' => 'Wyślemy link do najnowszej faktury w aktywnej konwersacji Chatwoot.',
+                            'heading' => 'Send latest invoice link?',
+                            'description' => 'We will send the latest invoice link to the active Chatwoot conversation.',
                         ],
                     ],
                     'duplicate' => [
-                        'label' => 'Duplikuj',
+                        'label' => 'Duplicate',
                     ],
                     'send' => [
-                        'label' => 'Wyślij',
+                        'label' => 'Send',
                         'modal' => [
-                            'heading' => 'Wysłać link do faktury?',
-                            'description' => 'Wyślemy ten link do faktury do bieżącej konwersacji Chatwoot.',
+                            'heading' => 'Send invoice link?',
+                            'description' => 'We will send this invoice link to the current Chatwoot conversation.',
                         ],
                     ],
                     'open' => [
-                        'label' => 'Otwórz',
+                        'label' => 'Open',
                     ],
                 ],
             ],
             'latest_invoice_lines_table' => [
-                'heading' => 'Pozycje najnowszej faktury',
+                'heading' => 'Latest Invoice Items',
                 'columns' => [
                     'description' => [
-                        'label' => 'Opis',
+                        'label' => 'Description',
                     ],
                     'unit_amount' => [
-                        'label' => 'Cena jednostkowa',
+                        'label' => 'Unit Price',
                     ],
                     'quantity' => [
-                        'label' => 'Ilość',
+                        'label' => 'Qty',
                         'prefix' => 'x',
                     ],
                     'amount' => [
-                        'label' => 'Suma częściowa',
+                        'label' => 'Subtotal',
                     ],
                 ],
                 'actions' => [
                     'duplicate' => [
-                        'label' => 'Duplikuj',
+                        'label' => 'Duplicate',
                         'modal' => [
-                            'heading' => 'Zduplikować najnowszą fakturę?',
+                            'heading' => 'Duplicate latest invoice',
                         ],
                     ],
                 ],
             ],
             'payments_table' => [
-                'heading' => 'Płatności',
+                'heading' => 'Payments',
                 'actions' => [
                     'open_receipt' => [
-                        'label' => 'Otwórz paragon',
+                        'label' => 'Open Receipt',
                     ],
                 ],
             ],
             'invoice_form' => [
                 'repeater' => [
-                    'label' => 'Produkty',
-                    'validation_attribute' => 'produkty',
+                    'label' => 'Products',
+                    'validation_attribute' => 'products',
                 ],
                 'table_columns' => [
-                    'product' => 'Produkt',
-                    'price' => 'Cena',
-                    'quantity' => 'Ilość',
-                    'subtotal' => 'Suma częściowa',
+                    'product' => 'Product',
+                    'price' => 'Price',
+                    'quantity' => 'Quantity',
+                    'subtotal' => 'Subtotal',
                 ],
                 'fields' => [
                     'product' => [
-                        'label' => 'Produkt',
-                        'placeholder' => 'Wybierz produkt',
+                        'label' => 'Product',
+                        'placeholder' => 'Select a product',
                     ],
                     'price' => [
-                        'label' => 'Cena',
-                        'placeholder' => 'Wybierz cenę',
+                        'label' => 'Price',
+                        'placeholder' => 'Select a price',
                     ],
                     'quantity' => [
-                        'label' => 'Ilość',
+                        'label' => 'Quantity',
                     ],
                     'subtotal' => [
-                        'label' => 'Suma częściowa',
+                        'label' => 'Subtotal',
                     ],
                 ],
                 'defaults' => [
-                    'product_name' => 'Produkt',
+                    'product_name' => 'Product',
                 ],
                 'actions' => [
-                    'submit' => 'Utwórz fakturę',
+                    'submit' => 'Create invoice',
                 ],
             ],
         ],
