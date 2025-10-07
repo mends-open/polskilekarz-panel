@@ -96,6 +96,8 @@ class ContactInfolist extends BaseSchemaWidget
                     ])
                     ->schema([
                         TextEntry::make('id')
+                            ->label(__('filament.widgets.chatwoot.contact_infolist.id_label'))
+                            ->placeholder(__('filament.widgets.chatwoot.contact_infolist.id_placeholder'))
                             ->badge()
                             ->color('gray')
                             ->inlineLabel(),
