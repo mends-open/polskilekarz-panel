@@ -16,7 +16,6 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Stripe\Exception\ApiErrorException;
-use Stripe\StripeClient;
 use Throwable;
 
 class CreateCustomerPortalSessionLink implements ShouldQueue

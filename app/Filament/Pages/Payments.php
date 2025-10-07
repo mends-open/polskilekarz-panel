@@ -11,7 +11,6 @@ use App\Filament\Widgets\Stripe\LatestInvoiceInfolist;
 use App\Filament\Widgets\Stripe\LatestInvoiceLinesTable;
 use App\Filament\Widgets\Stripe\PaymentsTable;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
-use Filament\Actions\Action;
 use Filament\Pages\Dashboard;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;

@@ -176,7 +176,7 @@ class InvoicesTable extends BaseTableWidget
 
                             return $this->getInvoiceFormDefaults(is_array($record) ? $record : null);
                         }),
-                   Action::make('sendInvoiceShortUrl')
+                    Action::make('sendInvoiceShortUrl')
                         ->action(fn ($record) => $this->sendInvoiceRecordLink($record))
                         ->label(__('filament.widgets.stripe.invoices_table.actions.send.label'))
                         ->icon(Heroicon::OutlinedChatBubbleLeftEllipsis)

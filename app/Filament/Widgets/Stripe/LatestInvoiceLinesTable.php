@@ -8,12 +8,12 @@ use App\Filament\Widgets\Stripe\Concerns\HasLatestStripeInvoice;
 use App\Filament\Widgets\Stripe\Concerns\HasStripeInvoiceForm;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use Filament\Actions\Action;
-use Illuminate\Support\Str;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\Layout\Split;
 use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Support\Str;
 use Livewire\Attributes\On;
 use Stripe\StripeObject;
 
@@ -85,8 +85,8 @@ class LatestInvoiceLinesTable extends BaseTableWidget
                                 divideBy: fn ($record) => $this->currencyDivisor((string) data_get($record, 'currency', '')),
                                 locale: config('app.locale'),
                                 decimalPlaces: fn ($record) => $this->currencyDecimalPlaces((string) data_get($record, 'currency', '')),
-                        ),
-                    ])
+                            ),
+                    ]),
                 ]),
             ])
             ->headerActions([

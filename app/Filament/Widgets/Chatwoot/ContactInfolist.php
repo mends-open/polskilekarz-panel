@@ -17,9 +17,9 @@ use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
-use Stripe\Exception\ApiErrorException;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
+use Stripe\Exception\ApiErrorException;
 
 class ContactInfolist extends BaseSchemaWidget
 {
