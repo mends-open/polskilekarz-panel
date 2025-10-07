@@ -109,11 +109,6 @@ class LatestInvoiceLinesTable extends BaseTableWidget
 
                     return $this->getInvoiceFormDefaults($invoice->toArray());
                 }),
-                Action::make('refresh')
-                    ->action(fn () => $this->refreshLines())
-                    ->hiddenLabel()
-                    ->icon(Heroicon::OutlinedArrowPath)
-                    ->link(),
             ]);
     }
 

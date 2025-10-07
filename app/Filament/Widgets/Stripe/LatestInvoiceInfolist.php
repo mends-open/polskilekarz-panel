@@ -8,6 +8,7 @@ use App\Filament\Widgets\Stripe\Concerns\HasLatestStripeInvoice;
 use App\Filament\Widgets\Stripe\Concerns\HasStripeInvoiceForm;
 use App\Filament\Widgets\Stripe\Concerns\InterpretsStripeAmounts;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
+use Arr;
 use Filament\Actions\Action;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
@@ -90,11 +91,6 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                             ->url(data_get($data, 'hosted_invoice_url'))
                             ->openUrlInNewTab()
                             ->hidden(blank(data_get($data, 'hosted_invoice_url'))),
-                        Action::make('reset')
-                            ->action(fn () => $this->refreshLatestInvoice())
-                            ->hiddenLabel()
-                            ->icon(Heroicon::OutlinedArrowPath)
-                            ->link(),
                     ])
                     ->schema([
                         TextEntry::make('id')
@@ -156,7 +152,7 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                         TextEntry::make('currency')
                             ->label(__('filament.widgets.stripe.latest_invoice_infolist.fields.currency.label'))
                             ->inlineLabel()
-                            ->state(fn () => Str::upper($data['currency']))
+                            ->state(fn () => Str::upper(Arr::get($data, 'currency')))
                             ->badge()
                     ]),
             ]);

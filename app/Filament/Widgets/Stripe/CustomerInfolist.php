@@ -79,11 +79,6 @@ class CustomerInfolist extends BaseSchemaWidget
                             ->color($customerReady ? 'primary' : 'gray')
                             ->disabled(! $customerReady)
                             ->action(fn () => $this->openCustomerPortal()),
-                        Action::make('reset')
-                            ->action(fn () => $this->reset())
-                            ->hiddenLabel()
-                            ->icon(Heroicon::OutlinedArrowPath)
-                            ->link(),
                     ])
                     ->schema([
                         TextEntry::make('id')

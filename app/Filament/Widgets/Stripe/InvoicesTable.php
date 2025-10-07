@@ -158,11 +158,6 @@ class InvoicesTable extends BaseTableWidget
                     ->color(fn () => $this->hasCustomerInvoices() ? 'warning' : 'gray')
                     ->disabled(fn () => ! $this->hasCustomerInvoices())
                     ->action(fn () => $this->sendLatestInvoice()),
-                Action::make('reset')
-                    ->action(fn () => $this->refreshInvoices())
-                    ->hiddenLabel()
-                    ->icon(Heroicon::OutlinedArrowPath)
-                    ->link(),
             ])
             ->recordActions([
                 ActionGroup::make([

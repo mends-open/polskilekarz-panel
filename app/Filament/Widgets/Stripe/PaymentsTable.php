@@ -123,11 +123,6 @@ class PaymentsTable extends BaseTableWidget
             ])
             ->filters([])
             ->headerActions([
-                Action::make('refresh')
-                    ->action(fn () => $this->refreshTable())
-                    ->hiddenLabel()
-                    ->icon(Heroicon::OutlinedArrowPath)
-                    ->link(),
             ])
             ->recordActions([
                 ActionGroup::make([
