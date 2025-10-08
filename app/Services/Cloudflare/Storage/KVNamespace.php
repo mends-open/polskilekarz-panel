@@ -6,6 +6,7 @@ use Illuminate\Http\Client\Factory;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use InvalidArgumentException;
+use JsonException;
 
 class KVNamespace
 {
@@ -18,23 +19,66 @@ class KVNamespace
         protected ?string $defaultDomain = null,
     ) {}
 
-    public function create(string $key, string $value, array $headers = []): KVResult
+    /**
+     * @param  array<string, string>  $metadata
+     */
+    public function create(string $key, string $value, array $headers = [], array $metadata = []): KVResult
     {
-        $request = $this->baseRequest()
-            ->withHeaders(array_merge([
+        $request = $this->baseRequest();
+
+        $options = [];
+
+        if ($metadata !== []) {
+            if ($headers !== []) {
+                $request = $request->withHeaders($headers);
+            }
+
+            $options['multipart'] = $this->multipartPayload($value, $metadata);
+        } else {
+            $request = $request->withHeaders(array_merge([
                 'Content-Type' => 'text/plain',
             ], $headers));
 
-        $response = $request->send('PUT', $this->buildPath("values/{$key}"), [
-            'body' => base64_encode($value),
-        ]);
+            $options['body'] = $value;
+        }
+
+        $response = $request->send('PUT', $this->buildPath("values/{$key}"), $options);
 
         return $this->result($key, $response);
     }
 
-    public function createIfAbsent(string $key, string $value): KVResult
+    /**
+     * @param  array<string, string>  $metadata
+     */
+    public function createIfAbsent(string $key, string $value, array $metadata = []): KVResult
     {
-        return $this->create($key, $value, ['If-None-Match' => '*']);
+        return $this->create($key, $value, ['If-None-Match' => '*'], $metadata);
+    }
+
+    /**
+     * @param  array<string, string>  $metadata
+     * @return array<int, array<string, mixed>>
+     */
+    protected function multipartPayload(string $value, array $metadata): array
+    {
+        try {
+            $encodedMetadata = json_encode($metadata, JSON_THROW_ON_ERROR);
+        } catch (JsonException $exception) {
+            report($exception);
+
+            $encodedMetadata = '{}';
+        }
+
+        return [
+            [
+                'name' => 'value',
+                'contents' => $value,
+            ],
+            [
+                'name' => 'metadata',
+                'contents' => $encodedMetadata,
+            ],
+        ];
     }
 
     public function retrieve(string $key): ?string

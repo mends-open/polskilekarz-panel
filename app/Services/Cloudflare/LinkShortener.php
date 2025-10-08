@@ -45,7 +45,7 @@ class LinkShortener
 
         $encodedPayload = $this->encodePayload($payload, $rawUrl);
 
-        $result = $kv->createIfAbsent($slug, $encodedPayload);
+        $result = $kv->createIfAbsent($slug, $encodedPayload, $sanitisedMetadata);
 
         if ($result->conflicted()) {
             throw new \RuntimeException('Short link already exists');
