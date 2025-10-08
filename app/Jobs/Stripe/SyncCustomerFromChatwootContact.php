@@ -24,6 +24,8 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
         public readonly int|string $contactId,
         public readonly int|string $impersonatorId,
         public readonly string $customerId,
+        /** @var array<string, string> */
+        public readonly array $metadata = [],
         public readonly ?int $notifiableId,
     ) {}
 
@@ -45,6 +47,12 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
 
         if ($country !== '') {
             $payload['address'] = ['country' => $country];
+        }
+
+        $metadata = $this->sanitisedMetadata();
+
+        if ($metadata !== []) {
+            $payload['metadata'] = $metadata;
         }
 
         if ($payload === []) {
@@ -73,6 +81,7 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
             'contact_id' => $this->contactId,
             'impersonator_id' => $this->impersonatorId,
             'customer_id' => $this->customerId,
+            'metadata' => $this->metadata,
             'exception' => $exception,
         ]);
 
@@ -113,5 +122,16 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
         }
 
         return User::find($this->notifiableId);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function sanitisedMetadata(): array
+    {
+        return collect($this->metadata)
+            ->map(fn ($value): ?string => is_scalar($value) && $value !== '' ? (string) $value : null)
+            ->filter(fn (?string $value): bool => $value !== null)
+            ->all();
     }
 }

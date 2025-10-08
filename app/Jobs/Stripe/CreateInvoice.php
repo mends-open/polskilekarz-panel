@@ -27,6 +27,8 @@ class CreateInvoice implements ShouldQueue
         public readonly ?string $currency,
         /** @var array<int, array{price: string, quantity: int}> */
         public readonly array $lineItems,
+        /** @var array<string, string> */
+        public readonly array $metadata = [],
         public readonly ?int $notifiableId,
     ) {}
 
@@ -51,6 +53,12 @@ class CreateInvoice implements ShouldQueue
             $payload['currency'] = $this->currency;
         }
 
+        $metadata = $this->sanitisedMetadata();
+
+        if ($metadata !== []) {
+            $payload['metadata'] = $metadata;
+        }
+
         $invoice = $stripe->invoices->create($payload);
 
         foreach ($this->lineItems as $lineItem) {
@@ -65,14 +73,20 @@ class CreateInvoice implements ShouldQueue
                 $quantity = 1;
             }
 
-            $stripe->invoiceItems->create([
+            $invoiceItemPayload = [
                 'customer' => $this->customerId,
                 'invoice' => $invoice->id,
                 'quantity' => $quantity,
                 'pricing' => [
                     'price' => $priceId,
                 ],
-            ]);
+            ];
+
+            if ($metadata !== []) {
+                $invoiceItemPayload['metadata'] = $metadata;
+            }
+
+            $stripe->invoiceItems->create($invoiceItemPayload);
         }
 
         $finalized = $stripe->invoices->finalizeInvoice($invoice->id);
@@ -102,6 +116,7 @@ class CreateInvoice implements ShouldQueue
             'customer_id' => $this->customerId,
             'currency' => $this->currency,
             'line_items' => $this->lineItems,
+            'metadata' => $this->metadata,
             'exception' => $exception,
         ]);
 
@@ -154,5 +169,16 @@ class CreateInvoice implements ShouldQueue
         $divisor = Currency::divisor($currency);
 
         return Number::currency($amount / $divisor, $currency);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function sanitisedMetadata(): array
+    {
+        return collect($this->metadata)
+            ->map(fn ($value): ?string => is_scalar($value) && $value !== '' ? (string) $value : null)
+            ->filter(fn (?string $value): bool => $value !== null)
+            ->all();
     }
 }

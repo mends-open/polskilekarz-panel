@@ -27,12 +27,12 @@ readonly class ChatwootContext
         }
 
         return new self(
-            self::intOrNull($data['account_id'] ?? null),
-            self::intOrNull($data['conversation_id'] ?? null),
-            self::intOrNull($data['inbox_id'] ?? null),
-            self::intOrNull($data['contact_id'] ?? null),
+            self::resolveContextValue($data, 'account_id', 'chatwoot_account_id'),
+            self::resolveContextValue($data, 'conversation_id', 'chatwoot_conversation_id'),
+            self::resolveContextValue($data, 'inbox_id', 'chatwoot_inbox_id'),
+            self::resolveContextValue($data, 'contact_id', 'chatwoot_contact_id'),
             self::intOrNull($data['assigned_user_id'] ?? null),
-            self::intOrNull($data['current_user_id'] ?? null),
+            self::resolveContextValue($data, 'current_user_id', 'chatwoot_user_id'),
         );
     }
 
@@ -57,7 +57,23 @@ readonly class ChatwootContext
             'contact_id' => $this->contactId,
             'assigned_user_id' => $this->assignedUserId,
             'current_user_id' => $this->currentUserId,
+            'chatwoot_account_id' => $this->accountId,
+            'chatwoot_conversation_id' => $this->conversationId,
+            'chatwoot_inbox_id' => $this->inboxId,
+            'chatwoot_contact_id' => $this->contactId,
+            'chatwoot_user_id' => $this->currentUserId,
         ];
+    }
+
+    public function metadata(): array
+    {
+        return array_filter([
+            'chatwoot_account_id' => $this->stringOrNull($this->accountId),
+            'chatwoot_inbox_id' => $this->stringOrNull($this->inboxId),
+            'chatwoot_conversation_id' => $this->stringOrNull($this->conversationId),
+            'chatwoot_contact_id' => $this->stringOrNull($this->contactId),
+            'chatwoot_user_id' => $this->stringOrNull($this->currentUserId),
+        ], static fn (?string $value): bool => $value !== null);
     }
 
     public function isEmpty(): bool
@@ -85,5 +101,17 @@ readonly class ChatwootContext
     private static function intOrNull(mixed $value): ?int
     {
         return is_numeric($value) ? (int) $value : null;
+    }
+
+    private static function resolveContextValue(array $data, string $baseKey, string $chatwootKey): ?int
+    {
+        $value = Arr::get($data, $chatwootKey, Arr::get($data, $baseKey));
+
+        return self::intOrNull($value);
+    }
+
+    private function stringOrNull(?int $value): ?string
+    {
+        return $value === null ? null : (string) $value;
     }
 }

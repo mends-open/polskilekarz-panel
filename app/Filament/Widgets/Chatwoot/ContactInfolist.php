@@ -179,16 +179,13 @@ class ContactInfolist extends BaseSchemaWidget
             $payload['address'] = ['country' => $country];
         }
 
+        $metadata = $chatwootContext->metadata();
+
+        if ($metadata !== []) {
+            $payload['metadata'] = $metadata;
+        }
+
         if (! $customerId) {
-            $metadata = [
-                'chatwoot_account_id' => (string) $accountId,
-                'chatwoot_contact_id' => (string) $contactId,
-            ];
-
-            if ($metadata !== []) {
-                $payload['metadata'] = $metadata;
-            }
-
             try {
                 $customer = stripe()->customers->create($payload);
             } catch (ApiErrorException $exception) {
@@ -231,6 +228,7 @@ class ContactInfolist extends BaseSchemaWidget
             contactId: $contactId,
             impersonatorId: $impersonatorId,
             customerId: $customerId,
+            metadata: $metadata,
             notifiableId: auth()->id(),
         );
 

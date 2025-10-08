@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets\Stripe\Concerns;
 
 use App\Jobs\Stripe\CreateInvoice;
+use App\Support\Dashboard\ChatwootContext;
 use App\Support\Dashboard\StripeContext;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Repeater;
@@ -690,6 +691,7 @@ trait HasStripeInvoiceForm
             customerId: $customerId,
             currency: $currency,
             lineItems: $lineItems,
+            metadata: $this->chatwootMetadata(),
             notifiableId: auth()->id(),
         );
 
@@ -844,16 +846,18 @@ trait HasStripeInvoiceForm
             'name' => data_get($contact, 'name'),
             'email' => data_get($contact, 'email'),
             'phone' => data_get($contact, 'phone_number'),
-            'metadata' => [
-                'chatwoot_account_id' => (string) $accountId,
-                'chatwoot_contact_id' => (string) $contactId,
-            ],
         ], fn ($value) => filled($value));
 
         $country = Str::upper((string) data_get($contact, 'additional_attributes.country_code', ''));
 
         if ($country !== '') {
             $payload['address'] = ['country' => $country];
+        }
+
+        $metadata = $this->chatwootMetadata($chatwootContext);
+
+        if ($metadata !== []) {
+            $payload['metadata'] = $metadata;
         }
 
         try {
@@ -879,6 +883,20 @@ trait HasStripeInvoiceForm
             ->send();
 
         return $customer->id;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function chatwootMetadata(?ChatwootContext $context = null): array
+    {
+        $context ??= $this->chatwootContext();
+
+        if (! $context) {
+            return [];
+        }
+
+        return $context->metadata();
     }
 
     protected function afterInvoiceFormHandled(): void
