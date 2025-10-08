@@ -68,7 +68,7 @@ class CreateInvoice implements ShouldQueue
 
         if (is_string($invoice->id) && $invoice->id !== '') {
             $invoiceMetadata = $invoiceMetadata->with([
-                'stripe_invoice_id' => $invoice->id,
+                MetadataPayload::KEY_STRIPE_INVOICE_ID => $invoice->id,
             ]);
 
             $invoiceMetadataArray = $invoiceMetadata->toArray();

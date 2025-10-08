@@ -4,6 +4,7 @@ namespace App\Filament\Widgets\Stripe\Concerns;
 
 use App\Jobs\Stripe\CreateInvoice;
 use App\Support\Dashboard\StripeContext;
+use App\Support\Metadata\MetadataPayload;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Repeater\TableColumn;
@@ -691,7 +692,7 @@ trait HasStripeInvoiceForm
             currency: $currency,
             lineItems: $lineItems,
             metadata: $this->chatwootMetadata([
-                'stripe_customer_id' => $customerId,
+                MetadataPayload::KEY_STRIPE_CUSTOMER_ID => $customerId,
             ]),
             notifiableId: auth()->id(),
         );
@@ -876,7 +877,7 @@ trait HasStripeInvoiceForm
         }
 
         $metadataWithCustomerId = $this->chatwootMetadata([
-            'stripe_customer_id' => $customer->id,
+            MetadataPayload::KEY_STRIPE_CUSTOMER_ID => $customer->id,
         ]);
 
         if ($metadataWithCustomerId !== [] && $metadataWithCustomerId !== $metadata) {

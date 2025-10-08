@@ -48,17 +48,17 @@ trait InteractsWithDashboardContext
         $context = $this->chatwootContext();
 
         $metadata = [
-            'chatwoot_account_id' => $context->accountId,
-            'chatwoot_conversation_id' => $context->conversationId,
-            'chatwoot_inbox_id' => $context->inboxId,
-            'chatwoot_contact_id' => $context->contactId,
-            'chatwoot_user_id' => $context->currentUserId,
+            MetadataPayload::KEY_CHATWOOT_ACCOUNT_ID => $context->accountId,
+            MetadataPayload::KEY_CHATWOOT_CONVERSATION_ID => $context->conversationId,
+            MetadataPayload::KEY_CHATWOOT_INBOX_ID => $context->inboxId,
+            MetadataPayload::KEY_CHATWOOT_CONTACT_ID => $context->contactId,
+            MetadataPayload::KEY_CHATWOOT_USER_ID => $context->currentUserId,
         ];
 
         $userId = auth()->id();
 
         if ($userId !== null && $userId !== '') {
-            $metadata['user_id'] = (string) $userId;
+            $metadata[MetadataPayload::KEY_USER_ID] = (string) $userId;
         }
 
         $payload = MetadataPayload::from($metadata);

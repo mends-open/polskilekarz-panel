@@ -52,7 +52,7 @@ class CreateCustomerPortalSessionLink implements ShouldQueue
 
         if (is_string($session->id) && $session->id !== '') {
             $metadata = $metadata->with([
-                'billing_portal_session' => $session->id,
+                MetadataPayload::KEY_STRIPE_BILLING_PORTAL_SESSION => $session->id,
             ]);
         }
 

@@ -54,9 +54,9 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
 
         $metadataArray = $metadata->toArray();
 
-        if (! array_key_exists('stripe_customer_id', $metadataArray) && is_string($this->customerId) && $this->customerId !== '') {
+        if (! array_key_exists(MetadataPayload::KEY_STRIPE_CUSTOMER_ID, $metadataArray) && is_string($this->customerId) && $this->customerId !== '') {
             $metadata = $metadata->with([
-                'stripe_customer_id' => $this->customerId,
+                MetadataPayload::KEY_STRIPE_CUSTOMER_ID => $this->customerId,
             ]);
 
             $metadataArray = $metadata->toArray();

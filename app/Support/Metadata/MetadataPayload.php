@@ -2,11 +2,21 @@
 
 namespace App\Support\Metadata;
 
-use Illuminate\Contracts\Arrayable;
+use Illuminate\Contracts\Support\Arrayable;
 use JsonSerializable;
 
 final class MetadataPayload implements Arrayable, JsonSerializable
 {
+    public const KEY_CHATWOOT_ACCOUNT_ID = 'chatwoot_account_id';
+    public const KEY_CHATWOOT_INBOX_ID = 'chatwoot_inbox_id';
+    public const KEY_CHATWOOT_CONVERSATION_ID = 'chatwoot_conversation_id';
+    public const KEY_CHATWOOT_CONTACT_ID = 'chatwoot_contact_id';
+    public const KEY_CHATWOOT_USER_ID = 'chatwoot_user_id';
+    public const KEY_USER_ID = 'user_id';
+    public const KEY_STRIPE_CUSTOMER_ID = 'stripe_customer_id';
+    public const KEY_STRIPE_INVOICE_ID = 'stripe_invoice_id';
+    public const KEY_STRIPE_BILLING_PORTAL_SESSION = 'stripe_billing_portal_session';
+
     /**
      * @var array<string, string>
      */
@@ -18,15 +28,15 @@ final class MetadataPayload implements Arrayable, JsonSerializable
      * @var array<int, string>
      */
     private const PRIORITY_KEYS = [
-        'chatwoot_account_id',
-        'chatwoot_inbox_id',
-        'chatwoot_conversation_id',
-        'chatwoot_contact_id',
-        'chatwoot_user_id',
-        'user_id',
-        'stripe_customer_id',
-        'stripe_invoice_id',
-        'billing_portal_session',
+        self::KEY_CHATWOOT_ACCOUNT_ID,
+        self::KEY_CHATWOOT_INBOX_ID,
+        self::KEY_CHATWOOT_CONVERSATION_ID,
+        self::KEY_CHATWOOT_CONTACT_ID,
+        self::KEY_CHATWOOT_USER_ID,
+        self::KEY_USER_ID,
+        self::KEY_STRIPE_CUSTOMER_ID,
+        self::KEY_STRIPE_INVOICE_ID,
+        self::KEY_STRIPE_BILLING_PORTAL_SESSION,
     ];
 
     /**
