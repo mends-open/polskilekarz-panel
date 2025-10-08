@@ -4,9 +4,9 @@ namespace App\Services\Cloudflare;
 
 use App\Models\CloudflareLink;
 use App\Services\Cloudflare\Storage\KVNamespace;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use JsonException;
 
 class LinkShortener
 {
@@ -38,14 +38,9 @@ class LinkShortener
 
         $kv = $this->cloudflare->kv($this->namespace, ['domain' => $this->domain]);
         $sanitisedMetadata = $this->sanitiseMetadata($metadata);
-        $payload = [
-            'url' => $rawUrl,
-            'metadata' => $sanitisedMetadata,
-        ];
+        $encodedUrl = $this->encodeUrl($rawUrl);
 
-        $encodedPayload = $this->encodePayload($payload, $rawUrl);
-
-        $result = $kv->createIfAbsent($slug, $encodedPayload, $sanitisedMetadata);
+        $result = $kv->createIfAbsent($slug, $encodedUrl, $sanitisedMetadata);
 
         if ($result->conflicted()) {
             throw new \RuntimeException('Short link already exists');
@@ -96,22 +91,9 @@ class LinkShortener
             ->all();
     }
 
-    /**
-     * @param array{url: string, metadata: array<string, string>} $payload
-     */
-    protected function encodePayload(array $payload, string $fallback): string
+    protected function encodeUrl(string $url): string
     {
-        try {
-            return json_encode($payload, JSON_THROW_ON_ERROR);
-        } catch (JsonException $exception) {
-            Log::error('Failed to encode Cloudflare short link payload', [
-                'payload' => $payload,
-                'exception' => $exception->getMessage(),
-            ]);
-
-        }
-
-        return $fallback;
+        return base64_encode($url);
     }
 
     public function entries(string $slug, ?string $url = null): array
