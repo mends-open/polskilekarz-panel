@@ -5,6 +5,7 @@ namespace App\Support\Dashboard\Concerns;
 use App\Support\Dashboard\ChatwootContext;
 use App\Support\Dashboard\DashboardContext;
 use App\Support\Dashboard\StripeContext;
+use App\Support\Metadata\MetadataPayload;
 
 trait InteractsWithDashboardContext
 {
@@ -60,11 +61,12 @@ trait InteractsWithDashboardContext
             $metadata['user_id'] = (string) $userId;
         }
 
-        $metadata = array_merge($metadata, $additional);
+        $payload = MetadataPayload::from($metadata);
 
-        return collect($metadata)
-            ->map(fn ($value): ?string => is_scalar($value) ? (string) $value : null)
-            ->filter(fn (?string $value): bool => $value !== null && $value !== '')
-            ->all();
+        if ($additional !== []) {
+            $payload = $payload->with($additional);
+        }
+
+        return $payload->toArray();
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Jobs\Stripe;
 
 use App\Models\User;
+use App\Support\Metadata\MetadataPayload;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Illuminate\Bus\Queueable;
@@ -49,14 +50,20 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
             $payload['address'] = ['country' => $country];
         }
 
-        $metadata = $this->sanitisedMetadata();
+        $metadata = MetadataPayload::from($this->metadata);
 
-        if (! isset($metadata['stripe_customer_id']) && is_string($this->customerId) && $this->customerId !== '') {
-            $metadata['stripe_customer_id'] = $this->customerId;
+        $metadataArray = $metadata->toArray();
+
+        if (! array_key_exists('stripe_customer_id', $metadataArray) && is_string($this->customerId) && $this->customerId !== '') {
+            $metadata = $metadata->with([
+                'stripe_customer_id' => $this->customerId,
+            ]);
+
+            $metadataArray = $metadata->toArray();
         }
 
-        if ($metadata !== []) {
-            $payload['metadata'] = $metadata;
+        if ($metadataArray !== []) {
+            $payload['metadata'] = $metadataArray;
         }
 
         if ($payload === []) {
@@ -128,14 +135,4 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
         return User::find($this->notifiableId);
     }
 
-    /**
-     * @return array<string, string>
-     */
-    protected function sanitisedMetadata(): array
-    {
-        return collect($this->metadata)
-            ->map(fn ($value): ?string => is_scalar($value) && $value !== '' ? (string) $value : null)
-            ->filter(fn (?string $value): bool => $value !== null)
-            ->all();
-    }
 }

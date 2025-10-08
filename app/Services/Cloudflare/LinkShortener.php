@@ -4,6 +4,7 @@ namespace App\Services\Cloudflare;
 
 use App\Models\CloudflareLink;
 use App\Services\Cloudflare\Storage\KVNamespace;
+use App\Support\Metadata\MetadataPayload;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -37,10 +38,11 @@ class LinkShortener
         $slug = $this->generateSlug();
 
         $kv = $this->cloudflare->kv($this->namespace, ['domain' => $this->domain]);
-        $sanitisedMetadata = $this->sanitiseMetadata($metadata);
+        $metadataPayload = MetadataPayload::from($metadata);
+        $metadataArray = $metadataPayload->toArray();
         $encodedUrl = $this->encodeUrl($rawUrl);
 
-        $result = $kv->createIfAbsent($slug, $encodedUrl, $sanitisedMetadata);
+        $result = $kv->createIfAbsent($slug, $encodedUrl, $metadataArray);
 
         if ($result->conflicted()) {
             throw new \RuntimeException('Short link already exists');
@@ -61,14 +63,14 @@ class LinkShortener
         $link = CloudflareLink::create([
             'slug' => $slug,
             'url' => $rawUrl,
-            'metadata' => $sanitisedMetadata,
+            'metadata' => $metadataArray,
         ]);
 
         Log::info('Created Cloudflare short link', [
             'slug' => $slug,
             'url' => $rawUrl,
             'link_id' => $link->id,
-            'metadata' => $sanitisedMetadata,
+            'metadata' => $metadataArray,
         ]);
 
         return $result->buildShortLink();
@@ -77,18 +79,6 @@ class LinkShortener
     public function buildShortLink(string $slug): string
     {
         return rtrim($this->domain, '/').'/'.$slug;
-    }
-
-    /**
-     * @param array<string, mixed> $metadata
-     * @return array<string, string>
-     */
-    protected function sanitiseMetadata(array $metadata): array
-    {
-        return collect($metadata)
-            ->map(fn ($value): ?string => is_scalar($value) ? (string) $value : null)
-            ->filter(fn (?string $value): bool => $value !== null && $value !== '')
-            ->all();
     }
 
     protected function encodeUrl(string $url): string

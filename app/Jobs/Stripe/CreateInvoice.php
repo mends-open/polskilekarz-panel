@@ -3,6 +3,7 @@
 namespace App\Jobs\Stripe;
 
 use App\Models\User;
+use App\Support\Metadata\MetadataPayload;
 use App\Support\Stripe\Currency;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
@@ -41,7 +42,8 @@ class CreateInvoice implements ShouldQueue
             return;
         }
 
-        $metadata = $this->sanitisedMetadata();
+        $metadata = MetadataPayload::from($this->metadata);
+        $metadataArray = $metadata->toArray();
 
         $payload = [
             'customer' => $this->customerId,
@@ -55,28 +57,29 @@ class CreateInvoice implements ShouldQueue
             $payload['currency'] = $this->currency;
         }
 
-        if ($metadata !== []) {
-            $payload['metadata'] = $metadata;
+        if ($metadataArray !== []) {
+            $payload['metadata'] = $metadataArray;
         }
 
         $invoice = $stripe->invoices->create($payload);
 
         $invoiceMetadata = $metadata;
+        $invoiceMetadataArray = $metadataArray;
 
         if (is_string($invoice->id) && $invoice->id !== '') {
-            $invoiceMetadata = array_merge($invoiceMetadata, [
+            $invoiceMetadata = $invoiceMetadata->with([
                 'stripe_invoice_id' => $invoice->id,
             ]);
 
-            $normalisedInvoiceMetadata = $this->normaliseMetadata($invoiceMetadata);
+            $invoiceMetadataArray = $invoiceMetadata->toArray();
 
-            if ($normalisedInvoiceMetadata !== $metadata) {
+            if ($invoiceMetadataArray !== $metadataArray) {
                 $stripe->invoices->update($invoice->id, [
-                    'metadata' => $normalisedInvoiceMetadata,
+                    'metadata' => $invoiceMetadataArray,
                 ]);
             }
 
-            $metadata = $normalisedInvoiceMetadata;
+            $metadataArray = $invoiceMetadataArray;
         }
 
         foreach ($this->lineItems as $lineItem) {
@@ -100,8 +103,8 @@ class CreateInvoice implements ShouldQueue
                 ],
             ];
 
-            if ($metadata !== []) {
-                $invoiceItemPayload['metadata'] = $metadata;
+            if ($metadataArray !== []) {
+                $invoiceItemPayload['metadata'] = $metadataArray;
             }
 
             $stripe->invoiceItems->create($invoiceItemPayload);
@@ -189,23 +192,4 @@ class CreateInvoice implements ShouldQueue
         return Number::currency($amount / $divisor, $currency);
     }
 
-    /**
-     * @return array<string, string>
-     */
-    private function sanitisedMetadata(): array
-    {
-        return $this->normaliseMetadata($this->metadata);
-    }
-
-    /**
-     * @param array<string, mixed> $metadata
-     * @return array<string, string>
-     */
-    private function normaliseMetadata(array $metadata): array
-    {
-        return collect($metadata)
-            ->map(fn ($value): ?string => is_scalar($value) && $value !== '' ? (string) $value : null)
-            ->filter(fn (?string $value): bool => $value !== null)
-            ->all();
-    }
 }
