@@ -1,4 +1,4 @@
-<x-filament-widgets::widget class="fi-wi-table" wire:poll>
+<x-filament-widgets::widget class="fi-wi-table">
     {{ \Filament\Support\Facades\FilamentView::renderHook(\Filament\Widgets\View\WidgetsRenderHook::TABLE_WIDGET_START, scopes: static::class) }}
     @if ($this->isReady())
         {{ $this->table }}

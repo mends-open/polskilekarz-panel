@@ -33,20 +33,23 @@ class AppPanelProvider extends PanelProvider
     {
         return $panel
             ->default()
+            ->topNavigation()
             ->databaseNotifications()
             ->broadcasting()
-            ->spa()
+            ->spa(hasPrefetching: true)
             ->id('app')
             ->path('')
             ->login()
-            ->topNavigation()
+            ->passwordReset()
+            ->emailVerification()
+            ->emailChangeVerification()
+            ->profile()
             ->colors([
-                'primary' => Color::Sky,
+                'primary' => Color::Blue,
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
-            ->widgets([])
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
