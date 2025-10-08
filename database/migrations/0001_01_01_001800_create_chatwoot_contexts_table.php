@@ -20,7 +20,6 @@ return new class extends Migration
             $table->bigInteger('chatwoot_conversation_id');
             $table->bigInteger('chatwoot_contact_id');
             $table->bigInteger('chatwoot_user_id');
-            $table->bigInteger('chatwoot_message_id');
             $table->timestampsTz();
             $table->softDeletesTz();
         });
