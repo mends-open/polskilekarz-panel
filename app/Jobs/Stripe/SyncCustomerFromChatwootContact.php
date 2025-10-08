@@ -51,6 +51,10 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
 
         $metadata = $this->sanitisedMetadata();
 
+        if (! isset($metadata['stripe_customer_id']) && is_string($this->customerId) && $this->customerId !== '') {
+            $metadata['stripe_customer_id'] = $this->customerId;
+        }
+
         if ($metadata !== []) {
             $payload['metadata'] = $metadata;
         }

@@ -19,6 +19,11 @@ class EntityUser extends Pivot
     protected $fillable = [
         'entity_id',
         'user_id',
+        'metadata',
+    ];
+
+    protected $casts = [
+        'metadata' => 'array',
     ];
 
     public function entity(): BelongsTo
@@ -36,6 +41,7 @@ class EntityUser extends Pivot
         return [
             'entity_id' => ['required', 'exists:entities,id'],
             'user_id' => ['required', 'exists:users,id'],
+            'metadata' => ['nullable', 'array'],
         ];
     }
 }

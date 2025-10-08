@@ -11,4 +11,8 @@ use Tpetry\PostgresqlEnhanced\Eloquent\Concerns\AutomaticDateFormat;
 class Media extends BaseMedia
 {
     use AutomaticDateFormat, HasFactory, SoftDeletes, ValidatesAttributes;
+
+    protected $casts = [
+        'metadata' => 'array',
+    ];
 }

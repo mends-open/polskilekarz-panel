@@ -18,10 +18,12 @@ class Submission extends Model
         'user_id',
         'type',
         'data',
+        'metadata',
     ];
 
     protected $casts = [
         'data' => 'array',
+        'metadata' => 'array',
     ];
 
     public function entity(): BelongsTo
@@ -46,6 +48,7 @@ class Submission extends Model
             'user_id' => ['required', 'exists:users,id'],
             'type' => ['required', 'integer'],
             'data' => ['nullable', 'array'],
+            'metadata' => ['nullable', 'array'],
         ];
     }
 }

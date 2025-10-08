@@ -41,6 +41,8 @@ class CreateInvoice implements ShouldQueue
             return;
         }
 
+        $metadata = $this->sanitisedMetadata();
+
         $payload = [
             'customer' => $this->customerId,
             'pending_invoice_items_behavior' => 'exclude',
@@ -53,13 +55,29 @@ class CreateInvoice implements ShouldQueue
             $payload['currency'] = $this->currency;
         }
 
-        $metadata = $this->sanitisedMetadata();
-
         if ($metadata !== []) {
             $payload['metadata'] = $metadata;
         }
 
         $invoice = $stripe->invoices->create($payload);
+
+        $invoiceMetadata = $metadata;
+
+        if (is_string($invoice->id) && $invoice->id !== '') {
+            $invoiceMetadata = array_merge($invoiceMetadata, [
+                'stripe_invoice_id' => $invoice->id,
+            ]);
+
+            $normalisedInvoiceMetadata = $this->normaliseMetadata($invoiceMetadata);
+
+            if ($normalisedInvoiceMetadata !== $metadata) {
+                $stripe->invoices->update($invoice->id, [
+                    'metadata' => $normalisedInvoiceMetadata,
+                ]);
+            }
+
+            $metadata = $normalisedInvoiceMetadata;
+        }
 
         foreach ($this->lineItems as $lineItem) {
             $priceId = $lineItem['price'] ?? null;
@@ -176,7 +194,16 @@ class CreateInvoice implements ShouldQueue
      */
     private function sanitisedMetadata(): array
     {
-        return collect($this->metadata)
+        return $this->normaliseMetadata($this->metadata);
+    }
+
+    /**
+     * @param array<string, mixed> $metadata
+     * @return array<string, string>
+     */
+    private function normaliseMetadata(array $metadata): array
+    {
+        return collect($metadata)
             ->map(fn ($value): ?string => is_scalar($value) && $value !== '' ? (string) $value : null)
             ->filter(fn (?string $value): bool => $value !== null)
             ->all();

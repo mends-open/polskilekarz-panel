@@ -20,6 +20,7 @@ return new class extends Migration
             $table->foreignIdFor(Email::class)->constrained();
             $table->timestampTz('primary_since')->nullable();
             $table->timestampTz('message_consent_since')->nullable();
+            $table->jsonb('metadata')->nullable();
             $table->timestampsTz();
 
             $table->unique(['patient_id', 'email_id']);

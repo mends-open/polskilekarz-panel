@@ -3,7 +3,6 @@
 namespace App\Filament\Widgets\Stripe\Concerns;
 
 use App\Jobs\Stripe\CreateInvoice;
-use App\Support\Dashboard\ChatwootContext;
 use App\Support\Dashboard\StripeContext;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Repeater;
@@ -691,7 +690,9 @@ trait HasStripeInvoiceForm
             customerId: $customerId,
             currency: $currency,
             lineItems: $lineItems,
-            metadata: $this->chatwootMetadata(),
+            metadata: $this->chatwootMetadata([
+                'stripe_customer_id' => $customerId,
+            ]),
             notifiableId: auth()->id(),
         );
 
@@ -854,7 +855,7 @@ trait HasStripeInvoiceForm
             $payload['address'] = ['country' => $country];
         }
 
-        $metadata = $this->chatwootMetadata($chatwootContext);
+        $metadata = $this->chatwootMetadata();
 
         if ($metadata !== []) {
             $payload['metadata'] = $metadata;
@@ -874,6 +875,16 @@ trait HasStripeInvoiceForm
             return null;
         }
 
+        $metadataWithCustomerId = $this->chatwootMetadata([
+            'stripe_customer_id' => $customer->id,
+        ]);
+
+        if ($metadataWithCustomerId !== [] && $metadataWithCustomerId !== $metadata) {
+            stripe()->customers->update($customer->id, [
+                'metadata' => $metadataWithCustomerId,
+            ]);
+        }
+
         $this->dashboardContext()->storeStripe(new StripeContext($customer->id));
 
         Notification::make()
@@ -884,21 +895,6 @@ trait HasStripeInvoiceForm
 
         return $customer->id;
     }
-
-    /**
-     * @return array<string, string>
-     */
-    protected function chatwootMetadata(?ChatwootContext $context = null): array
-    {
-        $context ??= $this->chatwootContext();
-
-        if (! $context) {
-            return [];
-        }
-
-        return $context->metadata();
-    }
-
     protected function afterInvoiceFormHandled(): void
     {
         // Allow consuming components to hook into invoice creation.

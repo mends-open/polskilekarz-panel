@@ -37,4 +37,34 @@ trait InteractsWithDashboardContext
 
         return true;
     }
+
+    /**
+     * @param array<string, mixed> $additional
+     * @return array<string, string>
+     */
+    protected function chatwootMetadata(array $additional = []): array
+    {
+        $context = $this->chatwootContext();
+
+        $metadata = [
+            'chatwoot_account_id' => $context->accountId,
+            'chatwoot_conversation_id' => $context->conversationId,
+            'chatwoot_inbox_id' => $context->inboxId,
+            'chatwoot_contact_id' => $context->contactId,
+            'chatwoot_user_id' => $context->currentUserId,
+        ];
+
+        $userId = auth()->id();
+
+        if ($userId !== null && $userId !== '') {
+            $metadata['user_id'] = (string) $userId;
+        }
+
+        $metadata = array_merge($metadata, $additional);
+
+        return collect($metadata)
+            ->map(fn ($value): ?string => is_scalar($value) ? (string) $value : null)
+            ->filter(fn (?string $value): bool => $value !== null && $value !== '')
+            ->all();
+    }
 }

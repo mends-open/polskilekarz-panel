@@ -4,9 +4,9 @@ namespace App\Services\Cloudflare;
 
 use App\Models\CloudflareLink;
 use App\Services\Cloudflare\Storage\KVNamespace;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use JsonException;
 
 class LinkShortener
 {
@@ -32,12 +32,20 @@ class LinkShortener
     /**
      * Create a short link.
      */
-    public function shorten(string $rawUrl): string
+    public function shorten(string $rawUrl, array $metadata = []): string
     {
         $slug = $this->generateSlug();
 
         $kv = $this->cloudflare->kv($this->namespace, ['domain' => $this->domain]);
-        $result = $kv->createIfAbsent($slug, $rawUrl);
+        $sanitisedMetadata = $this->sanitiseMetadata($metadata);
+        $payload = [
+            'url' => $rawUrl,
+            'metadata' => $sanitisedMetadata,
+        ];
+
+        $encodedPayload = $this->encodePayload($payload, $rawUrl);
+
+        $result = $kv->createIfAbsent($slug, $encodedPayload);
 
         if ($result->conflicted()) {
             throw new \RuntimeException('Short link already exists');
@@ -58,12 +66,14 @@ class LinkShortener
         $link = CloudflareLink::create([
             'slug' => $slug,
             'url' => $rawUrl,
+            'metadata' => $sanitisedMetadata,
         ]);
 
         Log::info('Created Cloudflare short link', [
             'slug' => $slug,
             'url' => $rawUrl,
             'link_id' => $link->id,
+            'metadata' => $sanitisedMetadata,
         ]);
 
         return $result->buildShortLink();
@@ -72,6 +82,36 @@ class LinkShortener
     public function buildShortLink(string $slug): string
     {
         return rtrim($this->domain, '/').'/'.$slug;
+    }
+
+    /**
+     * @param array<string, mixed> $metadata
+     * @return array<string, string>
+     */
+    protected function sanitiseMetadata(array $metadata): array
+    {
+        return collect($metadata)
+            ->map(fn ($value): ?string => is_scalar($value) ? (string) $value : null)
+            ->filter(fn (?string $value): bool => $value !== null && $value !== '')
+            ->all();
+    }
+
+    /**
+     * @param array{url: string, metadata: array<string, string>} $payload
+     */
+    protected function encodePayload(array $payload, string $fallback): string
+    {
+        try {
+            return json_encode($payload, JSON_THROW_ON_ERROR);
+        } catch (JsonException $exception) {
+            Log::error('Failed to encode Cloudflare short link payload', [
+                'payload' => $payload,
+                'exception' => $exception->getMessage(),
+            ]);
+
+        }
+
+        return $fallback;
     }
 
     public function entries(string $slug, ?string $url = null): array

@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-use App\Models\ChatwootContext;
 use App\Models\ChatwootEvent;
 use App\Models\CloudflareLink;
 use App\Models\Document;
@@ -74,10 +73,9 @@ class AppServiceProvider extends ServiceProvider
             13 => Media::class,
             14 => EmaSubstance::class,
             15 => EmaProduct::class,
-            16 => ChatwootContext::class,
-            17 => CloudflareLink::class,
-            18 => StripeEvent::class,
-            19 => ChatwootEvent::class,
+            16 => CloudflareLink::class,
+            17 => StripeEvent::class,
+            18 => ChatwootEvent::class,
         ]);
     }
 }

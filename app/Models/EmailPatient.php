@@ -21,11 +21,13 @@ class EmailPatient extends Pivot
         'email_id',
         'primary_since',
         'message_consent_since',
+        'metadata',
     ];
 
     protected $casts = [
         'primary_since' => 'datetime',
         'message_consent_since' => 'datetime',
+        'metadata' => 'array',
     ];
 
     public function patient(): BelongsTo
@@ -45,6 +47,7 @@ class EmailPatient extends Pivot
             'email_id' => ['required', 'exists:emails,id'],
             'primary_since' => ['nullable', 'date'],
             'message_consent_since' => ['nullable', 'date'],
+            'metadata' => ['nullable', 'array'],
         ];
     }
 }

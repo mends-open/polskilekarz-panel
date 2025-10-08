@@ -15,6 +15,11 @@ class Phone extends Model
 
     protected $fillable = [
         'phone',
+        'metadata',
+    ];
+
+    protected $casts = [
+        'metadata' => 'array',
     ];
 
     public function patients(): BelongsToMany
@@ -34,6 +39,7 @@ class Phone extends Model
     {
         return [
             'phone' => ['required', 'string'],
+            'metadata' => ['nullable', 'array'],
         ];
     }
 }

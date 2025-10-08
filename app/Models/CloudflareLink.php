@@ -15,6 +15,11 @@ class CloudflareLink extends Model
     protected $fillable = [
         'slug',
         'url',
+        'metadata',
+    ];
+
+    protected $casts = [
+        'metadata' => 'array',
     ];
 
     public function rules(): array
@@ -22,6 +27,7 @@ class CloudflareLink extends Model
         return [
             'slug' => ['required', 'string'],
             'url' => ['required', 'url'],
+            'metadata' => ['nullable', 'array'],
         ];
     }
 }

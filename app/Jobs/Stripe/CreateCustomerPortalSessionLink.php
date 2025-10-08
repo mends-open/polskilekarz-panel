@@ -27,6 +27,8 @@ class CreateCustomerPortalSessionLink implements ShouldQueue
         public readonly int|string $accountId,
         public readonly int|string $conversationId,
         public readonly int|string $impersonatorId,
+        /** @var array<string, string> */
+        public readonly array $metadata = [],
         public readonly ?int $notifiableId,
     ) {}
 
@@ -45,7 +47,15 @@ class CreateCustomerPortalSessionLink implements ShouldQueue
 
         $session = stripe()->billingPortal->sessions->create($payload);
 
-        $shortUrl = $shortener->shorten($session->url);
+        $metadata = $this->metadata;
+
+        if (is_string($session->id) && $session->id !== '') {
+            $metadata = array_merge($metadata, [
+                'billing_portal_session' => $session->id,
+            ]);
+        }
+
+        $shortUrl = $shortener->shorten($session->url, $metadata);
 
         SendCustomerPortalLinkMessage::dispatch(
             shortUrl: $shortUrl,
@@ -69,6 +79,7 @@ class CreateCustomerPortalSessionLink implements ShouldQueue
             'account_id' => $this->accountId,
             'conversation_id' => $this->conversationId,
             'impersonator_id' => $this->impersonatorId,
+            'metadata' => $this->metadata,
             'exception' => $exception,
         ]);
 

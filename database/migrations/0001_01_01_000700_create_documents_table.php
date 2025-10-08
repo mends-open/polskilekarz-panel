@@ -19,6 +19,7 @@ return new class extends Migration
             $table->foreignIdFor(Entity::class)->constrained();
             $table->foreignIdFor(User::class)->constrained();
             $table->foreignIdFor(Patient::class)->constrained();
+            $table->jsonb('metadata')->nullable();
             $table->timestampsTz();
             $table->softDeletesTz();
         });

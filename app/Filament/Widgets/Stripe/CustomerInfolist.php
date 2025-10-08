@@ -148,6 +148,9 @@ class CustomerInfolist extends BaseSchemaWidget
             accountId: $accountId,
             conversationId: $conversationId,
             impersonatorId: $impersonatorId,
+            metadata: $this->chatwootMetadata([
+                'stripe_customer_id' => $customerId,
+            ]),
             notifiableId: auth()->id(),
         );
 

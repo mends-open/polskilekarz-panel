@@ -179,7 +179,9 @@ class ContactInfolist extends BaseSchemaWidget
             $payload['address'] = ['country' => $country];
         }
 
-        $metadata = $chatwootContext->metadata();
+        $metadata = $this->chatwootMetadata(
+            $customerId ? ['stripe_customer_id' => $customerId] : [],
+        );
 
         if ($metadata !== []) {
             $payload['metadata'] = $metadata;
@@ -228,7 +230,9 @@ class ContactInfolist extends BaseSchemaWidget
             contactId: $contactId,
             impersonatorId: $impersonatorId,
             customerId: $customerId,
-            metadata: $metadata,
+            metadata: $this->chatwootMetadata([
+                'stripe_customer_id' => $customerId,
+            ]),
             notifiableId: auth()->id(),
         );
 

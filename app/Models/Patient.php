@@ -21,12 +21,14 @@ class Patient extends Model
         'gender',
         'addresses',
         'identifiers',
+        'metadata',
     ];
 
     protected $casts = [
         'birth_date' => 'date',
         'addresses' => 'array',
         'identifiers' => 'array',
+        'metadata' => 'array',
     ];
 
     public function entries(): HasMany
@@ -74,6 +76,7 @@ class Patient extends Model
             'gender' => ['required', 'integer'],
             'addresses' => ['nullable', 'array'],
             'identifiers' => ['nullable', 'array'],
+            'metadata' => ['nullable', 'array'],
         ];
     }
 }

@@ -18,6 +18,7 @@ return new class extends Migration
             $table->caseInsensitiveText('name');
             $table->integerArray('routes_of_administration');
             $table->integerArray('countries');
+            $table->jsonb('metadata')->nullable();
             $table->timestampsTz();
             $table->softDeletesTz();
 

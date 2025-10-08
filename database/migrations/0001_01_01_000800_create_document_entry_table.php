@@ -17,6 +17,7 @@ return new class extends Migration
             $table->identity(always: true)->primary();
             $table->foreignIdFor(Document::class)->constrained();
             $table->foreignIdFor(Entry::class)->constrained();
+            $table->jsonb('metadata')->nullable();
             $table->timestampsTz();
         });
     }

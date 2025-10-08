@@ -19,6 +19,7 @@ return new class extends Migration
             $table->smallInteger('gender');
             $table->jsonb('addresses')->nullable();
             $table->jsonb('identifiers')->nullable();
+            $table->jsonb('metadata')->nullable();
             $table->timestampsTz();
             $table->softDeletesTz();
         });
