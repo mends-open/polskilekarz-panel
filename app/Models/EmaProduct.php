@@ -19,11 +19,13 @@ class EmaProduct extends Model
         'name',
         'routes_of_administration',
         'countries',
+        'metadata',
     ];
 
     protected $casts = [
         'routes_of_administration' => IntegerArrayCast::class,
         'countries' => IntegerArrayCast::class,
+        'metadata' => 'array',
     ];
 
     public function substance(): BelongsTo
@@ -36,6 +38,7 @@ class EmaProduct extends Model
         return [
             'ema_substance_id' => ['required', 'integer'],
             'name' => ['required', 'string'],
+            'metadata' => ['nullable', 'array'],
         ];
     }
 }

@@ -27,12 +27,14 @@ class CreateInvoiceShortLink implements ShouldQueue
         public readonly int|string $accountId,
         public readonly int|string $conversationId,
         public readonly int|string $impersonatorId,
+        /** @var array<string, string> */
+        public readonly array $metadata = [],
         public readonly ?int $notifiableId,
     ) {}
 
     public function handle(LinkShortener $shortener): void
     {
-        $shortUrl = $shortener->shorten($this->url);
+        $shortUrl = $shortener->shorten($this->url, $this->metadata);
 
         SendInvoiceShortLinkMessage::dispatch(
             shortUrl: $shortUrl,
@@ -56,6 +58,7 @@ class CreateInvoiceShortLink implements ShouldQueue
             'account_id' => $this->accountId,
             'conversation_id' => $this->conversationId,
             'impersonator_id' => $this->impersonatorId,
+            'metadata' => $this->metadata,
             'exception' => $exception,
         ]);
 

@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('emails', function (Blueprint $table) {
             $table->identity(always: true)->primary();
             $table->caseInsensitiveText('email')->unique();
+            $table->jsonb('metadata')->nullable();
             $table->timestampsTz();
             $table->softDeletesTz();
         });

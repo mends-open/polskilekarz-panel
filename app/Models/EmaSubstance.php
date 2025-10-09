@@ -15,6 +15,11 @@ class EmaSubstance extends Model
 
     protected $fillable = [
         'name',
+        'metadata',
+    ];
+
+    protected $casts = [
+        'metadata' => 'array',
     ];
 
     public function products(): HasMany
@@ -26,6 +31,7 @@ class EmaSubstance extends Model
     {
         return [
             'name' => ['required', 'string'],
+            'metadata' => ['nullable', 'array'],
         ];
     }
 }

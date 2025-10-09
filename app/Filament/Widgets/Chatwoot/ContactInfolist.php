@@ -6,6 +6,7 @@ use App\Filament\Widgets\BaseSchemaWidget;
 use App\Jobs\Stripe\SyncCustomerFromChatwootContact;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use App\Support\Dashboard\StripeContext;
+use App\Support\Metadata\Metadata;
 use Filament\Actions\Action;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
@@ -179,16 +180,15 @@ class ContactInfolist extends BaseSchemaWidget
             $payload['address'] = ['country' => $country];
         }
 
+        $metadata = $this->chatwootMetadata(
+            $customerId ? [Metadata::KEY_STRIPE_CUSTOMER_ID => $customerId] : [],
+        );
+
+        if ($metadata !== []) {
+            $payload['metadata'] = $metadata;
+        }
+
         if (! $customerId) {
-            $metadata = [
-                'chatwoot_account_id' => (string) $accountId,
-                'chatwoot_contact_id' => (string) $contactId,
-            ];
-
-            if ($metadata !== []) {
-                $payload['metadata'] = $metadata;
-            }
-
             try {
                 $customer = stripe()->customers->create($payload);
             } catch (ApiErrorException $exception) {
@@ -231,6 +231,9 @@ class ContactInfolist extends BaseSchemaWidget
             contactId: $contactId,
             impersonatorId: $impersonatorId,
             customerId: $customerId,
+            metadata: $this->chatwootMetadata([
+                Metadata::KEY_STRIPE_CUSTOMER_ID => $customerId,
+            ]),
             notifiableId: auth()->id(),
         );
 

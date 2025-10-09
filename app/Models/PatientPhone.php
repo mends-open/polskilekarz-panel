@@ -23,6 +23,7 @@ class PatientPhone extends Pivot
         'call_consent_since',
         'sms_consent_since',
         'whatsapp_consent_since',
+        'metadata',
     ];
 
     protected $casts = [
@@ -30,6 +31,7 @@ class PatientPhone extends Pivot
         'call_consent_since' => 'datetime',
         'sms_consent_since' => 'datetime',
         'whatsapp_consent_since' => 'datetime',
+        'metadata' => 'array',
     ];
 
     public function patient(): BelongsTo
@@ -51,6 +53,7 @@ class PatientPhone extends Pivot
             'call_consent_since' => ['nullable', 'date'],
             'sms_consent_since' => ['nullable', 'date'],
             'whatsapp_consent_since' => ['nullable', 'date'],
+            'metadata' => ['nullable', 'array'],
         ];
     }
 }

@@ -28,6 +28,7 @@ return new class extends Migration
             $table->jsonb('generated_conversions');
             $table->jsonb('responsive_images');
             $table->bigInteger('order_column')->nullable()->index();
+            $table->jsonb('metadata')->nullable();
 
             $table->timestampsTz();
             $table->softDeletesTz();

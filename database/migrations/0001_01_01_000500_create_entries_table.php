@@ -21,6 +21,7 @@ return new class extends Migration
             $table->foreignIdFor(Patient::class)->constrained();
             $table->smallInteger('type');
             $table->jsonb('data')->nullable();
+            $table->jsonb('metadata')->nullable();
             $table->timestampsTz();
             $table->softDeletesTz();
         });

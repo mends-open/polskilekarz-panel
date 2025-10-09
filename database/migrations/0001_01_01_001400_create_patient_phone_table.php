@@ -22,6 +22,7 @@ return new class extends Migration
             $table->timestampTz('call_consent_since')->nullable();
             $table->timestampTz('sms_consent_since')->nullable();
             $table->timestampTz('whatsapp_consent_since')->nullable();
+            $table->jsonb('metadata')->nullable();
             $table->timestampsTz();
 
             $table->unique(['patient_id', 'phone_id']);

@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('ema_substances', function (Blueprint $table) {
             $table->identity(always: true)->primary();
             $table->caseInsensitiveText('name')->unique();
+            $table->jsonb('metadata')->nullable();
             $table->timestampsTz();
             $table->softDeletesTz();
         });

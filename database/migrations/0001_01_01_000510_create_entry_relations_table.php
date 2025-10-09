@@ -17,6 +17,7 @@ return new class extends Migration
             $table->foreignIdFor(Entry::class)->constrained();
             $table->bigInteger('relationable_id');
             $table->smallInteger('relationable_type');
+            $table->jsonb('metadata')->nullable();
             $table->timestampsTz();
             $table->softDeletesTz();
         });

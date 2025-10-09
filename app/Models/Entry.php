@@ -20,10 +20,12 @@ class Entry extends Model
         'entity_id',
         'type',
         'data',
+        'metadata',
     ];
 
     protected $casts = [
         'data' => 'array',
+        'metadata' => 'array',
     ];
 
     public function entity(): BelongsTo
@@ -56,6 +58,7 @@ class Entry extends Model
             'entity_id' => ['required', 'exists:entities,id'],
             'type' => ['required', 'integer'],
             'data' => ['nullable', 'array'],
+            'metadata' => ['nullable', 'array'],
         ];
     }
 }

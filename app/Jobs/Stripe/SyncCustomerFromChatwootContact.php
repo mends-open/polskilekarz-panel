@@ -3,6 +3,7 @@
 namespace App\Jobs\Stripe;
 
 use App\Models\User;
+use App\Support\Metadata\Metadata;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Illuminate\Bus\Queueable;
@@ -24,6 +25,8 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
         public readonly int|string $contactId,
         public readonly int|string $impersonatorId,
         public readonly string $customerId,
+        /** @var array<string, string> */
+        public readonly array $metadata = [],
         public readonly ?int $notifiableId,
     ) {}
 
@@ -45,6 +48,18 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
 
         if ($country !== '') {
             $payload['address'] = ['country' => $country];
+        }
+
+        $metadata = Metadata::prepare($this->metadata);
+
+        if (! array_key_exists(Metadata::KEY_STRIPE_CUSTOMER_ID, $metadata) && is_string($this->customerId) && $this->customerId !== '') {
+            $metadata = Metadata::extend($metadata, [
+                Metadata::KEY_STRIPE_CUSTOMER_ID => $this->customerId,
+            ]);
+        }
+
+        if ($metadata !== []) {
+            $payload['metadata'] = $metadata;
         }
 
         if ($payload === []) {
@@ -73,6 +88,7 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
             'contact_id' => $this->contactId,
             'impersonator_id' => $this->impersonatorId,
             'customer_id' => $this->customerId,
+            'metadata' => $this->metadata,
             'exception' => $exception,
         ]);
 
@@ -114,4 +130,5 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
 
         return User::find($this->notifiableId);
     }
+
 }

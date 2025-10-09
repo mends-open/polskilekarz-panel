@@ -18,6 +18,11 @@ class Document extends Model
         'patient_id',
         'user_id',
         'entity_id',
+        'metadata',
+    ];
+
+    protected $casts = [
+        'metadata' => 'array',
     ];
 
     public function entity(): BelongsTo
@@ -48,6 +53,7 @@ class Document extends Model
             'patient_id' => ['required', 'exists:patients,id'],
             'user_id' => ['required', 'exists:users,id'],
             'entity_id' => ['required', 'exists:entities,id'],
+            'metadata' => ['nullable', 'array'],
         ];
     }
 }

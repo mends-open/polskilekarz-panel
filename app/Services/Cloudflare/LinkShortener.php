@@ -4,6 +4,7 @@ namespace App\Services\Cloudflare;
 
 use App\Models\CloudflareLink;
 use App\Services\Cloudflare\Storage\KVNamespace;
+use App\Support\Metadata\Metadata;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -32,12 +33,15 @@ class LinkShortener
     /**
      * Create a short link.
      */
-    public function shorten(string $rawUrl): string
+    public function shorten(string $rawUrl, array $metadata = []): string
     {
         $slug = $this->generateSlug();
 
         $kv = $this->cloudflare->kv($this->namespace, ['domain' => $this->domain]);
-        $result = $kv->createIfAbsent($slug, $rawUrl);
+        $metadataArray = Metadata::prepare($metadata);
+        $encodedUrl = $this->encodeUrl($rawUrl);
+
+        $result = $kv->createIfAbsent($slug, $encodedUrl, $metadataArray);
 
         if ($result->conflicted()) {
             throw new \RuntimeException('Short link already exists');
@@ -58,12 +62,14 @@ class LinkShortener
         $link = CloudflareLink::create([
             'slug' => $slug,
             'url' => $rawUrl,
+            'metadata' => $metadataArray,
         ]);
 
         Log::info('Created Cloudflare short link', [
             'slug' => $slug,
             'url' => $rawUrl,
             'link_id' => $link->id,
+            'metadata' => $metadataArray,
         ]);
 
         return $result->buildShortLink();
@@ -72,6 +78,11 @@ class LinkShortener
     public function buildShortLink(string $slug): string
     {
         return rtrim($this->domain, '/').'/'.$slug;
+    }
+
+    protected function encodeUrl(string $url): string
+    {
+        return base64_encode($url);
     }
 
     public function entries(string $slug, ?string $url = null): array

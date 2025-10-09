@@ -15,6 +15,7 @@ return new class extends Migration
             $table->identity(always: true)->primary();
             $table->caseInsensitiveText('name');
             $table->jsonb('headers')->nullable();
+            $table->jsonb('metadata')->nullable();
             $table->timestampsTz();
             $table->softDeletesTz();
         });

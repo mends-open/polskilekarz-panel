@@ -3,6 +3,7 @@
 namespace App\Jobs\Stripe;
 
 use App\Models\User;
+use App\Support\Metadata\Metadata;
 use App\Support\Stripe\Currency;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
@@ -27,6 +28,8 @@ class CreateInvoice implements ShouldQueue
         public readonly ?string $currency,
         /** @var array<int, array{price: string, quantity: int}> */
         public readonly array $lineItems,
+        /** @var array<string, string> */
+        public readonly array $metadata = [],
         public readonly ?int $notifiableId,
     ) {}
 
@@ -38,6 +41,8 @@ class CreateInvoice implements ShouldQueue
         if ($this->lineItems === []) {
             return;
         }
+
+        $metadata = Metadata::prepare($this->metadata);
 
         $payload = [
             'customer' => $this->customerId,
@@ -51,7 +56,25 @@ class CreateInvoice implements ShouldQueue
             $payload['currency'] = $this->currency;
         }
 
+        if ($metadata !== []) {
+            $payload['metadata'] = $metadata;
+        }
+
         $invoice = $stripe->invoices->create($payload);
+
+        if (is_string($invoice->id) && $invoice->id !== '') {
+            $metadataWithInvoiceId = Metadata::extend($metadata, [
+                Metadata::KEY_STRIPE_INVOICE_ID => $invoice->id,
+            ]);
+
+            if ($metadataWithInvoiceId !== $metadata) {
+                $stripe->invoices->update($invoice->id, [
+                    'metadata' => $metadataWithInvoiceId,
+                ]);
+            }
+
+            $metadata = $metadataWithInvoiceId;
+        }
 
         foreach ($this->lineItems as $lineItem) {
             $priceId = $lineItem['price'] ?? null;
@@ -65,14 +88,20 @@ class CreateInvoice implements ShouldQueue
                 $quantity = 1;
             }
 
-            $stripe->invoiceItems->create([
+            $invoiceItemPayload = [
                 'customer' => $this->customerId,
                 'invoice' => $invoice->id,
                 'quantity' => $quantity,
                 'pricing' => [
                     'price' => $priceId,
                 ],
-            ]);
+            ];
+
+            if ($metadata !== []) {
+                $invoiceItemPayload['metadata'] = $metadata;
+            }
+
+            $stripe->invoiceItems->create($invoiceItemPayload);
         }
 
         $finalized = $stripe->invoices->finalizeInvoice($invoice->id);
@@ -102,6 +131,7 @@ class CreateInvoice implements ShouldQueue
             'customer_id' => $this->customerId,
             'currency' => $this->currency,
             'line_items' => $this->lineItems,
+            'metadata' => $this->metadata,
             'exception' => $exception,
         ]);
 
@@ -155,4 +185,5 @@ class CreateInvoice implements ShouldQueue
 
         return Number::currency($amount / $divisor, $currency);
     }
+
 }

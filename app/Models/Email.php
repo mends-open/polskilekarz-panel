@@ -15,6 +15,11 @@ class Email extends Model
 
     protected $fillable = [
         'email',
+        'metadata',
+    ];
+
+    protected $casts = [
+        'metadata' => 'array',
     ];
 
     public function patients(): BelongsToMany
@@ -29,6 +34,7 @@ class Email extends Model
     {
         return [
             'email' => ['required', 'email'],
+            'metadata' => ['nullable', 'array'],
         ];
     }
 }

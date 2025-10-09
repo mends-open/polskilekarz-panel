@@ -32,6 +32,7 @@ class User extends Authenticatable implements HasMedia, FilamentUser
         'email',
         'password',
         'signatures',
+        'metadata',
     ];
 
     /**
@@ -53,6 +54,7 @@ class User extends Authenticatable implements HasMedia, FilamentUser
     {
         return [
             'signatures' => 'array',
+            'metadata' => 'array',
         ];
     }
 
@@ -82,6 +84,7 @@ class User extends Authenticatable implements HasMedia, FilamentUser
     {
         return [
             'signatures' => ['nullable', 'array'],
+            'metadata' => ['nullable', 'array'],
         ];
     }
 

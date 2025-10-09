@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('type');
             $table->morphs('notifiable');
             $table->jsonb('data');
+            $table->jsonb('metadata')->nullable();
             $table->timestampTz('read_at')->nullable();
             $table->timestampsTz();
         });

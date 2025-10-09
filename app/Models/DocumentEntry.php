@@ -19,6 +19,11 @@ class DocumentEntry extends Pivot
     protected $fillable = [
         'document_id',
         'entry_id',
+        'metadata',
+    ];
+
+    protected $casts = [
+        'metadata' => 'array',
     ];
 
     public function document(): BelongsTo
@@ -36,6 +41,7 @@ class DocumentEntry extends Pivot
         return [
             'document_id' => ['required', 'exists:documents,id'],
             'entry_id' => ['required', 'exists:entries,id'],
+            'metadata' => ['nullable', 'array'],
         ];
     }
 }

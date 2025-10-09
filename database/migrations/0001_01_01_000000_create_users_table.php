@@ -19,6 +19,7 @@ return new class extends Migration
             $table->timestampTz('email_verified_at')->nullable();
             $table->text('password');
             $table->jsonb('signatures')->nullable();
+            $table->jsonb('metadata')->nullable();
             $table->rememberToken();
             $table->timestampsTz();
             $table->softDeletesTz();

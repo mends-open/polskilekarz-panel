@@ -5,6 +5,7 @@ namespace App\Jobs\Stripe;
 use App\Jobs\Chatwoot\SendCustomerPortalLinkMessage;
 use App\Models\User;
 use App\Services\Cloudflare\LinkShortener;
+use App\Support\Metadata\Metadata;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Illuminate\Bus\Queueable;
@@ -27,6 +28,8 @@ class CreateCustomerPortalSessionLink implements ShouldQueue
         public readonly int|string $accountId,
         public readonly int|string $conversationId,
         public readonly int|string $impersonatorId,
+        /** @var array<string, string> */
+        public readonly array $metadata = [],
         public readonly ?int $notifiableId,
     ) {}
 
@@ -45,7 +48,15 @@ class CreateCustomerPortalSessionLink implements ShouldQueue
 
         $session = stripe()->billingPortal->sessions->create($payload);
 
-        $shortUrl = $shortener->shorten($session->url);
+        $metadata = Metadata::prepare($this->metadata);
+
+        if (is_string($session->id) && $session->id !== '') {
+            $metadata = Metadata::extend($metadata, [
+                Metadata::KEY_STRIPE_BILLING_PORTAL_SESSION => $session->id,
+            ]);
+        }
+
+        $shortUrl = $shortener->shorten($session->url, $metadata);
 
         SendCustomerPortalLinkMessage::dispatch(
             shortUrl: $shortUrl,
@@ -69,6 +80,7 @@ class CreateCustomerPortalSessionLink implements ShouldQueue
             'account_id' => $this->accountId,
             'conversation_id' => $this->conversationId,
             'impersonator_id' => $this->impersonatorId,
+            'metadata' => $this->metadata,
             'exception' => $exception,
         ]);
 

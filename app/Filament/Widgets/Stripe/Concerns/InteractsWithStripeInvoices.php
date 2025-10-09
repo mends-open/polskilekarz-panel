@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets\Stripe\Concerns;
 
 use App\Jobs\Chatwoot\CreateInvoiceShortLink;
+use App\Support\Metadata\Metadata;
 use Filament\Notifications\Notification;
 use Stripe\Exception\ApiErrorException;
 use Stripe\StripeObject;
@@ -131,10 +132,18 @@ trait InteractsWithStripeInvoices
             return;
         }
 
-        $this->sendInvoiceLinkToChatwoot($invoiceUrl);
+        $metadata = $this->chatwootMetadata([
+            Metadata::KEY_STRIPE_INVOICE_ID => data_get($payload, 'id'),
+            Metadata::KEY_STRIPE_CUSTOMER_ID => data_get($payload, 'customer'),
+        ]);
+
+        $this->sendInvoiceLinkToChatwoot($invoiceUrl, $metadata);
     }
 
-    protected function sendInvoiceLinkToChatwoot(string $url): void
+    /**
+     * @param array<string, string> $metadata
+     */
+    protected function sendInvoiceLinkToChatwoot(string $url, array $metadata = []): void
     {
         $context = $this->chatwootContext();
 
@@ -157,6 +166,7 @@ trait InteractsWithStripeInvoices
             accountId: $accountId,
             conversationId: $conversationId,
             impersonatorId: $userId,
+            metadata: $metadata,
             notifiableId: auth()->id(),
         );
 

@@ -15,6 +15,7 @@ return new class extends Migration
             $table->identity(always: true)->primary();
             $table->text('slug')->unique();
             $table->text('url');
+            $table->jsonb('metadata')->nullable();
             $table->timestampsTz();
             $table->softDeletesTz();
         });

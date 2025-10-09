@@ -4,6 +4,7 @@ namespace App\Filament\Widgets\Stripe\Concerns;
 
 use App\Jobs\Stripe\CreateInvoice;
 use App\Support\Dashboard\StripeContext;
+use App\Support\Metadata\Metadata;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Repeater\TableColumn;
@@ -690,6 +691,9 @@ trait HasStripeInvoiceForm
             customerId: $customerId,
             currency: $currency,
             lineItems: $lineItems,
+            metadata: $this->chatwootMetadata([
+                Metadata::KEY_STRIPE_CUSTOMER_ID => $customerId,
+            ]),
             notifiableId: auth()->id(),
         );
 
@@ -844,16 +848,18 @@ trait HasStripeInvoiceForm
             'name' => data_get($contact, 'name'),
             'email' => data_get($contact, 'email'),
             'phone' => data_get($contact, 'phone_number'),
-            'metadata' => [
-                'chatwoot_account_id' => (string) $accountId,
-                'chatwoot_contact_id' => (string) $contactId,
-            ],
         ], fn ($value) => filled($value));
 
         $country = Str::upper((string) data_get($contact, 'additional_attributes.country_code', ''));
 
         if ($country !== '') {
             $payload['address'] = ['country' => $country];
+        }
+
+        $metadata = $this->chatwootMetadata();
+
+        if ($metadata !== []) {
+            $payload['metadata'] = $metadata;
         }
 
         try {
@@ -870,6 +876,16 @@ trait HasStripeInvoiceForm
             return null;
         }
 
+        $metadataWithCustomerId = $this->chatwootMetadata([
+            Metadata::KEY_STRIPE_CUSTOMER_ID => $customer->id,
+        ]);
+
+        if ($metadataWithCustomerId !== [] && $metadataWithCustomerId !== $metadata) {
+            stripe()->customers->update($customer->id, [
+                'metadata' => $metadataWithCustomerId,
+            ]);
+        }
+
         $this->dashboardContext()->storeStripe(new StripeContext($customer->id));
 
         Notification::make()
@@ -880,7 +896,6 @@ trait HasStripeInvoiceForm
 
         return $customer->id;
     }
-
     protected function afterInvoiceFormHandled(): void
     {
         // Allow consuming components to hook into invoice creation.
