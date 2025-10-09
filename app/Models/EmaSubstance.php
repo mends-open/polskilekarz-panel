@@ -15,7 +15,6 @@ class EmaSubstance extends Model
 
     protected $fillable = [
         'name',
-        'metadata',
     ];
 
     protected $casts = [
