@@ -3,7 +3,7 @@
 namespace App\Filament\Widgets\Stripe\Concerns;
 
 use App\Jobs\Chatwoot\CreateInvoiceShortLink;
-use App\Support\Metadata\MetadataPayload;
+use App\Support\Metadata\Metadata;
 use Filament\Notifications\Notification;
 use Stripe\Exception\ApiErrorException;
 use Stripe\StripeObject;
@@ -133,8 +133,8 @@ trait InteractsWithStripeInvoices
         }
 
         $metadata = $this->chatwootMetadata([
-            MetadataPayload::KEY_STRIPE_INVOICE_ID => data_get($payload, 'id'),
-            MetadataPayload::KEY_STRIPE_CUSTOMER_ID => data_get($payload, 'customer'),
+            Metadata::KEY_STRIPE_INVOICE_ID => data_get($payload, 'id'),
+            Metadata::KEY_STRIPE_CUSTOMER_ID => data_get($payload, 'customer'),
         ]);
 
         $this->sendInvoiceLinkToChatwoot($invoiceUrl, $metadata);

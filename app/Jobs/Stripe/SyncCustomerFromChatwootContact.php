@@ -3,7 +3,7 @@
 namespace App\Jobs\Stripe;
 
 use App\Models\User;
-use App\Support\Metadata\MetadataPayload;
+use App\Support\Metadata\Metadata;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Illuminate\Bus\Queueable;
@@ -50,20 +50,16 @@ class SyncCustomerFromChatwootContact implements ShouldQueue
             $payload['address'] = ['country' => $country];
         }
 
-        $metadata = MetadataPayload::from($this->metadata);
+        $metadata = Metadata::prepare($this->metadata);
 
-        $metadataArray = $metadata->toArray();
-
-        if (! array_key_exists(MetadataPayload::KEY_STRIPE_CUSTOMER_ID, $metadataArray) && is_string($this->customerId) && $this->customerId !== '') {
-            $metadata = $metadata->with([
-                MetadataPayload::KEY_STRIPE_CUSTOMER_ID => $this->customerId,
+        if (! array_key_exists(Metadata::KEY_STRIPE_CUSTOMER_ID, $metadata) && is_string($this->customerId) && $this->customerId !== '') {
+            $metadata = Metadata::extend($metadata, [
+                Metadata::KEY_STRIPE_CUSTOMER_ID => $this->customerId,
             ]);
-
-            $metadataArray = $metadata->toArray();
         }
 
-        if ($metadataArray !== []) {
-            $payload['metadata'] = $metadataArray;
+        if ($metadata !== []) {
+            $payload['metadata'] = $metadata;
         }
 
         if ($payload === []) {

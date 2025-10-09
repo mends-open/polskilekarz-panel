@@ -5,7 +5,7 @@ namespace App\Support\Dashboard\Concerns;
 use App\Support\Dashboard\ChatwootContext;
 use App\Support\Dashboard\DashboardContext;
 use App\Support\Dashboard\StripeContext;
-use App\Support\Metadata\MetadataPayload;
+use App\Support\Metadata\Metadata;
 
 trait InteractsWithDashboardContext
 {
@@ -48,25 +48,25 @@ trait InteractsWithDashboardContext
         $context = $this->chatwootContext();
 
         $metadata = [
-            MetadataPayload::KEY_CHATWOOT_ACCOUNT_ID => $context->accountId,
-            MetadataPayload::KEY_CHATWOOT_CONVERSATION_ID => $context->conversationId,
-            MetadataPayload::KEY_CHATWOOT_INBOX_ID => $context->inboxId,
-            MetadataPayload::KEY_CHATWOOT_CONTACT_ID => $context->contactId,
-            MetadataPayload::KEY_CHATWOOT_USER_ID => $context->currentUserId,
+            Metadata::KEY_CHATWOOT_ACCOUNT_ID => $context->accountId,
+            Metadata::KEY_CHATWOOT_CONVERSATION_ID => $context->conversationId,
+            Metadata::KEY_CHATWOOT_INBOX_ID => $context->inboxId,
+            Metadata::KEY_CHATWOOT_CONTACT_ID => $context->contactId,
+            Metadata::KEY_CHATWOOT_USER_ID => $context->currentUserId,
         ];
 
         $userId = auth()->id();
 
         if ($userId !== null && $userId !== '') {
-            $metadata[MetadataPayload::KEY_USER_ID] = (string) $userId;
+            $metadata[Metadata::KEY_USER_ID] = (string) $userId;
         }
 
-        $payload = MetadataPayload::from($metadata);
+        $payload = Metadata::prepare($metadata);
 
         if ($additional !== []) {
-            $payload = $payload->with($additional);
+            $payload = Metadata::extend($payload, $additional);
         }
 
-        return $payload->toArray();
+        return $payload;
     }
 }

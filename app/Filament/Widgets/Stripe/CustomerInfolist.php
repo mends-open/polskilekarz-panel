@@ -5,7 +5,7 @@ namespace App\Filament\Widgets\Stripe;
 use App\Filament\Widgets\BaseSchemaWidget;
 use App\Jobs\Stripe\CreateCustomerPortalSessionLink;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
-use App\Support\Metadata\MetadataPayload;
+use App\Support\Metadata\Metadata;
 use Filament\Actions\Action;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
@@ -150,7 +150,7 @@ class CustomerInfolist extends BaseSchemaWidget
             conversationId: $conversationId,
             impersonatorId: $impersonatorId,
             metadata: $this->chatwootMetadata([
-                MetadataPayload::KEY_STRIPE_CUSTOMER_ID => $customerId,
+                Metadata::KEY_STRIPE_CUSTOMER_ID => $customerId,
             ]),
             notifiableId: auth()->id(),
         );

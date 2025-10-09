@@ -6,7 +6,7 @@ use App\Filament\Widgets\BaseSchemaWidget;
 use App\Jobs\Stripe\SyncCustomerFromChatwootContact;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use App\Support\Dashboard\StripeContext;
-use App\Support\Metadata\MetadataPayload;
+use App\Support\Metadata\Metadata;
 use Filament\Actions\Action;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
@@ -181,7 +181,7 @@ class ContactInfolist extends BaseSchemaWidget
         }
 
         $metadata = $this->chatwootMetadata(
-            $customerId ? [MetadataPayload::KEY_STRIPE_CUSTOMER_ID => $customerId] : [],
+            $customerId ? [Metadata::KEY_STRIPE_CUSTOMER_ID => $customerId] : [],
         );
 
         if ($metadata !== []) {
@@ -232,7 +232,7 @@ class ContactInfolist extends BaseSchemaWidget
             impersonatorId: $impersonatorId,
             customerId: $customerId,
             metadata: $this->chatwootMetadata([
-                MetadataPayload::KEY_STRIPE_CUSTOMER_ID => $customerId,
+                Metadata::KEY_STRIPE_CUSTOMER_ID => $customerId,
             ]),
             notifiableId: auth()->id(),
         );

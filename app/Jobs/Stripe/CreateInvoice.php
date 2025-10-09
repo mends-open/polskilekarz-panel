@@ -3,7 +3,7 @@
 namespace App\Jobs\Stripe;
 
 use App\Models\User;
-use App\Support\Metadata\MetadataPayload;
+use App\Support\Metadata\Metadata;
 use App\Support\Stripe\Currency;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
@@ -42,8 +42,7 @@ class CreateInvoice implements ShouldQueue
             return;
         }
 
-        $metadata = MetadataPayload::from($this->metadata);
-        $metadataArray = $metadata->toArray();
+        $metadata = Metadata::prepare($this->metadata);
 
         $payload = [
             'customer' => $this->customerId,
@@ -57,29 +56,24 @@ class CreateInvoice implements ShouldQueue
             $payload['currency'] = $this->currency;
         }
 
-        if ($metadataArray !== []) {
-            $payload['metadata'] = $metadataArray;
+        if ($metadata !== []) {
+            $payload['metadata'] = $metadata;
         }
 
         $invoice = $stripe->invoices->create($payload);
 
-        $invoiceMetadata = $metadata;
-        $invoiceMetadataArray = $metadataArray;
-
         if (is_string($invoice->id) && $invoice->id !== '') {
-            $invoiceMetadata = $invoiceMetadata->with([
-                MetadataPayload::KEY_STRIPE_INVOICE_ID => $invoice->id,
+            $metadataWithInvoiceId = Metadata::extend($metadata, [
+                Metadata::KEY_STRIPE_INVOICE_ID => $invoice->id,
             ]);
 
-            $invoiceMetadataArray = $invoiceMetadata->toArray();
-
-            if ($invoiceMetadataArray !== $metadataArray) {
+            if ($metadataWithInvoiceId !== $metadata) {
                 $stripe->invoices->update($invoice->id, [
-                    'metadata' => $invoiceMetadataArray,
+                    'metadata' => $metadataWithInvoiceId,
                 ]);
             }
 
-            $metadataArray = $invoiceMetadataArray;
+            $metadata = $metadataWithInvoiceId;
         }
 
         foreach ($this->lineItems as $lineItem) {
@@ -103,8 +97,8 @@ class CreateInvoice implements ShouldQueue
                 ],
             ];
 
-            if ($metadataArray !== []) {
-                $invoiceItemPayload['metadata'] = $metadataArray;
+            if ($metadata !== []) {
+                $invoiceItemPayload['metadata'] = $metadata;
             }
 
             $stripe->invoiceItems->create($invoiceItemPayload);

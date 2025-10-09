@@ -5,7 +5,7 @@ namespace App\Jobs\Stripe;
 use App\Jobs\Chatwoot\SendCustomerPortalLinkMessage;
 use App\Models\User;
 use App\Services\Cloudflare\LinkShortener;
-use App\Support\Metadata\MetadataPayload;
+use App\Support\Metadata\Metadata;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Illuminate\Bus\Queueable;
@@ -48,15 +48,15 @@ class CreateCustomerPortalSessionLink implements ShouldQueue
 
         $session = stripe()->billingPortal->sessions->create($payload);
 
-        $metadata = MetadataPayload::from($this->metadata);
+        $metadata = Metadata::prepare($this->metadata);
 
         if (is_string($session->id) && $session->id !== '') {
-            $metadata = $metadata->with([
-                MetadataPayload::KEY_STRIPE_BILLING_PORTAL_SESSION => $session->id,
+            $metadata = Metadata::extend($metadata, [
+                Metadata::KEY_STRIPE_BILLING_PORTAL_SESSION => $session->id,
             ]);
         }
 
-        $shortUrl = $shortener->shorten($session->url, $metadata->toArray());
+        $shortUrl = $shortener->shorten($session->url, $metadata);
 
         SendCustomerPortalLinkMessage::dispatch(
             shortUrl: $shortUrl,

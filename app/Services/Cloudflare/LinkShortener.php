@@ -4,7 +4,7 @@ namespace App\Services\Cloudflare;
 
 use App\Models\CloudflareLink;
 use App\Services\Cloudflare\Storage\KVNamespace;
-use App\Support\Metadata\MetadataPayload;
+use App\Support\Metadata\Metadata;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -38,8 +38,7 @@ class LinkShortener
         $slug = $this->generateSlug();
 
         $kv = $this->cloudflare->kv($this->namespace, ['domain' => $this->domain]);
-        $metadataPayload = MetadataPayload::from($metadata);
-        $metadataArray = $metadataPayload->toArray();
+        $metadataArray = Metadata::prepare($metadata);
         $encodedUrl = $this->encodeUrl($rawUrl);
 
         $result = $kv->createIfAbsent($slug, $encodedUrl, $metadataArray);
