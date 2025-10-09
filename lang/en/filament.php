@@ -25,6 +25,7 @@ return [
                 'payment_method' => 'No payment method',
                 'price' => 'No price',
                 'product' => 'No product',
+                'metadata' => 'No metadata',
             ],
         ],
         'chatwoot' => [
@@ -57,6 +58,75 @@ return [
                     'country_code' => [
                         'label' => 'Country',
                     ],
+                ],
+            ],
+        ],
+        'cloudflare' => [
+            'links_table' => [
+                'heading' => 'Short link activity',
+                'empty_state' => [
+                    'heading' => 'No link activity',
+                    'description' => 'We have not recorded any short link visits for this contact yet.',
+                ],
+                'columns' => [
+                    'slug' => [
+                        'label' => 'Slug',
+                    ],
+                    'short_url' => [
+                        'label' => 'Short link',
+                    ],
+                    'url' => [
+                        'label' => 'Destination',
+                    ],
+                    'entity_type' => [
+                        'label' => 'Entity',
+                    ],
+                    'metadata' => [
+                        'label' => 'Metadata',
+                    ],
+                    'request_method' => [
+                        'label' => 'Method',
+                    ],
+                    'request_url' => [
+                        'label' => 'Request URL',
+                    ],
+                    'request_country' => [
+                        'label' => 'Country',
+                    ],
+                    'request_city' => [
+                        'label' => 'City',
+                    ],
+                    'request_ip' => [
+                        'label' => 'IP address',
+                    ],
+                    'response_status' => [
+                        'label' => 'Status',
+                    ],
+                    'timestamp' => [
+                        'label' => 'Visited',
+                    ],
+                    'timestamp_exact' => [
+                        'label' => 'Visited at',
+                    ],
+                ],
+                'enums' => [
+                    'entity_types' => [
+                        'invoice' => 'Invoice',
+                        'billing_portal' => 'Billing portal',
+                        'customer' => 'Customer',
+                        'link' => 'Link',
+                    ],
+                ],
+                'metadata_keys' => [
+                    'chatwoot_account_id' => 'Chatwoot account',
+                    'chatwoot_conversation_id' => 'Chatwoot conversation',
+                    'chatwoot_inbox_id' => 'Chatwoot inbox',
+                    'chatwoot_contact_id' => 'Chatwoot contact',
+                    'chatwoot_user_id' => 'Chatwoot user',
+                    'user_id' => 'User',
+                    'stripe_customer_id' => 'Stripe customer',
+                    'stripe_invoice_id' => 'Stripe invoice',
+                    'stripe_billing_portal_session' => 'Billing portal session',
                 ],
             ],
         ],

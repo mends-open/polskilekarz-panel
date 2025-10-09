@@ -25,6 +25,7 @@ return [
                 'payment_method' => 'Brak metody płatności',
                 'price' => 'Brak ceny',
                 'product' => 'Brak produktu',
+                'metadata' => 'Brak metadanych',
             ],
         ],
         'chatwoot' => [
@@ -57,6 +58,75 @@ return [
                     'country_code' => [
                         'label' => 'Kraj',
                     ],
+                ],
+            ],
+        ],
+        'cloudflare' => [
+            'links_table' => [
+                'heading' => 'Aktywność skróconych linków',
+                'empty_state' => [
+                    'heading' => 'Brak aktywności linków',
+                    'description' => 'Nie zarejestrowaliśmy jeszcze odwiedzin skróconych linków dla tego kontaktu.',
+                ],
+                'columns' => [
+                    'slug' => [
+                        'label' => 'Slug',
+                    ],
+                    'short_url' => [
+                        'label' => 'Skrócony link',
+                    ],
+                    'url' => [
+                        'label' => 'Docelowy adres',
+                    ],
+                    'entity_type' => [
+                        'label' => 'Typ obiektu',
+                    ],
+                    'metadata' => [
+                        'label' => 'Metadane',
+                    ],
+                    'request_method' => [
+                        'label' => 'Metoda',
+                    ],
+                    'request_url' => [
+                        'label' => 'Adres żądania',
+                    ],
+                    'request_country' => [
+                        'label' => 'Kraj',
+                    ],
+                    'request_city' => [
+                        'label' => 'Miasto',
+                    ],
+                    'request_ip' => [
+                        'label' => 'Adres IP',
+                    ],
+                    'response_status' => [
+                        'label' => 'Status',
+                    ],
+                    'timestamp' => [
+                        'label' => 'Odwiedzono',
+                    ],
+                    'timestamp_exact' => [
+                        'label' => 'Data odwiedzin',
+                    ],
+                ],
+                'enums' => [
+                    'entity_types' => [
+                        'invoice' => 'Faktura',
+                        'billing_portal' => 'Portal rozliczeń',
+                        'customer' => 'Klient',
+                        'link' => 'Link',
+                    ],
+                ],
+                'metadata_keys' => [
+                    'chatwoot_account_id' => 'Konto Chatwoot',
+                    'chatwoot_conversation_id' => 'Konwersacja Chatwoot',
+                    'chatwoot_inbox_id' => 'Skrzynka Chatwoot',
+                    'chatwoot_contact_id' => 'Kontakt Chatwoot',
+                    'chatwoot_user_id' => 'Użytkownik Chatwoot',
+                    'user_id' => 'Użytkownik',
+                    'stripe_customer_id' => 'Klient Stripe',
+                    'stripe_invoice_id' => 'Faktura Stripe',
+                    'stripe_billing_portal_session' => 'Sesja portalu rozliczeń',
                 ],
             ],
         ],
