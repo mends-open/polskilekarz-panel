@@ -28,7 +28,7 @@ class LinkEntriesTable extends BaseTableWidget
 
     protected int|string|array $columnSpan = 'full';
 
-    public $tableRecordsPerPage = 3;
+    public $tableRecordsPerPage = 5;
 
     #[On('reset')]
     public function resetComponent(): void
@@ -77,12 +77,14 @@ class LinkEntriesTable extends BaseTableWidget
                             ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.slug.label'))
                             ->badge()
                             ->color('gray')
-                            ->placeholder(__('filament.widgets.common.placeholders.blank')),
+                            ->placeholder(__('filament.widgets.common.placeholders.blank'))
+                            ->copyable(),
                         TextColumn::make('short_url')
                             ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.short_url.label'))
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->url(fn ($state) => $state)
                             ->openUrlInNewTab()
+                            ->copyable()
                             ->limit(50),
                         TextColumn::make('url')
                             ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.url.label'))
@@ -90,10 +92,12 @@ class LinkEntriesTable extends BaseTableWidget
                             ->url(fn ($state) => $state)
                             ->openUrlInNewTab()
                             ->limit(50),
+                    ])->space(1),
+                    Stack::make([
                         TextColumn::make('entity_type')
                             ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.entity_type.label'))
-                            ->badge()
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
+                            ->badge()
                             ->formatStateUsing(fn (?string $state) => $state ? __('filament.widgets.cloudflare.enums.entity_types.' . $state) : null)
                             ->color(fn (?string $state) => match ($state) {
                                 'invoice' => 'info',
@@ -101,12 +105,13 @@ class LinkEntriesTable extends BaseTableWidget
                                 'customer' => 'success',
                                 default => 'gray',
                             }),
-                        TextColumn::make('metadata_summary')
-                            ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.metadata_summary.label'))
+                        TextColumn::make('entity_identifier')
+                            ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.entity_identifier.label'))
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
-                            ->limit(50)
-                            ->wrap(),
-                    ])->space(2),
+                            ->badge()
+                            ->color('gray')
+                            ->copyable(),
+                    ])->space(1),
                     Stack::make([
                         TextColumn::make('request.url')
                             ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.request_url.label'))
@@ -131,7 +136,7 @@ class LinkEntriesTable extends BaseTableWidget
                             ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.request_ip.label'))
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->copyable(),
-                    ])->space(2),
+                    ])->space(1),
                     Stack::make([
                         TextColumn::make('response.status')
                             ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.response_status.label'))
@@ -152,7 +157,7 @@ class LinkEntriesTable extends BaseTableWidget
                             ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.timestamp_exact.label'))
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->dateTime(),
-                    ])->space(2),
+                    ])->space(1),
                 ])->from('lg'),
             ])
             ->filters([])
@@ -195,6 +200,7 @@ class LinkEntriesTable extends BaseTableWidget
 
                 $metadata = Arr::wrap($link->metadata);
                 $entityType = $this->resolveEntityType($metadata);
+                $entityIdentifier = $this->resolveEntityIdentifier($metadata, $entityType);
 
                 $shortUrl = $entries['short_url'] ?? null;
 
@@ -214,7 +220,7 @@ class LinkEntriesTable extends BaseTableWidget
 
                 return collect(Arr::get($entries, 'entries', []))
                     ->filter(fn ($entry) => is_array($entry))
-                    ->map(fn (array $entry) => $this->makeRecord($link, $entry, $metadata, $entityType, $shortUrl));
+                    ->map(fn (array $entry) => $this->makeRecord($link, $entry, $entityType, $entityIdentifier, $shortUrl));
             })
             ->filter()
             ->sortByDesc(fn (array $record) => (string) ($record['timestamp'] ?? ''))
@@ -224,10 +230,9 @@ class LinkEntriesTable extends BaseTableWidget
 
     /**
      * @param  array<string, mixed>  $entry
-     * @param  array<string, string>  $metadata
      * @return array<string, mixed>
      */
-    protected function makeRecord(CloudflareLink $link, array $entry, array $metadata, string $entityType, ?string $shortUrl): array
+    protected function makeRecord(CloudflareLink $link, array $entry, string $entityType, ?string $entityIdentifier, ?string $shortUrl): array
     {
         $request = $entry['request'] ?? [];
         $response = $entry['response'] ?? [];
@@ -247,9 +252,8 @@ class LinkEntriesTable extends BaseTableWidget
             'slug' => $link->slug,
             'short_url' => $shortUrl,
             'url' => $link->url,
-            'metadata' => $metadata,
-            'metadata_summary' => $this->summariseMetadata($metadata),
             'entity_type' => $entityType,
+            'entity_identifier' => $entityIdentifier,
             'timestamp' => $entry['timestamp'] ?? null,
             'request' => is_array($request) ? $request : [],
             'response' => is_array($response) ? $response : [],

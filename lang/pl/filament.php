@@ -81,8 +81,8 @@ return [
                     'entity_type' => [
                         'label' => 'Typ obiektu',
                     ],
-                    'metadata_summary' => [
-                        'label' => 'Metadane',
+                    'entity_identifier' => [
+                        'label' => 'Identyfikator obiektu',
                     ],
                     'created_at' => [
                         'label' => 'Utworzono',
@@ -111,8 +111,8 @@ return [
                     'entity_type' => [
                         'label' => 'Typ obiektu',
                     ],
-                    'metadata_summary' => [
-                        'label' => 'Metadane',
+                    'entity_identifier' => [
+                        'label' => 'Identyfikator obiektu',
                     ],
                     'request_url' => [
                         'label' => 'Adres żądania',

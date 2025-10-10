@@ -4,8 +4,8 @@ namespace App\Filament\Widgets\Cloudflare\Concerns;
 
 use App\Models\CloudflareLink;
 use App\Support\Metadata\Metadata;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
 
 trait InteractsWithCloudflareLinks
 {
@@ -37,41 +37,6 @@ trait InteractsWithCloudflareLinks
     /**
      * @param array<string, string> $metadata
      */
-    protected function summariseMetadata(array $metadata): string
-    {
-        if ($metadata === []) {
-            return '';
-        }
-
-        $parts = [];
-
-        foreach ($metadata as $key => $value) {
-            if (! is_scalar($value)) {
-                continue;
-            }
-
-            $label = $this->metadataLabel((string) $key);
-            $parts[] = sprintf('%s: %s', $label, (string) $value);
-        }
-
-        return implode(', ', $parts);
-    }
-
-    protected function metadataLabel(string $key): string
-    {
-        $translationKey = 'filament.widgets.cloudflare.metadata_keys.' . $key;
-        $translation = __($translationKey);
-
-        if ($translation === $translationKey) {
-            return Str::title(str_replace('_', ' ', $key));
-        }
-
-        return $translation;
-    }
-
-    /**
-     * @param array<string, string> $metadata
-     */
     protected function resolveEntityType(array $metadata): string
     {
         if (array_key_exists(Metadata::KEY_STRIPE_INVOICE_ID, $metadata)) {
@@ -87,5 +52,32 @@ trait InteractsWithCloudflareLinks
         }
 
         return 'link';
+    }
+
+    /**
+     * @param array<string, string> $metadata
+     */
+    protected function resolveEntityIdentifier(array $metadata, string $entityType): ?string
+    {
+        return match ($entityType) {
+            'invoice' => $metadata[Metadata::KEY_STRIPE_INVOICE_ID] ?? null,
+            'billing_portal' => $metadata[Metadata::KEY_STRIPE_BILLING_PORTAL_SESSION] ?? null,
+            'customer' => $metadata[Metadata::KEY_STRIPE_CUSTOMER_ID] ?? null,
+            default => $this->fallbackEntityIdentifier($metadata),
+        };
+    }
+
+    /**
+     * @param array<string, string> $metadata
+     */
+    protected function fallbackEntityIdentifier(array $metadata): ?string
+    {
+        $ordered = Metadata::prepare($metadata);
+
+        if ($ordered === []) {
+            return null;
+        }
+
+        return Arr::first($ordered);
     }
 }

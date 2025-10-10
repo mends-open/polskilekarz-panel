@@ -89,7 +89,7 @@ class LinksTable extends BaseTableWidget
                             ->url(fn ($state) => $state)
                             ->openUrlInNewTab()
                             ->limit(50),
-                    ])->space(2),
+                    ])->space(1),
                     Stack::make([
                         TextColumn::make('entity_type')
                             ->tooltip(__('filament.widgets.cloudflare.links_table.columns.entity_type.label'))
@@ -102,12 +102,13 @@ class LinksTable extends BaseTableWidget
                                 'customer' => 'success',
                                 default => 'gray',
                             }),
-                        TextColumn::make('metadata_summary')
-                            ->tooltip(__('filament.widgets.cloudflare.links_table.columns.metadata_summary.label'))
+                        TextColumn::make('entity_identifier')
+                            ->tooltip(__('filament.widgets.cloudflare.links_table.columns.entity_identifier.label'))
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
-                            ->limit(50)
-                            ->wrap(),
-                    ])->space(2),
+                            ->badge()
+                            ->color('gray')
+                            ->copyable(),
+                    ])->space(1),
                     Stack::make([
                         TextColumn::make('created_at')
                             ->tooltip(__('filament.widgets.cloudflare.links_table.columns.created_at.label'))
@@ -117,7 +118,7 @@ class LinksTable extends BaseTableWidget
                             ->tooltip(__('filament.widgets.cloudflare.links_table.columns.created_at_exact.label'))
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->dateTime(),
-                    ])->space(2),
+                    ])->space(1),
                 ])->from('lg'),
             ])
             ->filters([])
@@ -150,15 +151,15 @@ class LinksTable extends BaseTableWidget
     protected function makeRecord(CloudflareLink $link, LinkShortener $shortener): array
     {
         $metadata = Arr::wrap($link->metadata);
+        $entityType = $this->resolveEntityType($metadata);
 
         return [
             'id' => $link->getKey(),
             'slug' => $link->slug,
             'short_url' => $shortener->buildShortLink($link->slug),
             'url' => $link->url,
-            'metadata' => $metadata,
-            'metadata_summary' => $this->summariseMetadata($metadata),
-            'entity_type' => $this->resolveEntityType($metadata),
+            'entity_type' => $entityType,
+            'entity_identifier' => $this->resolveEntityIdentifier($metadata, $entityType),
             'created_at' => $link->created_at?->toImmutable(),
         ];
     }

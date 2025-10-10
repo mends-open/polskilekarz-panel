@@ -79,10 +79,10 @@ return [
                         'label' => 'Destination',
                     ],
                     'entity_type' => [
-                        'label' => 'Entity',
+                        'label' => 'Object',
                     ],
-                    'metadata_summary' => [
-                        'label' => 'Metadata',
+                    'entity_identifier' => [
+                        'label' => 'Object ID',
                     ],
                     'created_at' => [
                         'label' => 'Created',
@@ -109,10 +109,10 @@ return [
                         'label' => 'Destination',
                     ],
                     'entity_type' => [
-                        'label' => 'Entity',
+                        'label' => 'Object',
                     ],
-                    'metadata_summary' => [
-                        'label' => 'Metadata',
+                    'entity_identifier' => [
+                        'label' => 'Object ID',
                     ],
                     'request_url' => [
                         'label' => 'Request URL',
