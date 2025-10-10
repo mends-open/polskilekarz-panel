@@ -11,6 +11,7 @@ return [
                 'email' => 'Brak adresu e-mail',
                 'phone' => 'Brak telefonu',
                 'country' => 'Brak kraju',
+                'location' => 'Brak lokalizacji',
                 'status' => 'Brak statusu',
                 'due_date' => 'Brak terminu płatności',
                 'total' => 'Brak sumy',
@@ -63,6 +64,36 @@ return [
         ],
         'cloudflare' => [
             'links_table' => [
+                'heading' => 'Skrócone linki',
+                'empty_state' => [
+                    'heading' => 'Brak skróconych linków',
+                    'description' => 'Nie utworzyliśmy jeszcze żadnych skróconych linków dla tego kontaktu.',
+                ],
+                'columns' => [
+                    'slug' => [
+                        'label' => 'Slug',
+                    ],
+                    'short_url' => [
+                        'label' => 'Skrócony link',
+                    ],
+                    'url' => [
+                        'label' => 'Docelowy adres',
+                    ],
+                    'entity_type' => [
+                        'label' => 'Typ obiektu',
+                    ],
+                    'entity_identifier' => [
+                        'label' => 'Identyfikator obiektu',
+                    ],
+                    'created_at' => [
+                        'label' => 'Utworzono',
+                    ],
+                    'created_at_exact' => [
+                        'label' => 'Data utworzenia',
+                    ],
+                ],
+            ],
+            'link_entries_table' => [
                 'heading' => 'Aktywność skróconych linków',
                 'empty_state' => [
                     'heading' => 'Brak aktywności linków',
@@ -81,11 +112,8 @@ return [
                     'entity_type' => [
                         'label' => 'Typ obiektu',
                     ],
-                    'metadata' => [
-                        'label' => 'Metadane',
-                    ],
-                    'request_method' => [
-                        'label' => 'Metoda',
+                    'entity_identifier' => [
+                        'label' => 'Identyfikator obiektu',
                     ],
                     'request_url' => [
                         'label' => 'Adres żądania',
@@ -93,8 +121,8 @@ return [
                     'request_country' => [
                         'label' => 'Kraj',
                     ],
-                    'request_city' => [
-                        'label' => 'Miasto',
+                    'request_location' => [
+                        'label' => 'Lokalizacja',
                     ],
                     'request_ip' => [
                         'label' => 'Adres IP',
@@ -109,25 +137,43 @@ return [
                         'label' => 'Data odwiedzin',
                     ],
                 ],
-                'enums' => [
-                    'entity_types' => [
-                        'invoice' => 'Faktura',
-                        'billing_portal' => 'Portal rozliczeń',
-                        'customer' => 'Klient',
-                        'link' => 'Link',
-                    ],
+            ],
+            'enums' => [
+                'entity_types' => [
+                    'invoice' => 'Faktura',
+                    'billing_portal' => 'Portal rozliczeń',
+                    'customer' => 'Klient',
+                    'link' => 'Link',
                 ],
-                'metadata_keys' => [
-                    'chatwoot_account_id' => 'Konto Chatwoot',
-                    'chatwoot_conversation_id' => 'Konwersacja Chatwoot',
-                    'chatwoot_inbox_id' => 'Skrzynka Chatwoot',
-                    'chatwoot_contact_id' => 'Kontakt Chatwoot',
-                    'chatwoot_user_id' => 'Użytkownik Chatwoot',
-                    'user_id' => 'Użytkownik',
-                    'stripe_customer_id' => 'Klient Stripe',
-                    'stripe_invoice_id' => 'Faktura Stripe',
-                    'stripe_billing_portal_session' => 'Sesja portalu rozliczeń',
+                'response_statuses' => [
+                    '200' => '200 OK',
+                    '201' => '201 Utworzono',
+                    '202' => '202 Zaakceptowano',
+                    '204' => '204 Brak treści',
+                    '301' => '301 Przeniesiono na stałe',
+                    '302' => '302 Znaleziono',
+                    '307' => '307 Tymczasowe przekierowanie',
+                    '308' => '308 Stałe przekierowanie',
+                    '400' => '400 Błędne żądanie',
+                    '401' => '401 Nieautoryzowano',
+                    '403' => '403 Zabroniono',
+                    '404' => '404 Nie znaleziono',
+                    '500' => '500 Wewnętrzny błąd serwera',
+                    '502' => '502 Błędna brama',
+                    '503' => '503 Niedostępny serwer',
+                    '504' => '504 Przekroczono czas bramy',
                 ],
+            ],
+            'metadata_keys' => [
+                'chatwoot_account_id' => 'Konto Chatwoot',
+                'chatwoot_conversation_id' => 'Konwersacja Chatwoot',
+                'chatwoot_inbox_id' => 'Skrzynka Chatwoot',
+                'chatwoot_contact_id' => 'Kontakt Chatwoot',
+                'chatwoot_user_id' => 'Użytkownik Chatwoot',
+                'user_id' => 'Użytkownik',
+                'stripe_customer_id' => 'Klient Stripe',
+                'stripe_invoice_id' => 'Faktura Stripe',
+                'stripe_billing_portal_session' => 'Sesja portalu rozliczeń',
             ],
         ],
         'stripe' => [
@@ -401,6 +447,12 @@ return [
             'title' => 'Płatności',
             'navigation' => [
                 'label' => 'Płatności',
+            ],
+        ],
+        'tracking' => [
+            'title' => 'Śledzenie',
+            'navigation' => [
+                'label' => 'Śledzenie',
             ],
         ],
     ],

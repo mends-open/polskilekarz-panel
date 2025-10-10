@@ -3,10 +3,11 @@
 namespace App\Filament\Widgets\Cloudflare;
 
 use App\Filament\Widgets\BaseTableWidget;
+use App\Filament\Widgets\Cloudflare\Concerns\InteractsWithCloudflareLinks;
+use App\Filament\Widgets\Cloudflare\Enums\CloudflareResponseStatus;
 use App\Models\CloudflareLink;
 use App\Services\Cloudflare\LinkShortener;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
-use App\Support\Metadata\Metadata;
 use Filament\Actions\BulkActionGroup;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\Layout\Split;
@@ -23,15 +24,17 @@ use Throwable;
 
 class LinkEntriesTable extends BaseTableWidget
 {
+    use InteractsWithCloudflareLinks;
     use InteractsWithDashboardContext;
 
     protected int|string|array $columnSpan = 'full';
 
-    public $tableRecordsPerPage = 3;
+    public $tableRecordsPerPage = 5;
 
     #[On('reset')]
     public function resetComponent(): void
     {
+        $this->resetCloudflareLinksCache();
         $this->resetTable();
         $this->resetErrorBag();
         $this->resetValidation();
@@ -47,7 +50,7 @@ class LinkEntriesTable extends BaseTableWidget
     public function table(Table $table): Table
     {
         return $table
-            ->heading(__('filament.widgets.cloudflare.links_table.heading'))
+            ->heading(__('filament.widgets.cloudflare.link_entries_table.heading'))
             ->records(function (int $page, int $recordsPerPage): LengthAwarePaginator {
                 $records = collect($this->linkEntries);
 
@@ -65,76 +68,87 @@ class LinkEntriesTable extends BaseTableWidget
             })
             ->defaultPaginationPageOption(5)
             ->paginationPageOptions([5, 10, 25, 50])
-            ->emptyStateIcon(Heroicon::OutlinedLink)
-            ->emptyStateHeading(__('filament.widgets.cloudflare.links_table.empty_state.heading'))
-            ->emptyStateDescription(__('filament.widgets.cloudflare.links_table.empty_state.description'))
+            ->emptyStateIcon(Heroicon::OutlinedCursorArrowRays)
+            ->emptyStateHeading(__('filament.widgets.cloudflare.link_entries_table.empty_state.heading'))
+            ->emptyStateDescription(__('filament.widgets.cloudflare.link_entries_table.empty_state.description'))
             ->columns([
                 Split::make([
                     Stack::make([
                         TextColumn::make('slug')
-                            ->tooltip(__('filament.widgets.cloudflare.links_table.columns.slug.label'))
+                            ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.slug.label'))
                             ->badge()
                             ->color('gray')
-                            ->placeholder(__('filament.widgets.common.placeholders.blank')),
+                            ->placeholder(__('filament.widgets.common.placeholders.blank'))
+                            ->copyable(),
+                        TextColumn::make('short_url')
+                            ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.short_url.label'))
+                            ->placeholder(__('filament.widgets.common.placeholders.blank'))
+                            ->url(fn ($state) => $state)
+                            ->openUrlInNewTab()
+                            ->copyable()
+                            ->limit(50),
                         TextColumn::make('url')
-                            ->tooltip(__('filament.widgets.cloudflare.links_table.columns.url.label'))
+                            ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.url.label'))
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->url(fn ($state) => $state)
                             ->openUrlInNewTab()
                             ->limit(50),
+                    ])->space(1),
+                    Stack::make([
                         TextColumn::make('entity_type')
-                            ->tooltip(__('filament.widgets.cloudflare.links_table.columns.entity_type.label'))
-                            ->badge()
+                            ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.entity_type.label'))
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
-                            ->formatStateUsing(fn (?string $state) => $state ? __('filament.widgets.cloudflare.links_table.enums.entity_types.' . $state) : null)
+                            ->badge()
+                            ->formatStateUsing(fn (?string $state) => $state ? __('filament.widgets.cloudflare.enums.entity_types.' . $state) : null)
                             ->color(fn (?string $state) => match ($state) {
                                 'invoice' => 'info',
                                 'billing_portal' => 'warning',
                                 'customer' => 'success',
                                 default => 'gray',
                             }),
-                    ])->space(2),
-                    Stack::make([
-                        TextColumn::make('request.url')
-                            ->tooltip(__('filament.widgets.cloudflare.links_table.columns.request_url.label'))
-                            ->placeholder(__('filament.widgets.common.placeholders.blank'))
-                            ->limit(50),
-                        TextColumn::make('location')
-                            ->state(fn (array $record) => (
-                            implode(', ', array_filter([
-                                $record['request']['cf']['city'] ?? null,
-                                $record['request']['cf']['country'] ?? null,
-                                $record['request']['cf']['postalCode'] ?? null,
-                                $record['request']['cf']['region'] ?? null
-                            ]))
-                            ))
-                            ->placeholder(__('filament.widgets.common.placeholders.blank')),
-                        TextColumn::make('request.headers.X-Real-Ip')
-                            ->tooltip(__('filament.widgets.cloudflare.links_table.columns.request_ip.label'))
-                            ->placeholder(__('filament.widgets.common.placeholders.blank'))
-                            ->copyable(),
-                    ])->space(2),
-                    Stack::make([
-                        TextColumn::make('response.status')
-                            ->tooltip(__('filament.widgets.cloudflare.links_table.columns.response_status.label'))
+                        TextColumn::make('entity_identifier')
+                            ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.entity_identifier.label'))
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->badge()
-                            ->color(fn (?int $state) => match ($state) {
-                                200, 201, 202, 204 => 'success',
-                                301, 302, 307, 308 => 'info',
-                                400, 401, 403, 404 => 'warning',
-                                500, 502, 503, 504 => 'danger',
-                                default => 'secondary',
-                            }),
+                            ->color('gray')
+                            ->copyable(),
+                    ])->space(1),
+                    Stack::make([
+                        TextColumn::make('request.url')
+                            ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.request_url.label'))
+                            ->placeholder(__('filament.widgets.common.placeholders.blank'))
+                            ->limit(50),
+                        TextColumn::make('request.cf.country')
+                            ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.request_country.label'))
+                            ->placeholder(__('filament.widgets.common.placeholders.country'))
+                            ->formatStateUsing(fn (?string $state) => filled($state) ? Str::upper($state) : null)
+                            ->badge()
+                            ->color('gray'),
+                        TextColumn::make('request_location')
+                            ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.request_location.label'))
+                            ->state(fn (array $record) => $this->formatRequestLocation(Arr::get($record, 'request.cf', [])))
+                            ->placeholder(__('filament.widgets.common.placeholders.location')),
+                        TextColumn::make('request.headers.X-Real-Ip')
+                            ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.request_ip.label'))
+                            ->placeholder(__('filament.widgets.common.placeholders.blank'))
+                            ->copyable(),
+                    ])->space(1),
+                    Stack::make([
+                        TextColumn::make('response.status')
+                            ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.response_status.label'))
+                            ->state(fn (array $record) => $this->resolveResponseStatus(Arr::get($record, 'response', [])))
+                            ->placeholder(__('filament.widgets.common.placeholders.blank'))
+                            ->badge()
+                            ->color(fn ($state) => $state instanceof CloudflareResponseStatus ? null : 'gray'),
                         TextColumn::make('timestamp')
-                            ->tooltip(__('filament.widgets.cloudflare.links_table.columns.timestamp.label'))
+                            ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.timestamp.label'))
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->since(),
                         TextColumn::make('timestamp')
-                            ->tooltip(__('filament.widgets.cloudflare.links_table.columns.timestamp_exact.label'))
+                            ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.timestamp_exact.label'))
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->dateTime(),
-                    ])->space(2),
+                    ])->space(1),
                 ])->from('lg'),
             ])
             ->filters([])
@@ -151,16 +165,7 @@ class LinkEntriesTable extends BaseTableWidget
     #[Computed(persist: true)]
     protected function linkEntries(): array
     {
-        $contactId = $this->chatwootContext()->contactId;
-
-        if ($contactId === null) {
-            return [];
-        }
-
-        $links = CloudflareLink::query()
-            ->whereRaw("metadata->>'chatwoot_contact_id' = ?", [(string) $contactId])
-            ->latest()
-            ->get();
+        $links = $this->cloudflareLinks();
 
         if ($links->isEmpty()) {
             return [];
@@ -168,71 +173,57 @@ class LinkEntriesTable extends BaseTableWidget
 
         $shortener = app(LinkShortener::class);
 
-        $records = [];
-
-        foreach ($links as $link) {
-            try {
-                $entries = $shortener->entriesFor($link);
-            } catch (Throwable $exception) {
-                report($exception);
-
-                Log::warning('Failed to fetch Cloudflare link entries', [
-                    'link_id' => $link->id,
-                    'slug' => $link->slug,
-                    'exception' => $exception->getMessage(),
-                ]);
-
-                continue;
-            }
-
-            $metadata = $link->metadata ?? [];
-            $entityType = $this->resolveEntityType($metadata);
-
-            $shortUrl = $entries['short_url'] ?? null;
-
-            if ($shortUrl === null) {
+        return $links
+            ->flatMap(function (CloudflareLink $link) use ($shortener) {
                 try {
-                    $shortUrl = $shortener->buildShortLink($link->slug);
+                    $entries = $shortener->entriesFor($link);
                 } catch (Throwable $exception) {
                     report($exception);
 
-                    Log::warning('Failed to build Cloudflare short link URL', [
+                    Log::warning('Failed to fetch Cloudflare link entries', [
                         'link_id' => $link->id,
                         'slug' => $link->slug,
                         'exception' => $exception->getMessage(),
                     ]);
-                }
-            }
 
-            foreach (Arr::get($entries, 'entries', []) as $entry) {
-                if (! is_array($entry)) {
-                    continue;
+                    return collect();
                 }
 
-                $records[] = $this->makeRecord($link, $entry, $metadata, $entityType, $shortUrl);
-            }
-        }
+                $metadata = Arr::wrap($link->metadata);
+                $entityType = $this->resolveEntityType($metadata);
+                $entityIdentifier = $this->resolveEntityIdentifier($metadata, $entityType);
 
-        if ($records === []) {
-            return [];
-        }
+                $shortUrl = $entries['short_url'] ?? null;
 
-        usort($records, function (array $left, array $right): int {
-            $leftTimestamp = $left['timestamp'] ?? '';
-            $rightTimestamp = $right['timestamp'] ?? '';
+                if ($shortUrl === null) {
+                    try {
+                        $shortUrl = $shortener->buildShortLink($link->slug);
+                    } catch (Throwable $exception) {
+                        report($exception);
 
-            return strcmp((string) $rightTimestamp, (string) $leftTimestamp);
-        });
+                        Log::warning('Failed to build Cloudflare short link URL', [
+                            'link_id' => $link->id,
+                            'slug' => $link->slug,
+                            'exception' => $exception->getMessage(),
+                        ]);
+                    }
+                }
 
-        return $records;
+                return collect(Arr::get($entries, 'entries', []))
+                    ->filter(fn ($entry) => is_array($entry))
+                    ->map(fn (array $entry) => $this->makeRecord($link, $entry, $entityType, $entityIdentifier, $shortUrl));
+            })
+            ->filter()
+            ->sortByDesc(fn (array $record) => (string) ($record['timestamp'] ?? ''))
+            ->values()
+            ->all();
     }
 
     /**
      * @param  array<string, mixed>  $entry
-     * @param  array<string, string>  $metadata
      * @return array<string, mixed>
      */
-    protected function makeRecord(CloudflareLink $link, array $entry, array $metadata, string $entityType, ?string $shortUrl): array
+    protected function makeRecord(CloudflareLink $link, array $entry, string $entityType, ?string $entityIdentifier, ?string $shortUrl): array
     {
         $request = $entry['request'] ?? [];
         $response = $entry['response'] ?? [];
@@ -252,9 +243,8 @@ class LinkEntriesTable extends BaseTableWidget
             'slug' => $link->slug,
             'short_url' => $shortUrl,
             'url' => $link->url,
-            'metadata' => $metadata,
-            'metadata_summary' => $this->summariseMetadata($metadata),
             'entity_type' => $entityType,
+            'entity_identifier' => $entityIdentifier,
             'timestamp' => $entry['timestamp'] ?? null,
             'request' => is_array($request) ? $request : [],
             'response' => is_array($response) ? $response : [],
@@ -262,53 +252,36 @@ class LinkEntriesTable extends BaseTableWidget
     }
 
     /**
-     * @param  array<string, string>  $metadata
+     * @param  array<string, mixed>  $cloudflare
      */
-    protected function summariseMetadata(array $metadata): string
+    protected function formatRequestLocation(array $cloudflare): ?string
     {
-        if ($metadata === []) {
-            return '';
-        }
+        $parts = array_filter([
+            $cloudflare['city'] ?? null,
+            $cloudflare['region'] ?? null,
+            $cloudflare['postalCode'] ?? null,
+        ]);
 
-        $parts = [];
-
-        foreach ($metadata as $key => $value) {
-            if (! is_scalar($value)) {
-                continue;
-            }
-
-            $label = $this->metadataLabel((string) $key);
-            $parts[] = sprintf('%s: %s', $label, (string) $value);
+        if ($parts === []) {
+            return null;
         }
 
         return implode(', ', $parts);
     }
 
-    protected function metadataLabel(string $key): string
-    {
-        $translationKey = 'filament.widgets.cloudflare.links_table.metadata_keys.' . $key;
-        $translation = __($translationKey);
-
-        if ($translation === $translationKey) {
-            return Str::title(str_replace('_', ' ', $key));
-        }
-
-        return $translation;
-    }
-
     /**
-     * @param  array<string, string>  $metadata
+     * @param  array<string, mixed>  $response
      */
-    protected function resolveEntityType(array $metadata): string
+    protected function resolveResponseStatus(array $response): CloudflareResponseStatus|int|string|null
     {
-        if (array_key_exists(Metadata::KEY_STRIPE_INVOICE_ID, $metadata)) {
-            return 'invoice';
+        $status = $response['status'] ?? null;
+
+        if (is_numeric($status)) {
+            $status = (int) $status;
+
+            return CloudflareResponseStatus::tryFrom($status) ?? $status;
         }
 
-        if (array_key_exists(Metadata::KEY_STRIPE_BILLING_PORTAL_SESSION, $metadata)) {
-            return 'billing_portal';
-        }
-
-        return 'link';
+        return $status;
     }
 }
