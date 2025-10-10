@@ -6,6 +6,8 @@ use App\Filament\Widgets\BaseSchemaWidget;
 use App\Filament\Widgets\Stripe\Concerns\HandlesCurrencyDecimals;
 use App\Filament\Widgets\Stripe\Concerns\HasLatestStripeInvoice;
 use App\Filament\Widgets\Stripe\Concerns\HasStripeInvoiceForm;
+use App\Filament\Widgets\Stripe\Concerns\ResolvesStripeEnums;
+use App\Filament\Widgets\Stripe\Enums\InvoiceStatus;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use Arr;
 use Filament\Actions\Action;
@@ -23,6 +25,7 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
     use HasLatestStripeInvoice;
     use HasStripeInvoiceForm;
     use InteractsWithDashboardContext;
+    use ResolvesStripeEnums;
 
     protected int|string|array $columnSpan = 'full';
 
@@ -103,14 +106,8 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
                         TextEntry::make('status')
                             ->label(__('filament.widgets.stripe.latest_invoice_infolist.fields.status.label'))
                             ->badge()
-                            ->formatStateUsing(fn (?string $state) => $state ? __('filament.widgets.stripe.enums.invoice_statuses.' . $state) : null)
-                            ->color(fn (?string $state) => match ($state) {
-                                'draft', 'void' => 'gray',
-                                'open' => 'warning',
-                                'paid' => 'success',
-                                'uncollectible' => 'danger',
-                                default => 'secondary',
-                            })
+                            ->state(fn (?string $state) => $this->makeInvoiceStatus($state) ?? $state)
+                            ->color(fn ($state) => $state instanceof InvoiceStatus ? null : 'secondary')
                             ->inlineLabel()
                             ->placeholder(__('filament.widgets.common.placeholders.status')),
                         TextEntry::make('created')

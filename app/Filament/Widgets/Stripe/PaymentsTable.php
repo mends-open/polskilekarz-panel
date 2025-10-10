@@ -4,6 +4,8 @@ namespace App\Filament\Widgets\Stripe;
 
 use App\Filament\Widgets\BaseTableWidget;
 use App\Filament\Widgets\Stripe\Concerns\HandlesCurrencyDecimals;
+use App\Filament\Widgets\Stripe\Concerns\ResolvesStripeEnums;
+use App\Filament\Widgets\Stripe\Enums\PaymentIntentStatus;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -24,6 +26,7 @@ class PaymentsTable extends BaseTableWidget
 {
     use HandlesCurrencyDecimals;
     use InteractsWithDashboardContext;
+    use ResolvesStripeEnums;
 
     protected int|string|array $columnSpan = 'full';
 
@@ -93,22 +96,19 @@ class PaymentsTable extends BaseTableWidget
                                 locale: config('app.locale'),
                                 decimalPlaces: fn ($record) => $this->currencyDecimalPlaces($record['currency']),
                             )
-                            ->color(fn ($record) => match ($record['status']) {
-                                'succeeded' => 'success',   // ✅ received
-                                default => 'gray',          // ❌ not yet settled
+                            ->color(function ($record) {
+                                $status = $this->makePaymentIntentStatus(data_get($record, 'status'));
+
+                                return $status instanceof PaymentIntentStatus
+                                    ? $status->getAmountBadgeColor()
+                                    : 'gray';
                             }),
                         TextColumn::make('status')
                             ->label(__('filament.widgets.stripe.payments_table.columns.status.label'))
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->badge()
-                            ->formatStateUsing(fn (?string $state) => $state ? __('filament.widgets.stripe.enums.payment_intent_statuses.' . $state) : null)
-                            ->color(fn ($state) => match ($state) {
-                                'succeeded' => 'success',             // green
-                                'processing' => 'warning',            // yellow
-                                'requires_payment_method', 'requires_capture', 'requires_action', 'requires_confirmation' => 'danger',// red
-                                'canceled' => 'gray',                 // neutral
-                                default => 'secondary',
-                            }),
+                            ->state(fn (?string $state) => $this->makePaymentIntentStatus($state) ?? $state)
+                            ->color(fn ($state) => $state instanceof PaymentIntentStatus ? null : 'secondary'),
                     ])->space(2),
                     Stack::make([
                         TextColumn::make('payment_method.type')

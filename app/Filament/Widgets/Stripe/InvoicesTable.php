@@ -6,6 +6,8 @@ use App\Filament\Widgets\BaseTableWidget;
 use App\Filament\Widgets\Stripe\Concerns\HandlesCurrencyDecimals;
 use App\Filament\Widgets\Stripe\Concerns\HasStripeInvoiceForm;
 use App\Filament\Widgets\Stripe\Concerns\InteractsWithStripeInvoices;
+use App\Filament\Widgets\Stripe\Concerns\ResolvesStripeEnums;
+use App\Filament\Widgets\Stripe\Enums\InvoiceStatus;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -28,6 +30,7 @@ class InvoicesTable extends BaseTableWidget
     use HasStripeInvoiceForm;
     use InteractsWithDashboardContext;
     use InteractsWithStripeInvoices;
+    use ResolvesStripeEnums;
 
     protected int|string|array $columnSpan = 'full';
 
@@ -99,25 +102,19 @@ class InvoicesTable extends BaseTableWidget
                                 locale: config('app.locale'),
                                 decimalPlaces: fn ($record) => $this->currencyDecimalPlaces($record['currency']),
                             )
-                            ->color(fn ($record) => match ($record['status']) {
-                                'paid' => 'success',                     // ✅ money in
-                                'open', 'draft', 'uncollectible' => 'danger', // ❌ not collected
-                                'void' => 'gray',                        // ⚪ cancelled
-                                default => 'secondary',
+                            ->color(function ($record) {
+                                $status = $this->makeInvoiceStatus(data_get($record, 'status'));
+
+                                return $status instanceof InvoiceStatus
+                                    ? $status->getTotalBadgeColor()
+                                    : 'secondary';
                             }),
                         TextColumn::make('status')
                             ->label(__('filament.widgets.stripe.invoices_table.columns.status.label'))
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->badge()
-                            ->formatStateUsing(fn (?string $state) => $state ? __('filament.widgets.stripe.enums.invoice_statuses.' . $state) : null)
-                            ->color(fn ($state) => match ($state) {
-                                'paid' => 'success',        // green
-                                'open' => 'info',           // blue
-                                'draft' => 'secondary',     // neutral
-                                'uncollectible' => 'danger',// red
-                                'void' => 'gray',           // gray
-                                default => 'secondary',
-                            }),
+                            ->state(fn (?string $state) => $this->makeInvoiceStatus($state) ?? $state)
+                            ->color(fn ($state) => $state instanceof InvoiceStatus ? null : 'secondary'),
                     ])->space(2),
                     Stack::make([
                         TextColumn::make('currency')

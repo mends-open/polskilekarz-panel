@@ -4,6 +4,7 @@ namespace App\Filament\Widgets\Cloudflare;
 
 use App\Filament\Widgets\BaseTableWidget;
 use App\Filament\Widgets\Cloudflare\Concerns\InteractsWithCloudflareLinks;
+use App\Filament\Widgets\Cloudflare\Enums\CloudflareLinkEntityType;
 use App\Filament\Widgets\Cloudflare\Enums\CloudflareResponseStatus;
 use App\Models\CloudflareLink;
 use App\Services\Cloudflare\LinkShortener;
@@ -99,13 +100,8 @@ class LinkEntriesTable extends BaseTableWidget
                             ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.entity_type.label'))
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->badge()
-                            ->formatStateUsing(fn (?string $state) => $state ? __('filament.widgets.cloudflare.enums.entity_types.' . $state) : null)
-                            ->color(fn (?string $state) => match ($state) {
-                                'invoice' => 'info',
-                                'billing_portal' => 'warning',
-                                'customer' => 'success',
-                                default => 'gray',
-                            }),
+                            ->state(fn (?string $state) => filled($state) ? CloudflareLinkEntityType::tryFrom($state) ?? $state : null)
+                            ->color(fn ($state) => $state instanceof CloudflareLinkEntityType ? null : 'gray'),
                         TextColumn::make('entity_identifier')
                             ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.entity_identifier.label'))
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
