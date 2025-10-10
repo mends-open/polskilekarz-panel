@@ -63,6 +63,36 @@ return [
         ],
         'cloudflare' => [
             'links_table' => [
+                'heading' => 'Skrócone linki',
+                'empty_state' => [
+                    'heading' => 'Brak skróconych linków',
+                    'description' => 'Nie utworzyliśmy jeszcze żadnych skróconych linków dla tego kontaktu.',
+                ],
+                'columns' => [
+                    'slug' => [
+                        'label' => 'Slug',
+                    ],
+                    'short_url' => [
+                        'label' => 'Skrócony link',
+                    ],
+                    'url' => [
+                        'label' => 'Docelowy adres',
+                    ],
+                    'entity_type' => [
+                        'label' => 'Typ obiektu',
+                    ],
+                    'metadata_summary' => [
+                        'label' => 'Metadane',
+                    ],
+                    'created_at' => [
+                        'label' => 'Utworzono',
+                    ],
+                    'created_at_exact' => [
+                        'label' => 'Data utworzenia',
+                    ],
+                ],
+            ],
+            'link_entries_table' => [
                 'heading' => 'Aktywność skróconych linków',
                 'empty_state' => [
                     'heading' => 'Brak aktywności linków',
@@ -81,20 +111,14 @@ return [
                     'entity_type' => [
                         'label' => 'Typ obiektu',
                     ],
-                    'metadata' => [
+                    'metadata_summary' => [
                         'label' => 'Metadane',
-                    ],
-                    'request_method' => [
-                        'label' => 'Metoda',
                     ],
                     'request_url' => [
                         'label' => 'Adres żądania',
                     ],
-                    'request_country' => [
-                        'label' => 'Kraj',
-                    ],
-                    'request_city' => [
-                        'label' => 'Miasto',
+                    'request_method' => [
+                        'label' => 'Metoda',
                     ],
                     'request_ip' => [
                         'label' => 'Adres IP',
@@ -109,25 +133,25 @@ return [
                         'label' => 'Data odwiedzin',
                     ],
                 ],
-                'enums' => [
-                    'entity_types' => [
-                        'invoice' => 'Faktura',
-                        'billing_portal' => 'Portal rozliczeń',
-                        'customer' => 'Klient',
-                        'link' => 'Link',
-                    ],
+            ],
+            'enums' => [
+                'entity_types' => [
+                    'invoice' => 'Faktura',
+                    'billing_portal' => 'Portal rozliczeń',
+                    'customer' => 'Klient',
+                    'link' => 'Link',
                 ],
-                'metadata_keys' => [
-                    'chatwoot_account_id' => 'Konto Chatwoot',
-                    'chatwoot_conversation_id' => 'Konwersacja Chatwoot',
-                    'chatwoot_inbox_id' => 'Skrzynka Chatwoot',
-                    'chatwoot_contact_id' => 'Kontakt Chatwoot',
-                    'chatwoot_user_id' => 'Użytkownik Chatwoot',
-                    'user_id' => 'Użytkownik',
-                    'stripe_customer_id' => 'Klient Stripe',
-                    'stripe_invoice_id' => 'Faktura Stripe',
-                    'stripe_billing_portal_session' => 'Sesja portalu rozliczeń',
-                ],
+            ],
+            'metadata_keys' => [
+                'chatwoot_account_id' => 'Konto Chatwoot',
+                'chatwoot_conversation_id' => 'Konwersacja Chatwoot',
+                'chatwoot_inbox_id' => 'Skrzynka Chatwoot',
+                'chatwoot_contact_id' => 'Kontakt Chatwoot',
+                'chatwoot_user_id' => 'Użytkownik Chatwoot',
+                'user_id' => 'Użytkownik',
+                'stripe_customer_id' => 'Klient Stripe',
+                'stripe_invoice_id' => 'Faktura Stripe',
+                'stripe_billing_portal_session' => 'Sesja portalu rozliczeń',
             ],
         ],
         'stripe' => [
