@@ -21,7 +21,7 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Throwable;
 
-class CloudflareLinksTable extends BaseTableWidget
+class LinkEntriesTable extends BaseTableWidget
 {
     use InteractsWithDashboardContext;
 

@@ -2,7 +2,7 @@
 
 namespace App\Filament\Pages;
 
-use App\Filament\Widgets\Cloudflare\CloudflareLinksTable;
+use App\Filament\Widgets\Cloudflare\LinkEntriesTable;
 use BackedEnum;
 use Filament\Pages\Dashboard;
 use Filament\Support\Icons\Heroicon;
@@ -17,7 +17,7 @@ class Tracking extends Dashboard
     public function getWidgets(): array
     {
         return [
-            CloudflareLinksTable::class,
+            LinkEntriesTable::class,
         ];
     }
 }
