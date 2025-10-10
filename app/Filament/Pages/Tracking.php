@@ -3,9 +3,12 @@
 namespace App\Filament\Pages;
 
 use App\Filament\Widgets\Cloudflare\LinkEntriesTable;
+use App\Filament\Widgets\Cloudflare\LinksTable;
+use App\Filament\Widgets\Cloudflare\LinkTable;
 use BackedEnum;
 use Filament\Pages\Dashboard;
 use Filament\Support\Icons\Heroicon;
+use Symfony\Component\VarDumper\Caster\LinkStub;
 
 class Tracking extends Dashboard
 {
@@ -17,6 +20,7 @@ class Tracking extends Dashboard
     public function getWidgets(): array
     {
         return [
+            LinksTable::class,
             LinkEntriesTable::class,
         ];
     }
