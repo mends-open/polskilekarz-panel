@@ -11,6 +11,7 @@ return [
                 'email' => 'No email',
                 'phone' => 'No phone',
                 'country' => 'No country',
+                'location' => 'No location',
                 'status' => 'No status',
                 'due_date' => 'No due date',
                 'total' => 'No total',
@@ -117,8 +118,11 @@ return [
                     'request_url' => [
                         'label' => 'Request URL',
                     ],
-                    'request_method' => [
-                        'label' => 'Method',
+                    'request_country' => [
+                        'label' => 'Country',
+                    ],
+                    'request_location' => [
+                        'label' => 'Location',
                     ],
                     'request_ip' => [
                         'label' => 'IP address',
@@ -425,6 +429,12 @@ return [
             'title' => 'Payments',
             'navigation' => [
                 'label' => 'Payments',
+            ],
+        ],
+        'tracking' => [
+            'title' => 'Tracking',
+            'navigation' => [
+                'label' => 'Tracking',
             ],
         ],
     ],

@@ -4,6 +4,7 @@ namespace App\Filament\Widgets\Cloudflare;
 
 use App\Filament\Widgets\BaseTableWidget;
 use App\Filament\Widgets\Cloudflare\Concerns\InteractsWithCloudflareLinks;
+use App\Filament\Widgets\Cloudflare\Enums\CloudflareResponseStatus;
 use App\Models\CloudflareLink;
 use App\Services\Cloudflare\LinkShortener;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
@@ -117,21 +118,16 @@ class LinkEntriesTable extends BaseTableWidget
                             ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.request_url.label'))
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->limit(50),
-                        TextColumn::make('request.method')
-                            ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.request_method.label'))
-                            ->placeholder(__('filament.widgets.common.placeholders.blank'))
+                        TextColumn::make('request.cf.country')
+                            ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.request_country.label'))
+                            ->placeholder(__('filament.widgets.common.placeholders.country'))
+                            ->formatStateUsing(fn (?string $state) => filled($state) ? Str::upper($state) : null)
                             ->badge()
                             ->color('gray'),
-                        TextColumn::make('location')
-                            ->state(fn (array $record) => (
-                                implode(', ', array_filter([
-                                    $record['request']['cf']['city'] ?? null,
-                                    $record['request']['cf']['country'] ?? null,
-                                    $record['request']['cf']['postalCode'] ?? null,
-                                    $record['request']['cf']['region'] ?? null,
-                                ]))
-                            ))
-                            ->placeholder(__('filament.widgets.common.placeholders.blank')),
+                        TextColumn::make('request_location')
+                            ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.request_location.label'))
+                            ->state(fn (array $record) => $this->formatRequestLocation(Arr::get($record, 'request.cf', [])))
+                            ->placeholder(__('filament.widgets.common.placeholders.location')),
                         TextColumn::make('request.headers.X-Real-Ip')
                             ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.request_ip.label'))
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
@@ -140,15 +136,10 @@ class LinkEntriesTable extends BaseTableWidget
                     Stack::make([
                         TextColumn::make('response.status')
                             ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.response_status.label'))
+                            ->state(fn (array $record) => $this->resolveResponseStatus(Arr::get($record, 'response', [])))
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->badge()
-                            ->color(fn (?int $state) => match ($state) {
-                                200, 201, 202, 204 => 'success',
-                                301, 302, 307, 308 => 'info',
-                                400, 401, 403, 404 => 'warning',
-                                500, 502, 503, 504 => 'danger',
-                                default => 'secondary',
-                            }),
+                            ->color(fn ($state) => $state instanceof CloudflareResponseStatus ? null : 'gray'),
                         TextColumn::make('timestamp')
                             ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.timestamp.label'))
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
@@ -258,5 +249,39 @@ class LinkEntriesTable extends BaseTableWidget
             'request' => is_array($request) ? $request : [],
             'response' => is_array($response) ? $response : [],
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $cloudflare
+     */
+    protected function formatRequestLocation(array $cloudflare): ?string
+    {
+        $parts = array_filter([
+            $cloudflare['city'] ?? null,
+            $cloudflare['region'] ?? null,
+            $cloudflare['postalCode'] ?? null,
+        ]);
+
+        if ($parts === []) {
+            return null;
+        }
+
+        return implode(', ', $parts);
+    }
+
+    /**
+     * @param  array<string, mixed>  $response
+     */
+    protected function resolveResponseStatus(array $response): CloudflareResponseStatus|int|string|null
+    {
+        $status = $response['status'] ?? null;
+
+        if (is_numeric($status)) {
+            $status = (int) $status;
+
+            return CloudflareResponseStatus::tryFrom($status) ?? $status;
+        }
+
+        return $status;
     }
 }

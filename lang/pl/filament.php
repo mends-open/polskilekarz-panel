@@ -11,6 +11,7 @@ return [
                 'email' => 'Brak adresu e-mail',
                 'phone' => 'Brak telefonu',
                 'country' => 'Brak kraju',
+                'location' => 'Brak lokalizacji',
                 'status' => 'Brak statusu',
                 'due_date' => 'Brak terminu płatności',
                 'total' => 'Brak sumy',
@@ -117,8 +118,11 @@ return [
                     'request_url' => [
                         'label' => 'Adres żądania',
                     ],
-                    'request_method' => [
-                        'label' => 'Metoda',
+                    'request_country' => [
+                        'label' => 'Kraj',
+                    ],
+                    'request_location' => [
+                        'label' => 'Lokalizacja',
                     ],
                     'request_ip' => [
                         'label' => 'Adres IP',
@@ -425,6 +429,12 @@ return [
             'title' => 'Płatności',
             'navigation' => [
                 'label' => 'Płatności',
+            ],
+        ],
+        'tracking' => [
+            'title' => 'Śledzenie',
+            'navigation' => [
+                'label' => 'Śledzenie',
             ],
         ],
     ],
