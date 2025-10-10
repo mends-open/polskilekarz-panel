@@ -17,6 +17,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Throwable;
 
@@ -26,7 +27,7 @@ class CloudflareLinksTable extends BaseTableWidget
 
     protected int|string|array $columnSpan = 'full';
 
-    public int $tableRecordsPerPage = 5;
+    public $tableRecordsPerPage = 5;
 
     #[On('reset')]
     public function resetComponent(): void
@@ -48,7 +49,7 @@ class CloudflareLinksTable extends BaseTableWidget
         return $table
             ->heading(__('filament.widgets.cloudflare.links_table.heading'))
             ->records(function (int $page, int $recordsPerPage): LengthAwarePaginator {
-                $records = collect($this->linkEntries());
+                $records = collect($this->linkEntries);
 
                 $items = $records
                     ->forPage($page, $recordsPerPage)
@@ -71,23 +72,18 @@ class CloudflareLinksTable extends BaseTableWidget
                 Split::make([
                     Stack::make([
                         TextColumn::make('slug')
-                            ->label(__('filament.widgets.cloudflare.links_table.columns.slug.label'))
+                            ->tooltip(__('filament.widgets.cloudflare.links_table.columns.slug.label'))
                             ->badge()
                             ->color('gray')
                             ->placeholder(__('filament.widgets.common.placeholders.blank')),
-                        TextColumn::make('short_url')
-                            ->label(__('filament.widgets.cloudflare.links_table.columns.short_url.label'))
-                            ->placeholder(__('filament.widgets.common.placeholders.blank'))
-                            ->url(fn ($record) => $record['short_url'] ?? null)
-                            ->openUrlInNewTab()
-                            ->copyable(),
                         TextColumn::make('url')
-                            ->label(__('filament.widgets.cloudflare.links_table.columns.url.label'))
+                            ->tooltip(__('filament.widgets.cloudflare.links_table.columns.url.label'))
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
-                            ->limit(50)
-                            ->tooltip(fn (?string $state) => $state),
+                            ->url(fn ($state) => $state)
+                            ->openUrlInNewTab()
+                            ->limit(50),
                         TextColumn::make('entity_type')
-                            ->label(__('filament.widgets.cloudflare.links_table.columns.entity_type.label'))
+                            ->tooltip(__('filament.widgets.cloudflare.links_table.columns.entity_type.label'))
                             ->badge()
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->formatStateUsing(fn (?string $state) => $state ? __('filament.widgets.cloudflare.links_table.enums.entity_types.' . $state) : null)
@@ -97,40 +93,30 @@ class CloudflareLinksTable extends BaseTableWidget
                                 'customer' => 'success',
                                 default => 'gray',
                             }),
-                        TextColumn::make('metadata_summary')
-                            ->label(__('filament.widgets.cloudflare.links_table.columns.metadata.label'))
-                            ->placeholder(__('filament.widgets.common.placeholders.metadata'))
-                            ->wrap()
-                            ->tooltip(fn ($state) => $state),
                     ])->space(2),
                     Stack::make([
-                        TextColumn::make('request.method')
-                            ->label(__('filament.widgets.cloudflare.links_table.columns.request_method.label'))
-                            ->placeholder(__('filament.widgets.common.placeholders.blank'))
-                            ->badge()
-                            ->formatStateUsing(fn (?string $state) => $state ? Str::upper($state) : null)
-                            ->color('primary'),
                         TextColumn::make('request.url')
-                            ->label(__('filament.widgets.cloudflare.links_table.columns.request_url.label'))
+                            ->tooltip(__('filament.widgets.cloudflare.links_table.columns.request_url.label'))
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
-                            ->limit(50)
-                            ->tooltip(fn (?string $state) => $state),
-                        TextColumn::make('request.cf.country')
-                            ->label(__('filament.widgets.cloudflare.links_table.columns.request_country.label'))
-                            ->placeholder(__('filament.widgets.common.placeholders.country'))
-                            ->badge()
-                            ->color('gray'),
-                        TextColumn::make('request.cf.city')
-                            ->label(__('filament.widgets.cloudflare.links_table.columns.request_city.label'))
+                            ->limit(50),
+                        TextColumn::make('location')
+                            ->state(fn (array $record) => (
+                            implode(', ', array_filter([
+                                $record['request']['cf']['city'] ?? null,
+                                $record['request']['cf']['country'] ?? null,
+                                $record['request']['cf']['postalCode'] ?? null,
+                                $record['request']['cf']['region'] ?? null
+                            ]))
+                            ))
                             ->placeholder(__('filament.widgets.common.placeholders.blank')),
                         TextColumn::make('request.headers.X-Real-Ip')
-                            ->label(__('filament.widgets.cloudflare.links_table.columns.request_ip.label'))
+                            ->tooltip(__('filament.widgets.cloudflare.links_table.columns.request_ip.label'))
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->copyable(),
                     ])->space(2),
                     Stack::make([
                         TextColumn::make('response.status')
-                            ->label(__('filament.widgets.cloudflare.links_table.columns.response_status.label'))
+                            ->tooltip(__('filament.widgets.cloudflare.links_table.columns.response_status.label'))
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->badge()
                             ->color(fn (?int $state) => match ($state) {
@@ -141,11 +127,11 @@ class CloudflareLinksTable extends BaseTableWidget
                                 default => 'secondary',
                             }),
                         TextColumn::make('timestamp')
-                            ->label(__('filament.widgets.cloudflare.links_table.columns.timestamp.label'))
+                            ->tooltip(__('filament.widgets.cloudflare.links_table.columns.timestamp.label'))
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->since(),
                         TextColumn::make('timestamp')
-                            ->label(__('filament.widgets.cloudflare.links_table.columns.timestamp_exact.label'))
+                            ->tooltip(__('filament.widgets.cloudflare.links_table.columns.timestamp_exact.label'))
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->dateTime(),
                     ])->space(2),
@@ -162,6 +148,7 @@ class CloudflareLinksTable extends BaseTableWidget
     /**
      * @return array<int, array<string, mixed>>
      */
+    #[Computed(persist: true)]
     protected function linkEntries(): array
     {
         $contactId = $this->chatwootContext()->contactId;
@@ -320,10 +307,6 @@ class CloudflareLinksTable extends BaseTableWidget
 
         if (array_key_exists(Metadata::KEY_STRIPE_BILLING_PORTAL_SESSION, $metadata)) {
             return 'billing_portal';
-        }
-
-        if (array_key_exists(Metadata::KEY_STRIPE_CUSTOMER_ID, $metadata)) {
-            return 'customer';
         }
 
         return 'link';
