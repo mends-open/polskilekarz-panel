@@ -26,24 +26,15 @@ enum CloudflareResponseStatus: int implements HasColor, HasLabel
 
     public function getLabel(): ?string
     {
-        return match ($this) {
-            self::Ok => '200 OK',
-            self::Created => '201 Created',
-            self::Accepted => '202 Accepted',
-            self::NoContent => '204 No Content',
-            self::MovedPermanently => '301 Moved Permanently',
-            self::Found => '302 Found',
-            self::TemporaryRedirect => '307 Temporary Redirect',
-            self::PermanentRedirect => '308 Permanent Redirect',
-            self::BadRequest => '400 Bad Request',
-            self::Unauthorized => '401 Unauthorized',
-            self::Forbidden => '403 Forbidden',
-            self::NotFound => '404 Not Found',
-            self::InternalServerError => '500 Internal Server Error',
-            self::BadGateway => '502 Bad Gateway',
-            self::ServiceUnavailable => '503 Service Unavailable',
-            self::GatewayTimeout => '504 Gateway Timeout',
-        };
+        $key = 'filament.widgets.cloudflare.enums.response_statuses.' . $this->value;
+
+        $label = __($key);
+
+        if ($label === $key) {
+            return (string) $this->value;
+        }
+
+        return $label;
     }
 
     public function getColor(): string|array|null
