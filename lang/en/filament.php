@@ -11,6 +11,7 @@ return [
                 'email' => 'No email',
                 'phone' => 'No phone',
                 'country' => 'No country',
+                'location' => 'No location',
                 'status' => 'No status',
                 'due_date' => 'No due date',
                 'total' => 'No total',
@@ -25,6 +26,7 @@ return [
                 'payment_method' => 'No payment method',
                 'price' => 'No price',
                 'product' => 'No product',
+                'metadata' => 'No metadata',
             ],
         ],
         'chatwoot' => [
@@ -58,6 +60,120 @@ return [
                         'label' => 'Country',
                     ],
                 ],
+            ],
+        ],
+        'cloudflare' => [
+            'links_table' => [
+                'heading' => 'Short links',
+                'empty_state' => [
+                    'heading' => 'No short links',
+                    'description' => 'We have not created any short links for this contact yet.',
+                ],
+                'columns' => [
+                    'slug' => [
+                        'label' => 'Slug',
+                    ],
+                    'short_url' => [
+                        'label' => 'Short link',
+                    ],
+                    'url' => [
+                        'label' => 'Destination',
+                    ],
+                    'entity_type' => [
+                        'label' => 'Object',
+                    ],
+                    'entity_identifier' => [
+                        'label' => 'Object ID',
+                    ],
+                    'created_at' => [
+                        'label' => 'Created',
+                    ],
+                    'created_at_exact' => [
+                        'label' => 'Created at',
+                    ],
+                ],
+            ],
+            'link_entries_table' => [
+                'heading' => 'Short link activity',
+                'empty_state' => [
+                    'heading' => 'No link activity',
+                    'description' => 'We have not recorded any short link visits for this contact yet.',
+                ],
+                'columns' => [
+                    'slug' => [
+                        'label' => 'Slug',
+                    ],
+                    'short_url' => [
+                        'label' => 'Short link',
+                    ],
+                    'url' => [
+                        'label' => 'Destination',
+                    ],
+                    'entity_type' => [
+                        'label' => 'Object',
+                    ],
+                    'entity_identifier' => [
+                        'label' => 'Object ID',
+                    ],
+                    'request_url' => [
+                        'label' => 'Request URL',
+                    ],
+                    'request_country' => [
+                        'label' => 'Country',
+                    ],
+                    'request_location' => [
+                        'label' => 'Location',
+                    ],
+                    'request_ip' => [
+                        'label' => 'IP address',
+                    ],
+                    'response_status' => [
+                        'label' => 'Status',
+                    ],
+                    'timestamp' => [
+                        'label' => 'Visited',
+                    ],
+                    'timestamp_exact' => [
+                        'label' => 'Visited at',
+                    ],
+                ],
+            ],
+            'enums' => [
+                'entity_types' => [
+                    'invoice' => 'Invoice',
+                    'billing_portal' => 'Billing portal',
+                    'customer' => 'Customer',
+                    'link' => 'Link',
+                ],
+                'response_statuses' => [
+                    '200' => '200 OK',
+                    '201' => '201 Created',
+                    '202' => '202 Accepted',
+                    '204' => '204 No Content',
+                    '301' => '301 Moved Permanently',
+                    '302' => '302 Found',
+                    '307' => '307 Temporary Redirect',
+                    '308' => '308 Permanent Redirect',
+                    '400' => '400 Bad Request',
+                    '401' => '401 Unauthorized',
+                    '403' => '403 Forbidden',
+                    '404' => '404 Not Found',
+                    '500' => '500 Internal Server Error',
+                    '502' => '502 Bad Gateway',
+                    '503' => '503 Service Unavailable',
+                    '504' => '504 Gateway Timeout',
+                ],
+            ],
+            'metadata_keys' => [
+                'chatwoot_account_id' => 'Chatwoot account',
+                'chatwoot_conversation_id' => 'Chatwoot conversation',
+                'chatwoot_inbox_id' => 'Chatwoot inbox',
+                'chatwoot_contact_id' => 'Chatwoot contact',
+                'chatwoot_user_id' => 'Chatwoot user',
+                'user_id' => 'User',
+                'stripe_customer_id' => 'Stripe customer',
+                'stripe_invoice_id' => 'Stripe invoice',
+                'stripe_billing_portal_session' => 'Billing portal session',
             ],
         ],
         'stripe' => [
@@ -331,6 +447,12 @@ return [
             'title' => 'Payments',
             'navigation' => [
                 'label' => 'Payments',
+            ],
+        ],
+        'tracking' => [
+            'title' => 'Tracking',
+            'navigation' => [
+                'label' => 'Tracking',
             ],
         ],
     ],
