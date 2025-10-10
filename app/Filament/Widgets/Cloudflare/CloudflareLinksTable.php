@@ -27,7 +27,7 @@ class CloudflareLinksTable extends BaseTableWidget
 
     protected int|string|array $columnSpan = 'full';
 
-    public $tableRecordsPerPage = 5;
+    public $tableRecordsPerPage = 3;
 
     #[On('reset')]
     public function resetComponent(): void
