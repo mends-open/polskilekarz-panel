@@ -20,9 +20,9 @@ class DashboardContext
         return $this->sessionManager->driver();
     }
 
-    public function storeChatwoot(ChatwootContext $context, bool $persist = true): void
+    public function storeChatwoot(ChatwootContext $context): void
     {
-        $this->store(self::CHATWOOT_KEY, $context->toArray(), $persist);
+        $this->store(self::CHATWOOT_KEY, $context->toArray());
     }
 
     public function chatwoot(): ChatwootContext
@@ -30,9 +30,9 @@ class DashboardContext
         return ChatwootContext::fromArray($this->session()->get(self::CHATWOOT_KEY, []));
     }
 
-    public function storeStripe(StripeContext $context, bool $persist = true): void
+    public function storeStripe(StripeContext $context): void
     {
-        $this->store(self::STRIPE_KEY, $context->toArray(), $persist);
+        $this->store(self::STRIPE_KEY, $context->toArray());
     }
 
     public function stripe(): StripeContext
@@ -40,18 +40,17 @@ class DashboardContext
         return StripeContext::fromArray($this->session()->get(self::STRIPE_KEY, []));
     }
 
-    public function markReady(bool $ready = true, bool $persist = true): void
+    public function markReady(bool $ready = true): void
     {
         $session = $this->session();
-        $method = $persist ? 'put' : 'now';
 
         if (! $ready) {
-            $session->{$method}(self::READY_KEY, false);
+            $session->put(self::READY_KEY, false);
 
             return;
         }
 
-        $session->{$method}(self::READY_KEY, $this->chatwootContextIsUsable());
+        $session->put(self::READY_KEY, $this->chatwootContextIsUsable());
     }
 
     public function isReady(): bool
@@ -90,16 +89,8 @@ class DashboardContext
     /**
      * @param array<string, mixed> $value
      */
-    private function store(string $key, array $value, bool $persist = true): void
+    private function store(string $key, array $value): void
     {
-        $session = $this->session();
-
-        if ($persist) {
-            $session->put($key, $value);
-
-            return;
-        }
-
-        $session->now($key, $value);
+        $this->session()->put($key, $value);
     }
 }

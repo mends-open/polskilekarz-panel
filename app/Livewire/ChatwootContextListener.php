@@ -33,9 +33,7 @@ class ChatwootContextListener extends Component
 
     public function mount(): void
     {
-        $this->dashboardContext->storeChatwoot(ChatwootContext::empty(), persist: false);
-        $this->dashboardContext->storeStripe(StripeContext::empty(), persist: false);
-        $this->dashboardContext->markReady(false, persist: false);
+        $this->dashboardContext->reset();
     }
 
     #[On('chatwoot.post-context')]
