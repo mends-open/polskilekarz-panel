@@ -19,14 +19,18 @@ services:
       retries: 30
     restart: unless-stopped
 
-  valkey:
-    image: valkey/valkey:7-alpine
-    container_name: valkey
-    command: ["valkey-server", "--appendonly", "no"]  # no password
+  dragonfly:  # Redis-compatible Dragonfly
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+    container_name: dragonfly
+    command: [
+      "--logtostderr",
+      "--maxmemory=1gb",
+      "--proactor_threads=2",
+    ]
     ports:
       - "6379:6379"
     healthcheck:
-      test: ["CMD", "valkey-cli", "PING"]
+      test: ["CMD", "redis-cli", "PING"]
       interval: 5s
       timeout: 3s
       retries: 30

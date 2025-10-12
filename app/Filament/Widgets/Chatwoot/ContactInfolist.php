@@ -27,9 +27,7 @@ class ContactInfolist extends BaseSchemaWidget
     use InteractsWithDashboardContext;
 
     /**
-     * @throws NotFoundExceptionInterface
      * @throws RequestException
-     * @throws ContainerExceptionInterface
      * @throws ConnectionException
      */
     #[Computed(persist: true)]
@@ -48,10 +46,6 @@ class ContactInfolist extends BaseSchemaWidget
             ->get($context->accountId, $context->contactId)['payload'];
     }
 
-    /**
-     * @throws ContainerExceptionInterface
-     * @throws NotFoundExceptionInterface
-     */
     public function isReady(): bool
     {
         return $this->dashboardContextIsReady(
@@ -66,9 +60,7 @@ class ContactInfolist extends BaseSchemaWidget
     }
 
     /**
-     * @throws NotFoundExceptionInterface
      * @throws ConnectionException
-     * @throws ContainerExceptionInterface
      * @throws RequestException
      */
     public function schema(Schema $schema): Schema
