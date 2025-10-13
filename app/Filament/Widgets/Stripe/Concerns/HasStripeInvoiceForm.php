@@ -718,21 +718,15 @@ trait HasStripeInvoiceForm
 
     protected function refreshStripeInvoiceWidget(?Closure $beforeRefresh = null): void
     {
-        if (method_exists($this, 'resetErrorBag')) {
-            $this->resetErrorBag();
-        }
-
-        if (method_exists($this, 'resetValidation')) {
-            $this->resetValidation();
-        }
-
         if ($beforeRefresh) {
             $beforeRefresh();
         }
 
         $this->resetInvoiceFormCache();
 
-        $this->dispatch('$refresh');
+        if (method_exists($this, 'resetTable')) {
+            $this->resetTable();
+        }
     }
 
     protected function getInvoiceFormDefaults(?array $invoice): array
