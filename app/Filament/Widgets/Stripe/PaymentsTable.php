@@ -5,6 +5,7 @@ namespace App\Filament\Widgets\Stripe;
 use App\Filament\Widgets\BaseTableWidget;
 use App\Filament\Widgets\Stripe\Concerns\HandlesCurrencyDecimals;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
+use App\Support\Dashboard\Concerns\RefreshesDashboardContextOnBoot;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
@@ -24,7 +25,7 @@ class PaymentsTable extends BaseTableWidget
 {
     use HandlesCurrencyDecimals;
     use InteractsWithDashboardContext;
-
+    use RefreshesDashboardContextOnBoot;
     protected int|string|array $columnSpan = 'full';
 
     public $tableRecordsPerPage = 3;

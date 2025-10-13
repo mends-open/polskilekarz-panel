@@ -5,6 +5,7 @@ namespace App\Filament\Widgets\Chatwoot;
 use App\Filament\Widgets\BaseSchemaWidget;
 use App\Jobs\Stripe\SyncCustomerFromChatwootContact;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
+use App\Support\Dashboard\Concerns\RefreshesDashboardContextOnBoot;
 use App\Support\Dashboard\StripeContext;
 use App\Support\Metadata\Metadata;
 use Filament\Actions\Action;
@@ -25,6 +26,7 @@ use Stripe\Exception\ApiErrorException;
 class ContactInfolist extends BaseSchemaWidget
 {
     use InteractsWithDashboardContext;
+    use RefreshesDashboardContextOnBoot;
 
     /**
      * @throws RequestException

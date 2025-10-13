@@ -7,6 +7,7 @@ use App\Filament\Widgets\Stripe\Concerns\HandlesCurrencyDecimals;
 use App\Filament\Widgets\Stripe\Concerns\HasLatestStripeInvoice;
 use App\Filament\Widgets\Stripe\Concerns\HasStripeInvoiceForm;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
+use App\Support\Dashboard\Concerns\RefreshesDashboardContextOnBoot;
 use Filament\Actions\Action;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\Layout\Split;
@@ -23,7 +24,7 @@ class LatestInvoiceLinesTable extends BaseTableWidget
     use HasLatestStripeInvoice;
     use HasStripeInvoiceForm;
     use InteractsWithDashboardContext;
-
+    use RefreshesDashboardContextOnBoot;
     protected int|string|array $columnSpan = 'full';
 
     protected function getHeading(): ?string

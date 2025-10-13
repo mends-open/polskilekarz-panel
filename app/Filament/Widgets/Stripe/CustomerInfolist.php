@@ -5,6 +5,7 @@ namespace App\Filament\Widgets\Stripe;
 use App\Filament\Widgets\BaseSchemaWidget;
 use App\Jobs\Stripe\CreateCustomerPortalSessionLink;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
+use App\Support\Dashboard\Concerns\RefreshesDashboardContextOnBoot;
 use App\Support\Metadata\Metadata;
 use Filament\Actions\Action;
 use Filament\Infolists\Components\TextEntry;
@@ -20,7 +21,7 @@ use Stripe\Exception\ApiErrorException;
 
 class CustomerInfolist extends BaseSchemaWidget
 {
-    use InteractsWithDashboardContext;
+    use InteractsWithDashboardContext, RefreshesDashboardContextOnBoot;
 
     public function isReady(): bool
     {
