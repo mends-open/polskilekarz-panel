@@ -1,28 +1,39 @@
 @script
 <script>
-    // Immediately ask for context (no DOMContentLoaded delay)
-    window.parent.postMessage('chatwoot-dashboard-app:fetch-info', '*');
-    console.log("🔵 Sent request: chatwoot-dashboard-app:fetch-info");
+    const registerFetchListener = () => {
+        if (!window.Livewire || typeof window.Livewire.on !== 'function') {
+            return;
+        }
 
-    // Listen for messages back from Chatwoot
-    window.addEventListener("message", function (event) {
-        console.log("🟡 Received raw event:", event);
+        window.Livewire.on('chatwoot.fetch-context', () => {
+            window.parent.postMessage('chatwoot-dashboard-app:fetch-info', '*');
+        });
+    };
 
-        // Safety: Only accept messages from the Chatwoot app
-        if (!event.data) return;
+    if (document.readyState === 'loading') {
+        document.addEventListener('livewire:init', registerFetchListener, { once: true });
+    } else {
+        registerFetchListener();
+    }
 
-        try {
-            let payload = typeof event.data === "string"
-                ? JSON.parse(event.data)
-                : event.data;
+    window.addEventListener('message', (event) => {
+        if (!event.data) {
+            return;
+        }
 
-            console.log("🟢 Parsed payload:", payload);
+        let payload = event.data;
 
-            // Dispatch to Livewire backend
+        if (typeof payload === 'string') {
+            try {
+                payload = JSON.parse(payload);
+            } catch (error) {
+                console.error('Failed to parse Chatwoot context:', error, event.data);
+                return;
+            }
+        }
+
+        if (typeof $wire !== 'undefined' && typeof $wire.dispatch === 'function') {
             $wire.dispatch('chatwoot.post-context', payload);
-
-        } catch (e) {
-            console.error("🔴 Failed to parse Chatwoot context:", e, event.data);
         }
     });
 </script>
