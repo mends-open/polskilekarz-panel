@@ -135,6 +135,7 @@ class LatestInvoiceLinesTable extends BaseTableWidget
         $this->resetErrorBag();
         $this->resetValidation();
         $this->clearLatestInvoiceCache();
+        $this->resetInvoiceFormCache();
     }
 
     #[On('stripe.invoices.refresh')]
@@ -143,8 +144,8 @@ class LatestInvoiceLinesTable extends BaseTableWidget
         $this->refreshLines();
     }
 
-    #[On('stripe.set-context')]
-    public function refreshContext(): void
+    #[On('reset')]
+    public function resetComponent(): void
     {
         $this->refreshLines();
     }

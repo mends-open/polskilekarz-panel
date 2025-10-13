@@ -44,11 +44,11 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
     public function refreshLatestInvoice(): void
     {
         $this->clearLatestInvoiceCache();
-        unset($this->stripePriceCollection, $this->stripeProductCollection);
+        $this->resetInvoiceFormCache();
     }
 
-    #[On('stripe.set-context')]
-    public function refreshContext(): void
+    #[On('reset')]
+    public function resetComponent(): void
     {
         $this->refreshLatestInvoice();
     }

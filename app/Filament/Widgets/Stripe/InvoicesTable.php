@@ -49,7 +49,13 @@ class InvoicesTable extends BaseTableWidget
         $this->resetErrorBag();
         $this->resetValidation();
         unset($this->customerInvoices);
-        unset($this->stripePriceCollection, $this->stripeProductCollection);
+        $this->resetInvoiceFormCache();
+    }
+
+    #[On('reset')]
+    public function resetComponent(): void
+    {
+        $this->refreshInvoices();
     }
 
     public function table(Table $table): Table
@@ -226,12 +232,6 @@ class InvoicesTable extends BaseTableWidget
 
             return [];
         }
-    }
-
-    #[On('stripe.set-context')]
-    public function refreshContext(): void
-    {
-        $this->refreshInvoices();
     }
 
     protected function afterInvoiceFormHandled(): void

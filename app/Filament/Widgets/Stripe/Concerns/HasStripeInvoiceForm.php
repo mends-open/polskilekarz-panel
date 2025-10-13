@@ -896,6 +896,12 @@ trait HasStripeInvoiceForm
 
         return $customer->id;
     }
+
+    protected function resetInvoiceFormCache(): void
+    {
+        unset($this->stripePriceCollection, $this->stripeProductCollection);
+    }
+
     protected function afterInvoiceFormHandled(): void
     {
         // Allow consuming components to hook into invoice creation.
