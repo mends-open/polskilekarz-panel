@@ -134,11 +134,7 @@ class LatestInvoiceLinesTable extends BaseTableWidget
     #[On('reset')]
     public function refreshLines(): void
     {
-        $this->resetErrorBag();
-        $this->resetValidation();
-        $this->clearLatestInvoiceCache();
-        $this->resetInvoiceFormCache();
-        $this->dispatch('$refresh');
+        $this->refreshStripeInvoiceWidget(fn () => $this->clearLatestInvoiceCache());
     }
 
     private function formatLineItem(StripeObject|array|null $line): array

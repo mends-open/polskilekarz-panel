@@ -44,9 +44,7 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
     #[On('reset')]
     public function refreshLatestInvoice(): void
     {
-        $this->clearLatestInvoiceCache();
-        $this->resetInvoiceFormCache();
-        $this->dispatch('$refresh');
+        $this->refreshStripeInvoiceWidget(fn () => $this->clearLatestInvoiceCache());
     }
 
     public function schema(Schema $schema): Schema

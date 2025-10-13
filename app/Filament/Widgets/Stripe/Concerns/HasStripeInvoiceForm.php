@@ -5,6 +5,7 @@ namespace App\Filament\Widgets\Stripe\Concerns;
 use App\Jobs\Stripe\CreateInvoice;
 use App\Support\Dashboard\StripeContext;
 use App\Support\Metadata\Metadata;
+use Closure;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Repeater\TableColumn;
@@ -713,6 +714,25 @@ trait HasStripeInvoiceForm
         $this->dispatch('stripe.latest-invoice.refresh');
         $this->dispatch('stripe.latest-invoice-lines.refresh');
         $this->dispatch('stripe.invoices-table.refresh');
+    }
+
+    protected function refreshStripeInvoiceWidget(?Closure $beforeRefresh = null): void
+    {
+        if (method_exists($this, 'resetErrorBag')) {
+            $this->resetErrorBag();
+        }
+
+        if (method_exists($this, 'resetValidation')) {
+            $this->resetValidation();
+        }
+
+        if ($beforeRefresh) {
+            $beforeRefresh();
+        }
+
+        $this->resetInvoiceFormCache();
+
+        $this->dispatch('$refresh');
     }
 
     protected function getInvoiceFormDefaults(?array $invoice): array

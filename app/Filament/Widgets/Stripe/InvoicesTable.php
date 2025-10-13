@@ -46,11 +46,9 @@ class InvoicesTable extends BaseTableWidget
     #[On('reset')]
     public function refreshInvoices(): void
     {
-        $this->resetErrorBag();
-        $this->resetValidation();
-        unset($this->customerInvoices);
-        $this->resetInvoiceFormCache();
-        $this->dispatch('$refresh');
+        $this->refreshStripeInvoiceWidget(function (): void {
+            unset($this->customerInvoices);
+        });
     }
 
     public function table(Table $table): Table
