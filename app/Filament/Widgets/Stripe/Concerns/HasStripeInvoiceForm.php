@@ -703,9 +703,16 @@ trait HasStripeInvoiceForm
             ->info()
             ->send();
 
-        $this->dispatch('stripe.invoices.refresh');
+        $this->dispatchStripeInvoiceRefreshEvents();
 
         $this->afterInvoiceFormHandled();
+    }
+
+    protected function dispatchStripeInvoiceRefreshEvents(): void
+    {
+        $this->dispatch('stripe.latest-invoice.refresh');
+        $this->dispatch('stripe.latest-invoice-lines.refresh');
+        $this->dispatch('stripe.invoices-table.refresh');
     }
 
     protected function getInvoiceFormDefaults(?array $invoice): array

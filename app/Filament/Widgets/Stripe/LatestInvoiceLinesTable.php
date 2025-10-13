@@ -27,6 +27,8 @@ class LatestInvoiceLinesTable extends BaseTableWidget
     use RefreshesDashboardContextOnBoot;
     protected int|string|array $columnSpan = 'full';
 
+    public int $latestInvoiceLinesRefreshTick = 0;
+
     protected function getHeading(): ?string
     {
         return __('filament.widgets.stripe.latest_invoice_lines_table.heading');
@@ -131,14 +133,14 @@ class LatestInvoiceLinesTable extends BaseTableWidget
 
     private function refreshLines(): void
     {
-        $this->resetTable();
+        $this->latestInvoiceLinesRefreshTick++;
         $this->resetErrorBag();
         $this->resetValidation();
         $this->clearLatestInvoiceCache();
         $this->resetInvoiceFormCache();
     }
 
-    #[On('stripe.invoices.refresh')]
+    #[On('stripe.latest-invoice-lines.refresh')]
     public function handleInvoiceRefresh(): void
     {
         $this->refreshLines();

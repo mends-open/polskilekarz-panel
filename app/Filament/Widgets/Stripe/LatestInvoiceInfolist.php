@@ -28,6 +28,8 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
 
     protected int|string|array $columnSpan = 'full';
 
+    public int $latestInvoiceRefreshTick = 0;
+
     public function isReady(): bool
     {
         return $this->dashboardContextIsReady(
@@ -40,9 +42,10 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
         $this->refreshLatestInvoice();
     }
 
-    #[On('stripe.invoices.refresh')]
+    #[On('stripe.latest-invoice.refresh')]
     public function refreshLatestInvoice(): void
     {
+        $this->latestInvoiceRefreshTick++;
         $this->clearLatestInvoiceCache();
         $this->resetInvoiceFormCache();
     }
