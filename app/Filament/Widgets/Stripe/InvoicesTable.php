@@ -35,8 +35,6 @@ class InvoicesTable extends BaseTableWidget
 
     public $tableRecordsPerPage = 3;
 
-    public int $invoicesTableRefreshTick = 0;
-
     public function isReady(): bool
     {
         return $this->dashboardContextIsReady(
@@ -45,19 +43,14 @@ class InvoicesTable extends BaseTableWidget
     }
 
     #[On('stripe.invoices-table.refresh')]
+    #[On('reset')]
     public function refreshInvoices(): void
     {
-        $this->invoicesTableRefreshTick++;
         $this->resetErrorBag();
         $this->resetValidation();
         unset($this->customerInvoices);
         $this->resetInvoiceFormCache();
-    }
-
-    #[On('reset')]
-    public function resetComponent(): void
-    {
-        $this->refreshInvoices();
+        $this->dispatch('$refresh');
     }
 
     public function table(Table $table): Table
