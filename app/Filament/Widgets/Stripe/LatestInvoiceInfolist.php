@@ -40,17 +40,11 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
         $this->refreshLatestInvoice();
     }
 
-    #[On('stripe.invoices.refresh')]
+    #[On('stripe.latest-invoice.refresh')]
+    #[On('reset')]
     public function refreshLatestInvoice(): void
     {
-        $this->clearLatestInvoiceCache();
-        unset($this->stripePriceCollection, $this->stripeProductCollection);
-    }
-
-    #[On('stripe.set-context')]
-    public function refreshContext(): void
-    {
-        $this->refreshLatestInvoice();
+        $this->refreshStripeInvoiceWidget(fn () => $this->clearLatestInvoiceCache());
     }
 
     public function schema(Schema $schema): Schema

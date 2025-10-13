@@ -25,6 +25,7 @@ class LatestInvoiceLinesTable extends BaseTableWidget
     use HasStripeInvoiceForm;
     use InteractsWithDashboardContext;
     use RefreshesDashboardContextOnBoot;
+
     protected int|string|array $columnSpan = 'full';
 
     protected function getHeading(): ?string
@@ -129,24 +130,11 @@ class LatestInvoiceLinesTable extends BaseTableWidget
             ->all();
     }
 
-    private function refreshLines(): void
+    #[On('stripe.latest-invoice-lines.refresh')]
+    #[On('reset')]
+    public function refreshLines(): void
     {
-        $this->resetTable();
-        $this->resetErrorBag();
-        $this->resetValidation();
-        $this->clearLatestInvoiceCache();
-    }
-
-    #[On('stripe.invoices.refresh')]
-    public function handleInvoiceRefresh(): void
-    {
-        $this->refreshLines();
-    }
-
-    #[On('stripe.set-context')]
-    public function refreshContext(): void
-    {
-        $this->refreshLines();
+        $this->refreshStripeInvoiceWidget(fn () => $this->clearLatestInvoiceCache());
     }
 
     private function formatLineItem(StripeObject|array|null $line): array
