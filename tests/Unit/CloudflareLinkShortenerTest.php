@@ -7,84 +7,64 @@ use App\Services\Cloudflare\LinkShortener;
 use App\Services\Cloudflare\Storage\KVNamespace;
 use Illuminate\Http\Client\Factory;
 
-it('merges Cloudflare link entry logs into a single payload structure', function () {
+it('loads aggregated Cloudflare link entries from the primary namespace', function () {
     $entries = [
-        'alpha:0' => base64_encode(gzencode(json_encode([
+        'alpha:entries' => base64_encode(gzencode(json_encode([
             'slug' => 'alpha',
-            'timestamp' => '2024-10-01T10:00:00Z',
-            'request_id' => 'req-1',
+            'url' => 'https://destination.test/alpha',
+            'short_url' => 'https://short.test/alpha',
+            'total' => 2,
+            'entries' => [
+                [
+                    'identifier' => '018fba1d-56b7-7c9b-b05e-31b89d812345',
+                    'timestamp' => '2024-10-01T10:00:00Z',
+                    'request_id' => 'req-1',
+                    'request' => [
+                        'method' => 'GET',
+                        'url' => 'https://worker.test/alpha',
+                    ],
+                    'response' => [
+                        'status' => 302,
+                    ],
+                ],
+                [
+                    'identifier' => '018fba1d-56b8-7d0a-b37c-31b89d876543',
+                    'timestamp' => '2024-10-01T10:05:00Z',
+                    'request_id' => 'req-2',
+                    'request' => [
+                        'method' => 'GET',
+                        'url' => 'https://worker.test/alpha',
+                    ],
+                    'response' => [
+                        'status' => 302,
+                    ],
+                ],
+            ],
         ], JSON_THROW_ON_ERROR))),
-        'alpha:0:request' => json_encode([
-            'method' => 'GET',
-            'url' => 'https://worker.test/alpha',
-        ], JSON_THROW_ON_ERROR),
-        'alpha:0:response' => json_encode([
-            'status' => 302,
-        ], JSON_THROW_ON_ERROR),
-        'alpha:1' => base64_encode(gzencode(json_encode([
-            'slug' => 'alpha',
-            'timestamp' => '2024-10-01T10:05:00Z',
-            'request_id' => 'req-2',
-        ], JSON_THROW_ON_ERROR))),
-        'alpha:1:request' => json_encode([
-            'method' => 'GET',
-            'url' => 'https://worker.test/alpha',
-        ], JSON_THROW_ON_ERROR),
-        'alpha:1:response' => json_encode([
-            'status' => 302,
-        ], JSON_THROW_ON_ERROR),
-        'alpha:counter' => '2',
     ];
 
     $client = new FakeCloudflareClient($entries);
     $shortener = new LinkShortener($client);
 
-    $result = $shortener->entries('alpha', 'https://destination.test');
+    $result = $shortener->entries('alpha');
 
     expect($result['slug'])->toBe('alpha');
-    expect($result['url'])->toBe('https://destination.test');
+    expect($result['url'])->toBe('https://destination.test/alpha');
     expect($result['short_url'])->toBe('https://short.test/alpha');
     expect($result['total'])->toBe(2);
     expect($result['entries'])->toHaveCount(2);
-
-    expect($result['entries'][0]['index'])->toBe(0);
-    expect($result['entries'][0]['identifier'])->toBe('0');
-    expect($result['entries'][0]['key'])->toBe('alpha:0');
-    expect($result['entries'][0]['keys'])->toBe([
-        'alpha:0',
-        'alpha:0:request',
-        'alpha:0:response',
-    ]);
-    expect($result['entries'][0]['timestamp'])->toBe('2024-10-01T10:00:00Z');
-    expect($result['entries'][0]['request_id'])->toBe('req-1');
-    expect($result['entries'][0]['request']['method'])->toBe('GET');
-    expect($result['entries'][0]['response']['status'])->toBe(302);
-
-    expect($result['entries'][1]['index'])->toBe(1);
-    expect($result['entries'][1]['identifier'])->toBe('1');
-    expect($result['entries'][1]['keys'])->toBe([
-        'alpha:1',
-        'alpha:1:request',
-        'alpha:1:response',
-    ]);
-    expect($result['entries'][1]['timestamp'])->toBe('2024-10-01T10:05:00Z');
-    expect($result['entries'][1]['request_id'])->toBe('req-2');
+    expect($result['entries'][0]['identifier'])->toBe('018fba1d-56b7-7c9b-b05e-31b89d812345');
+    expect($result['entries'][1]['request']['url'])->toBe('https://worker.test/alpha');
 });
 
-it('handles plain JSON payloads without compression', function () {
+it('derives totals when the payload omits them', function () {
     $entries = [
-        'beta:0' => json_encode([
-            'slug' => 'beta',
-            'timestamp' => '2024-10-02T11:00:00Z',
-            'request' => [
-                'method' => 'GET',
-                'url' => 'https://worker.test/beta',
-            ],
-            'response' => [
-                'status' => 302,
+        'beta:entries' => json_encode([
+            'entries' => [
+                ['identifier' => '0'],
+                ['identifier' => '1'],
             ],
         ], JSON_THROW_ON_ERROR),
-        'beta:counter' => '1',
     ];
 
     $client = new FakeCloudflareClient($entries);
@@ -92,64 +72,14 @@ it('handles plain JSON payloads without compression', function () {
 
     $result = $shortener->entries('beta');
 
-    expect($result['entries'])->toHaveCount(1);
-    expect($result['entries'][0]['timestamp'])->toBe('2024-10-02T11:00:00Z');
-    expect($result['total'])->toBe(1);
-});
-
-it('supports UUIDv7 log identifiers', function () {
-    $uuidOne = '018fba1d-56b7-7c9b-b05e-31b89d812345';
-    $uuidTwo = '018fba1d-56b8-7d0a-b37c-31b89d876543';
-
-    $entries = [
-        sprintf('gamma:%s', $uuidOne) => json_encode([
-            'slug' => 'gamma',
-            'timestamp' => '2024-10-03T09:15:00Z',
-            'request' => [
-                'method' => 'GET',
-                'url' => 'https://worker.test/gamma',
-            ],
-            'response' => [
-                'status' => 200,
-            ],
-        ], JSON_THROW_ON_ERROR),
-        sprintf('gamma:%s:request', $uuidTwo) => json_encode([
-            'method' => 'GET',
-            'url' => 'https://worker.test/gamma',
-        ], JSON_THROW_ON_ERROR),
-        sprintf('gamma:%s', $uuidTwo) => base64_encode(gzencode(json_encode([
-            'slug' => 'gamma',
-            'timestamp' => '2024-10-03T09:20:00Z',
-            'request_id' => 'req-3',
-        ], JSON_THROW_ON_ERROR))),
-        sprintf('gamma:%s:response', $uuidTwo) => json_encode([
-            'status' => 302,
-        ], JSON_THROW_ON_ERROR),
-        'gamma:counter' => '2',
-    ];
-
-    $client = new FakeCloudflareClient($entries);
-    $shortener = new LinkShortener($client);
-
-    $result = $shortener->entries('gamma');
-
     expect($result['total'])->toBe(2);
     expect($result['entries'])->toHaveCount(2);
-
-    expect($result['entries'][0]['identifier'])->toBe($uuidOne);
-    expect($result['entries'][0])->not->toHaveKey('index');
-    expect($result['entries'][0]['request']['url'])->toBe('https://worker.test/gamma');
-    expect($result['entries'][0]['response']['status'])->toBe(200);
-
-    expect($result['entries'][1]['identifier'])->toBe($uuidTwo);
-    expect($result['entries'][1]['request_id'])->toBe('req-3');
-    expect($result['entries'][1]['keys'])->toContain(sprintf('gamma:%s:response', $uuidTwo));
 });
 
-it('returns an empty structure when the logs namespace is not configured', function () {
+it('returns an empty structure when the links namespace is not configured', function () {
     $client = new FakeCloudflareClient([], [
         'shortener' => [
-            'entries_namespace_id' => '',
+            'links_namespace_id' => '',
             'domain' => '',
         ],
     ]);
@@ -181,7 +111,6 @@ class FakeCloudflareClient extends CloudflareClient
                 'links_namespace_id' => 'links',
                 'domain' => 'https://short.test',
                 'slug_length' => 6,
-                'entries_namespace_id' => 'entries',
             ],
         ];
 
@@ -190,7 +119,7 @@ class FakeCloudflareClient extends CloudflareClient
 
     public function kv(string $namespaceId, array $options = []): KVNamespace
     {
-        if ($namespaceId === 'entries') {
+        if ($namespaceId === 'links') {
             return new FakeKVNamespace($this->store);
         }
 
@@ -202,22 +131,7 @@ class FakeKVNamespace extends KVNamespace
 {
     public function __construct(private array $store)
     {
-        parent::__construct(new Factory, 'https://api.cloudflare.test', 'token', 'account', 'entries', null);
-    }
-
-    public function listKeys(array $query = []): array
-    {
-        $prefix = $query['prefix'] ?? '';
-
-        $keys = [];
-
-        foreach (array_keys($this->store) as $name) {
-            if ($prefix === '' || str_starts_with($name, $prefix)) {
-                $keys[] = ['name' => $name];
-            }
-        }
-
-        return $keys;
+        parent::__construct(new Factory, 'https://api.cloudflare.test', 'token', 'account', 'links', null);
     }
 
     public function retrieve(string $key): ?string
