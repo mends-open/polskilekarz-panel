@@ -135,32 +135,95 @@ class LinkShortener
      */
     protected function collectEntryRecords(KVNamespace $kv, string $slug): array
     {
-        $payload = $kv->retrieve($this->entryRecordsKey($slug));
+        $keys = $kv->listKeys(['prefix' => $this->entryKeyPrefix($slug)]);
 
-        if (! is_string($payload) || $payload === '') {
+        if ($keys === []) {
             return [[], 0, []];
         }
 
-        $decoded = $this->decodeEntryPayload($payload);
+        $entries = [];
+        $metadata = [];
+        $aggregate = null;
 
-        if ($decoded === null) {
-            Log::warning('Failed to decode Cloudflare link entries payload', [
-                'slug' => $slug,
-            ]);
+        foreach ($keys as $key) {
+            $name = (string) ($key['name'] ?? '');
 
-            return [[], 0, []];
+            if ($name === '') {
+                continue;
+            }
+
+            $payload = $kv->retrieve($name);
+
+            if (! is_string($payload) || $payload === '') {
+                continue;
+            }
+
+            if ($name === $this->entryRecordsKey($slug)) {
+                $aggregate = $this->decodeEntryPayload($payload);
+
+                if ($aggregate === null) {
+                    Log::warning('Failed to decode Cloudflare link entries payload', [
+                        'slug' => $slug,
+                        'key' => $name,
+                    ]);
+                }
+
+                continue;
+            }
+
+            $entry = $this->decodeEntryRecord($payload);
+
+            if ($entry === null) {
+                Log::debug('Ignoring Cloudflare link entry payload', [
+                    'slug' => $slug,
+                    'key' => $name,
+                ]);
+
+                continue;
+            }
+
+            $entry['key'] ??= $name;
+
+            $entries[] = $entry;
+
+            $this->mergeMetadataFromEntry($entry, $metadata);
         }
 
-        $entries = $this->normalizeEntryRecords($decoded['entries'] ?? []);
+        if ($aggregate !== null) {
+            $metadata = array_replace($metadata, $this->extractEntryMetadata($aggregate));
 
-        return [
-            $entries,
-            $this->resolveEntryTotal($decoded, $entries),
-            $this->extractEntryMetadata($decoded),
-        ];
+            $aggregateEntries = $this->normalizeEntryRecords($aggregate['entries'] ?? []);
+
+            if ($entries === []) {
+                $entries = $aggregateEntries;
+
+                foreach ($entries as &$entry) {
+                    $entry['key'] ??= $this->entryRecordsKey($slug);
+                }
+
+                unset($entry);
+            } else {
+                foreach ($aggregateEntries as $record) {
+                    $entries = $this->mergeEntryPayload($entries, $record);
+                }
+            }
+
+            $total = $this->resolveEntryTotal($aggregate, $entries);
+        } else {
+            $total = count($entries);
+        }
+
+        $this->sortEntryRecords($entries);
+
+        return [$entries, $total, $metadata];
     }
 
     protected function entryRecordsKey(string $slug): string
+    {
+        return $slug.':entries';
+    }
+
+    protected function entryKeyPrefix(string $slug): string
     {
         return $slug.':entries';
     }
@@ -258,5 +321,101 @@ class LinkShortener
     protected function isGzipPayload(string $payload): bool
     {
         return strlen($payload) >= 2 && str_starts_with($payload, "\x1F\x8B");
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    protected function decodeEntryRecord(string $payload): ?array
+    {
+        $decoded = $this->decodeEntryPayload($payload);
+
+        if ($decoded === null) {
+            return null;
+        }
+
+        if (isset($decoded['entry']) && is_array($decoded['entry'])) {
+            $decoded = $decoded['entry'];
+        }
+
+        if (isset($decoded['entries']) && is_array($decoded['entries'])) {
+            return null;
+        }
+
+        return is_array($decoded) ? $decoded : null;
+    }
+
+    protected function mergeMetadataFromEntry(array $entry, array &$metadata): void
+    {
+        foreach (['slug', 'url', 'short_url'] as $key) {
+            if (! array_key_exists($key, $metadata) && isset($entry[$key]) && is_string($entry[$key]) && $entry[$key] !== '') {
+                $metadata[$key] = $entry[$key];
+            }
+        }
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $entries
+     * @param  array<string, mixed>  $payload
+     * @return array<int, array<string, mixed>>
+     */
+    protected function mergeEntryPayload(array $entries, array $payload): array
+    {
+        $identifier = $payload['identifier'] ?? null;
+
+        if (is_string($identifier) && $identifier !== '') {
+            foreach ($entries as $index => $entry) {
+                if (($entry['identifier'] ?? null) === $identifier) {
+                    $entries[$index] = $this->mergeEntryAttributes($entry, $payload);
+
+                    return $entries;
+                }
+            }
+        }
+
+        $entries[] = $payload;
+
+        return $entries;
+    }
+
+    /**
+     * @param  array<string, mixed>  $base
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    protected function mergeEntryAttributes(array $base, array $payload): array
+    {
+        foreach ($payload as $key => $value) {
+            if (! array_key_exists($key, $base)) {
+                $base[$key] = $value;
+
+                continue;
+            }
+
+            if (is_array($value) && is_array($base[$key])) {
+                $base[$key] = array_replace_recursive($base[$key], $value);
+            } elseif ($base[$key] === null) {
+                $base[$key] = $value;
+            }
+        }
+
+        return $base;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $entries
+     */
+    protected function sortEntryRecords(array &$entries): void
+    {
+        usort($entries, function (array $left, array $right): int {
+            $leftTimestamp = (string) ($left['timestamp'] ?? '');
+            $rightTimestamp = (string) ($right['timestamp'] ?? '');
+
+            if ($leftTimestamp === $rightTimestamp) {
+                return strcmp((string) ($left['identifier'] ?? ''), (string) ($right['identifier'] ?? ''));
+            }
+
+            return strcmp($leftTimestamp, $rightTimestamp);
+        });
     }
 }

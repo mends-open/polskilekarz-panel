@@ -57,6 +57,42 @@ it('loads aggregated Cloudflare link entries from the primary namespace', functi
     expect($result['entries'][1]['request']['url'])->toBe('https://worker.test/alpha');
 });
 
+it('lists colocated entry keys and decodes their payloads', function () {
+    $entries = [
+        'gamma:entries:018fba1d-56b7-7c9b-b05e-31b89d812345' => json_encode([
+            'identifier' => '018fba1d-56b7-7c9b-b05e-31b89d812345',
+            'timestamp' => '2024-10-01T09:00:00Z',
+            'request' => [
+                'url' => 'https://worker.test/gamma',
+            ],
+            'response' => [
+                'status' => 302,
+            ],
+        ], JSON_THROW_ON_ERROR),
+        'gamma:entries:018fba1d-56b8-7d0a-b37c-31b89d876543' => base64_encode(json_encode([
+            'identifier' => '018fba1d-56b8-7d0a-b37c-31b89d876543',
+            'timestamp' => '2024-10-01T10:00:00Z',
+            'request' => [
+                'url' => 'https://worker.test/gamma',
+            ],
+            'response' => [
+                'status' => 200,
+            ],
+        ], JSON_THROW_ON_ERROR)),
+    ];
+
+    $client = new FakeCloudflareClient($entries);
+    $shortener = new LinkShortener($client);
+
+    $result = $shortener->entries('gamma');
+
+    expect($result['slug'])->toBe('gamma');
+    expect($result['total'])->toBe(2);
+    expect($result['entries'])->toHaveCount(2);
+    expect($result['entries'][0]['response']['status'])->toBe(302);
+    expect($result['entries'][1]['identifier'])->toBe('018fba1d-56b8-7d0a-b37c-31b89d876543');
+});
+
 it('derives totals when the payload omits them', function () {
     $entries = [
         'beta:entries' => json_encode([
@@ -149,6 +185,21 @@ class FakeKVNamespace extends KVNamespace
         }
 
         return $value;
+    }
+
+    public function listKeys(array $params = []): array
+    {
+        $prefix = (string) ($params['prefix'] ?? '');
+
+        $keys = array_keys($this->store);
+
+        if ($prefix !== '') {
+            $keys = array_values(array_filter($keys, fn ($key) => str_starts_with($key, $prefix)));
+        }
+
+        sort($keys);
+
+        return array_map(fn ($key) => ['name' => $key], $keys);
     }
 
 }
