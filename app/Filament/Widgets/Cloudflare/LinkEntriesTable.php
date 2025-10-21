@@ -78,14 +78,12 @@ class LinkEntriesTable extends BaseTableWidget
                             ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.slug.label'))
                             ->badge()
                             ->color('gray')
-                            ->placeholder(__('filament.widgets.common.placeholders.blank'))
-                            ->copyable(),
+                            ->placeholder(__('filament.widgets.common.placeholders.blank')),
                         TextColumn::make('short_url')
                             ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.short_url.label'))
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->url(fn ($state) => $state)
                             ->openUrlInNewTab()
-                            ->copyable()
                             ->limit(50),
                         TextColumn::make('url')
                             ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.url.label'))
@@ -110,8 +108,7 @@ class LinkEntriesTable extends BaseTableWidget
                             ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.entity_identifier.label'))
                             ->placeholder(__('filament.widgets.common.placeholders.blank'))
                             ->badge()
-                            ->color('gray')
-                            ->copyable(),
+                            ->color('gray'),
                     ])->space(1),
                     Stack::make([
                         TextColumn::make('request.url')
@@ -130,8 +127,7 @@ class LinkEntriesTable extends BaseTableWidget
                             ->placeholder(__('filament.widgets.common.placeholders.location')),
                         TextColumn::make('request.headers.X-Real-Ip')
                             ->tooltip(__('filament.widgets.cloudflare.link_entries_table.columns.request_ip.label'))
-                            ->placeholder(__('filament.widgets.common.placeholders.blank'))
-                            ->copyable(),
+                            ->placeholder(__('filament.widgets.common.placeholders.blank')),
                     ])->space(1),
                     Stack::make([
                         TextColumn::make('response.status')
@@ -236,10 +232,12 @@ class LinkEntriesTable extends BaseTableWidget
 
         $entryKey = (string) ($entry['key'] ?? '');
 
+        $identifier = (string) ($entry['identifier'] ?? ($entry['index'] ?? ''));
+
         return [
             'id' => $entryKey !== ''
                 ? $entryKey
-                : sprintf('%s-%s', $link->id, $entry['index'] ?? Str::uuid()),
+                : sprintf('%s-%s', $link->id, $identifier !== '' ? $identifier : Str::uuid()),
             'slug' => $link->slug,
             'short_url' => $shortUrl,
             'url' => $link->url,

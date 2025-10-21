@@ -17,8 +17,6 @@ class LinkShortener
 
     protected int $slugLength;
 
-    protected string $entriesNamespace;
-
     public function __construct(protected CloudflareClient $cloudflare)
     {
         $config = $this->cloudflare->config('shortener', []);
@@ -27,7 +25,6 @@ class LinkShortener
         $this->namespace = (string) ($config['links_namespace_id'] ?? '');
         $this->domain = (string) ($config['domain'] ?? '');
         $this->slugLength = (int) ($config['slug_length'] ?? 8);
-        $this->entriesNamespace = (string) ($config['entries_namespace_id'] ?? '');
     }
 
     /**
@@ -97,15 +94,23 @@ class LinkShortener
             'entries' => [],
         ];
 
-        if ($slug === '' || $this->entriesNamespace === '') {
+        if ($slug === '' || $this->namespace === '') {
             return $result;
         }
 
-        $kv = $this->cloudflare->kv($this->entriesNamespace);
-        [$entries, $counter] = $this->collectEntryRecords($kv, $slug);
+        $kv = $this->cloudflare->kv($this->namespace, ['domain' => $this->domain]);
+        [$entries, $counter, $metadata] = $this->collectEntryRecords($kv, $slug);
 
         $result['entries'] = $entries;
         $result['total'] = $counter;
+
+        if ($metadata !== []) {
+            foreach (['slug', 'url', 'short_url'] as $key) {
+                if (array_key_exists($key, $metadata)) {
+                    $result[$key] = $metadata[$key];
+                }
+            }
+        }
 
         return $result;
     }
@@ -126,19 +131,19 @@ class LinkShortener
     }
 
     /**
-     * @return array{0: array<int, array<string, mixed>>, 1: int}
+     * @return array{0: array<int, array<string, mixed>>, 1: int, 2: array<string, mixed>}
      */
     protected function collectEntryRecords(KVNamespace $kv, string $slug): array
     {
-        $keys = $kv->listKeys(['prefix' => $slug.':']);
+        $keys = $kv->listKeys(['prefix' => $this->entryKeyPrefix($slug)]);
 
         if ($keys === []) {
-            return [[], 0];
+            return [[], 0, []];
         }
 
         $entries = [];
-        $counter = 0;
-        $counterKey = $this->entryCounterKey($slug);
+        $metadata = [];
+        $aggregate = null;
 
         foreach ($keys as $key) {
             $name = (string) ($key['name'] ?? '');
@@ -147,128 +152,144 @@ class LinkShortener
                 continue;
             }
 
-            if ($name === $counterKey) {
-                $counter = $this->parseCounter($kv->retrieve($name));
-
-                continue;
-            }
-
-            $segments = $this->extractEntrySegments($slug, $name);
-
-            if ($segments === null) {
-                continue;
-            }
-
-            [$index, $path] = $segments;
-
             $payload = $kv->retrieve($name);
 
             if (! is_string($payload) || $payload === '') {
                 continue;
             }
 
-            $value = $this->decodeEntryValue($payload, $slug, $name, $path !== []);
+            if ($name === $this->entryRecordsKey($slug)) {
+                $aggregate = $this->decodeEntryPayload($payload);
 
-            if ($value === null && $path === []) {
-                continue;
-            }
-
-            $entry = &$entries[$index];
-
-            if (! isset($entry)) {
-                $entry = [
-                    'index' => $index,
-                    'keys' => [],
-                ];
-            }
-
-            if (! in_array($name, $entry['keys'], true)) {
-                $entry['keys'][] = $name;
-            }
-
-            $entry['key'] ??= $name;
-
-            if ($path === []) {
-                if (is_array($value)) {
-                    $this->mergeEntryPayload($entry, $value);
-                } elseif ($value !== null) {
-                    $entry['payload'] = $value;
+                if ($aggregate === null) {
+                    Log::warning('Failed to decode Cloudflare link entries payload', [
+                        'slug' => $slug,
+                        'key' => $name,
+                    ]);
                 }
 
                 continue;
             }
 
-            $this->assignEntryValue($entry, $path, $value);
-        }
+            $entry = $this->decodeEntryRecord($payload);
 
-        if ($entries !== []) {
-            foreach ($entries as &$entry) {
-                $entry['keys'] = array_values(array_unique($entry['keys']));
+            if ($entry === null) {
+                Log::debug('Ignoring Cloudflare link entry payload', [
+                    'slug' => $slug,
+                    'key' => $name,
+                ]);
+
+                continue;
             }
 
-            unset($entry);
+            $entry['key'] ??= $name;
+
+            $entries[] = $entry;
+
+            $this->mergeMetadataFromEntry($entry, $metadata);
+        }
+
+        if ($aggregate !== null) {
+            $metadata = array_replace($metadata, $this->extractEntryMetadata($aggregate));
+
+            $aggregateEntries = $this->normalizeEntryRecords($aggregate['entries'] ?? []);
+
+            if ($entries === []) {
+                $entries = $aggregateEntries;
+
+                foreach ($entries as &$entry) {
+                    $entry['key'] ??= $this->entryRecordsKey($slug);
+                }
+
+                unset($entry);
+            } else {
+                foreach ($aggregateEntries as $record) {
+                    $entries = $this->mergeEntryPayload($entries, $record);
+                }
+            }
+
+            $total = $this->resolveEntryTotal($aggregate, $entries);
+        } else {
+            $total = count($entries);
         }
 
         $this->sortEntryRecords($entries);
 
-        return [array_values($entries), $counter];
+        return [$entries, $total, $metadata];
+    }
+
+    protected function entryRecordsKey(string $slug): string
+    {
+        return $slug.':entries';
+    }
+
+    protected function entryKeyPrefix(string $slug): string
+    {
+        return $slug.':entries';
     }
 
     /**
-     * @param  array<int, string>  $path
+     * @param  array<int, mixed>  $entries
+     * @return array<int, array<string, mixed>>
      */
-    protected function assignEntryValue(array &$entry, array $path, mixed $value): void
+    protected function normalizeEntryRecords(array $entries): array
     {
-        if ($path === []) {
-            return;
+        return array_values(array_filter(array_map(function ($entry) {
+            return is_array($entry) ? $entry : null;
+        }, $entries)));
+    }
+
+    /**
+     * @param  array<string, mixed>  $decoded
+     * @param  array<int, array<string, mixed>>  $entries
+     */
+    protected function resolveEntryTotal(array $decoded, array $entries): int
+    {
+        $total = $decoded['total'] ?? null;
+
+        if (is_int($total)) {
+            return $total;
         }
 
-        Arr::set($entry, implode('.', $path), $value);
-    }
-
-    protected function mergeEntryPayload(array &$entry, array $payload): void
-    {
-        foreach ($payload as $key => $value) {
-            if ($key === 'index' || $key === 'keys') {
-                continue;
-            }
-
-            if ($key === 'key') {
-                $entry['key'] = $entry['key'] ?? (is_string($value) ? $value : null);
-
-                continue;
-            }
-
-            $entry[$key] = $value;
-        }
-    }
-
-    protected function parseCounter(?string $value): int
-    {
-        if ($value === null || $value === '') {
-            return 0;
+        if (is_string($total) && ctype_digit($total)) {
+            return (int) $total;
         }
 
-        return (int) $value;
+        return count($entries);
     }
 
-    protected function entryCounterKey(string $slug): string
+    protected function resolveShortLink(string $slug): ?string
     {
-        return $slug.':counter';
+        if ($slug === '' || $this->domain === '') {
+            return null;
+        }
+
+        return $this->buildShortLink($slug);
     }
 
-    protected function sortEntryRecords(array &$entries): void
+    /**
+     * @param  array<string, mixed>  $decoded
+     * @return array<string, mixed>
+     */
+    protected function extractEntryMetadata(array $decoded): array
     {
-        usort($entries, function (array $left, array $right): int {
-            $leftIndex = $left['index'] ?? PHP_INT_MAX;
-            $rightIndex = $right['index'] ?? PHP_INT_MAX;
+        return Arr::except($decoded, ['entries', 'entry', 'total']);
+    }
 
-            if ($leftIndex === $rightIndex) {
-                return strcmp((string) ($left['timestamp'] ?? ''), (string) ($right['timestamp'] ?? ''));
+    /**
+     * @return array<string, mixed>|null
+     */
+    protected function decodeEntryPayload(string $payload): ?array
+    {
+        foreach ($this->payloadCandidates($payload) as $candidate) {
+            $decoded = json_decode($candidate, true);
+
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                return $decoded;
             }
+        }
 
-            return $leftIndex <=> $rightIndex;
-        });
+        return null;
     }
 
     /**
@@ -276,21 +297,21 @@ class LinkShortener
      */
     protected function payloadCandidates(string $payload): iterable
     {
-        $candidates = [$payload];
+        $yielded = [$payload];
 
         $base64 = base64_decode($payload, true);
 
         if (is_string($base64) && $base64 !== '') {
-            $candidates[] = $base64;
+            $yielded[] = $base64;
         }
 
-        foreach ($candidates as $candidate) {
+        foreach ($yielded as $candidate) {
             yield $candidate;
 
             if ($this->isGzipPayload($candidate)) {
                 $decoded = gzdecode($candidate);
 
-                if ($decoded !== false) {
+                if (is_string($decoded) && $decoded !== '') {
                     yield $decoded;
                 }
             }
@@ -303,74 +324,98 @@ class LinkShortener
     }
 
     /**
-     * @return array{0: int, 1: array<int, string>}|null
+     * @return array<string, mixed>|null
      */
-    protected function extractEntrySegments(string $slug, string $name): ?array
+    protected function decodeEntryRecord(string $payload): ?array
     {
-        $prefix = $slug.':';
+        $decoded = $this->decodeEntryPayload($payload);
 
-        if (! str_starts_with($name, $prefix)) {
+        if ($decoded === null) {
             return null;
         }
 
-        $suffix = substr($name, strlen($prefix));
+        if (isset($decoded['entry']) && is_array($decoded['entry'])) {
+            $decoded = $decoded['entry'];
+        }
 
-        if ($suffix === '') {
+        if (isset($decoded['entries']) && is_array($decoded['entries'])) {
             return null;
         }
 
-        $segments = explode(':', $suffix);
-        $index = array_shift($segments);
-
-        if (! is_string($index) || $index === '' || ! ctype_digit($index)) {
-            return null;
-        }
-
-        return [(int) $index, $segments];
+        return is_array($decoded) ? $decoded : null;
     }
 
-    protected function resolveShortLink(string $slug): ?string
+    protected function mergeMetadataFromEntry(array $entry, array &$metadata): void
     {
-        if ($slug === '' || $this->domain === '') {
-            return null;
-        }
-
-        return $this->buildShortLink($slug);
-    }
-
-    protected function decodeEntryValue(string $payload, string $slug, string $key, bool $allowRaw): mixed
-    {
-        foreach ($this->payloadCandidates($payload) as $candidate) {
-            [$decoded, $valid] = $this->tryDecodeJson($candidate);
-
-            if ($valid) {
-                return $decoded;
+        foreach (['slug', 'url', 'short_url'] as $key) {
+            if (! array_key_exists($key, $metadata) && isset($entry[$key]) && is_string($entry[$key]) && $entry[$key] !== '') {
+                $metadata[$key] = $entry[$key];
             }
         }
-
-        if ($allowRaw) {
-            return $payload;
-        }
-
-        Log::warning('Failed to decode Cloudflare link log payload', [
-            'slug' => $slug,
-            'key' => $key,
-        ]);
-
-        return null;
     }
 
     /**
-     * @return array{0: mixed, 1: bool}
+     * @param  array<int, array<string, mixed>>  $entries
+     * @param  array<string, mixed>  $payload
+     * @return array<int, array<string, mixed>>
      */
-    protected function tryDecodeJson(string $payload): array
+    protected function mergeEntryPayload(array $entries, array $payload): array
     {
-        $decoded = json_decode($payload, true);
+        $identifier = $payload['identifier'] ?? null;
 
-        if (json_last_error() === JSON_ERROR_NONE) {
-            return [$decoded, true];
+        if (is_string($identifier) && $identifier !== '') {
+            foreach ($entries as $index => $entry) {
+                if (($entry['identifier'] ?? null) === $identifier) {
+                    $entries[$index] = $this->mergeEntryAttributes($entry, $payload);
+
+                    return $entries;
+                }
+            }
         }
 
-        return [null, false];
+        $entries[] = $payload;
+
+        return $entries;
+    }
+
+    /**
+     * @param  array<string, mixed>  $base
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    protected function mergeEntryAttributes(array $base, array $payload): array
+    {
+        foreach ($payload as $key => $value) {
+            if (! array_key_exists($key, $base)) {
+                $base[$key] = $value;
+
+                continue;
+            }
+
+            if (is_array($value) && is_array($base[$key])) {
+                $base[$key] = array_replace_recursive($base[$key], $value);
+            } elseif ($base[$key] === null) {
+                $base[$key] = $value;
+            }
+        }
+
+        return $base;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $entries
+     */
+    protected function sortEntryRecords(array &$entries): void
+    {
+        usort($entries, function (array $left, array $right): int {
+            $leftTimestamp = (string) ($left['timestamp'] ?? '');
+            $rightTimestamp = (string) ($right['timestamp'] ?? '');
+
+            if ($leftTimestamp === $rightTimestamp) {
+                return strcmp((string) ($left['identifier'] ?? ''), (string) ($right['identifier'] ?? ''));
+            }
+
+            return strcmp($leftTimestamp, $rightTimestamp);
+        });
     }
 }
