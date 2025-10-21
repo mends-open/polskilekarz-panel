@@ -57,54 +57,6 @@ it('loads aggregated Cloudflare link entries from the primary namespace', functi
     expect($result['entries'][1]['request']['url'])->toBe('https://worker.test/alpha');
 });
 
-it('loads distributed Cloudflare link entries stored under individual keys', function () {
-    $entries = [
-        'gamma:entries:019a0637-f88b-7f04-8da5-47f004d23a24' => json_encode([
-            'identifier' => '019a0637-f88b-7f04-8da5-47f004d23a24',
-            'timestamp' => '2024-11-02T10:00:00Z',
-            'request_id' => 'req-100',
-            'request' => [
-                'method' => 'GET',
-                'url' => 'https://worker.test/gamma',
-            ],
-            'response' => [
-                'status' => 302,
-            ],
-            'slug' => 'gamma',
-            'url' => 'https://destination.test/gamma',
-            'short_url' => 'https://short.test/gamma',
-        ], JSON_THROW_ON_ERROR),
-        'gamma:entries:019a0637-f88b-7f04-8da5-47f004d23a25' => json_encode([
-            'identifier' => '019a0637-f88b-7f04-8da5-47f004d23a25',
-            'timestamp' => '2024-11-02T10:05:00Z',
-            'request_id' => 'req-101',
-            'request' => [
-                'method' => 'GET',
-                'url' => 'https://worker.test/gamma',
-            ],
-            'response' => [
-                'status' => 302,
-            ],
-            'slug' => 'gamma',
-            'url' => 'https://destination.test/gamma',
-            'short_url' => 'https://short.test/gamma',
-        ], JSON_THROW_ON_ERROR),
-    ];
-
-    $client = new FakeCloudflareClient($entries);
-    $shortener = new LinkShortener($client);
-
-    $result = $shortener->entries('gamma');
-
-    expect($result['slug'])->toBe('gamma');
-    expect($result['url'])->toBe('https://destination.test/gamma');
-    expect($result['short_url'])->toBe('https://short.test/gamma');
-    expect($result['total'])->toBe(2);
-    expect($result['entries'])->toHaveCount(2);
-    expect($result['entries'][0]['identifier'])->toBe('019a0637-f88b-7f04-8da5-47f004d23a25');
-    expect($result['entries'][1]['identifier'])->toBe('019a0637-f88b-7f04-8da5-47f004d23a24');
-});
-
 it('derives totals when the payload omits them', function () {
     $entries = [
         'beta:entries' => json_encode([
@@ -199,23 +151,4 @@ class FakeKVNamespace extends KVNamespace
         return $value;
     }
 
-    public function listKeys(array $query = []): array
-    {
-        $prefix = (string) ($query['prefix'] ?? '');
-        $limit = isset($query['limit']) ? (int) $query['limit'] : null;
-
-        $keys = array_keys($this->store);
-
-        if ($prefix !== '') {
-            $keys = array_values(array_filter($keys, fn ($key) => str_starts_with($key, $prefix)));
-        }
-
-        sort($keys);
-
-        if ($limit !== null && $limit > 0) {
-            $keys = array_slice($keys, 0, $limit);
-        }
-
-        return array_map(fn ($key) => ['name' => $key], $keys);
-    }
 }

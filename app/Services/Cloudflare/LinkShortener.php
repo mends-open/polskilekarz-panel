@@ -137,27 +137,27 @@ class LinkShortener
     {
         $payload = $kv->retrieve($this->entryRecordsKey($slug));
 
-        if (is_string($payload) && $payload !== '') {
-            foreach ($this->payloadCandidates($payload) as $candidate) {
-                [$decoded, $valid] = $this->tryDecodeJson($candidate);
+        if (! is_string($payload) || $payload === '') {
+            return [[], 0, []];
+        }
 
-                if (! $valid || ! is_array($decoded)) {
-                    continue;
-                }
+        $decoded = $this->decodeEntryPayload($payload);
 
-                $entries = $this->normalizeEntryRecords($decoded['entries'] ?? []);
-                $total = $this->resolveEntryTotal($decoded, $entries);
-                $metadata = $this->extractEntryMetadata($decoded);
-
-                return [$entries, $total, $metadata];
-            }
-
+        if ($decoded === null) {
             Log::warning('Failed to decode Cloudflare link entries payload', [
                 'slug' => $slug,
             ]);
+
+            return [[], 0, []];
         }
 
-        return $this->collectIndividualEntryRecords($kv, $slug);
+        $entries = $this->normalizeEntryRecords($decoded['entries'] ?? []);
+
+        return [
+            $entries,
+            $this->resolveEntryTotal($decoded, $entries),
+            $this->extractEntryMetadata($decoded),
+        ];
     }
 
     protected function entryRecordsKey(string $slug): string
@@ -195,37 +195,6 @@ class LinkShortener
         return count($entries);
     }
 
-    /**
-     * @return iterable<string>
-     */
-    protected function payloadCandidates(string $payload): iterable
-    {
-        $candidates = [$payload];
-
-        $base64 = base64_decode($payload, true);
-
-        if (is_string($base64) && $base64 !== '') {
-            $candidates[] = $base64;
-        }
-
-        foreach ($candidates as $candidate) {
-            yield $candidate;
-
-            if ($this->isGzipPayload($candidate)) {
-                $decoded = gzdecode($candidate);
-
-                if ($decoded !== false) {
-                    yield $decoded;
-                }
-            }
-        }
-    }
-
-    protected function isGzipPayload(string $payload): bool
-    {
-        return strlen($payload) >= 2 && str_starts_with($payload, "\x1F\x8B");
-    }
-
     protected function resolveShortLink(string $slug): ?string
     {
         if ($slug === '' || $this->domain === '') {
@@ -233,20 +202,6 @@ class LinkShortener
         }
 
         return $this->buildShortLink($slug);
-    }
-
-    /**
-     * @return array{0: mixed, 1: bool}
-     */
-    protected function tryDecodeJson(string $payload): array
-    {
-        $decoded = json_decode($payload, true);
-
-        if (json_last_error() === JSON_ERROR_NONE) {
-            return [$decoded, true];
-        }
-
-        return [null, false];
     }
 
     /**
@@ -259,168 +214,49 @@ class LinkShortener
     }
 
     /**
-     * @return array{0: array<int, array<string, mixed>>, 1: int, 2: array<string, mixed>}
+     * @return array<string, mixed>|null
      */
-    protected function collectIndividualEntryRecords(KVNamespace $kv, string $slug): array
+    protected function decodeEntryPayload(string $payload): ?array
     {
-        $keys = $this->listEntryRecordKeys($kv, $slug);
+        foreach ($this->payloadCandidates($payload) as $candidate) {
+            $decoded = json_decode($candidate, true);
 
-        if ($keys === []) {
-            return [[], 0, []];
-        }
-
-        $entries = [];
-        $metadata = [];
-
-        foreach ($keys as $key) {
-            $payload = $kv->retrieve($key);
-
-            if (! is_string($payload) || $payload === '') {
-                continue;
-            }
-
-            foreach ($this->payloadCandidates($payload) as $candidate) {
-                [$decoded, $valid] = $this->tryDecodeJson($candidate);
-
-                if (! $valid || ! is_array($decoded)) {
-                    continue;
-                }
-
-                $metadata = array_merge($metadata, $this->extractEntryMetadata($decoded));
-
-                $entry = $this->resolveIndividualEntry($decoded);
-
-                if ($entry !== null) {
-                    $entries[] = $entry;
-                }
-
-                break;
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                return $decoded;
             }
         }
 
-        if ($entries === []) {
-            return [[], 0, $metadata];
-        }
-
-        $entries = $this->sortEntryRecords($entries);
-
-        return [$entries, count($entries), $metadata];
+        return null;
     }
 
     /**
-     * @return array<int, string>
+     * @return iterable<string>
      */
-    protected function listEntryRecordKeys(KVNamespace $kv, string $slug): array
+    protected function payloadCandidates(string $payload): iterable
     {
-        $result = $kv->listKeys([
-            'prefix' => $this->entryRecordsKey($slug).':',
-            'limit' => 1000,
-        ]);
+        $yielded = [$payload];
 
-        if (! is_array($result) || $result === []) {
-            return [];
+        $base64 = base64_decode($payload, true);
+
+        if (is_string($base64) && $base64 !== '') {
+            $yielded[] = $base64;
         }
 
-        $keys = array_map(function ($item) {
-            if (is_array($item) && isset($item['name']) && is_string($item['name'])) {
-                return $item['name'];
-            }
+        foreach ($yielded as $candidate) {
+            yield $candidate;
 
-            if (is_string($item)) {
-                return $item;
-            }
+            if ($this->isGzipPayload($candidate)) {
+                $decoded = gzdecode($candidate);
 
-            return null;
-        }, $result);
-
-        $keys = array_filter($keys);
-
-        sort($keys);
-
-        return array_values($keys);
-    }
-
-    protected function resolveIndividualEntry(array $decoded): ?array
-    {
-        if (isset($decoded['entry']) && is_array($decoded['entry'])) {
-            return $this->normalizeSingleEntry($decoded['entry']);
-        }
-
-        if (isset($decoded['entries']) && is_array($decoded['entries'])) {
-            $entries = $this->normalizeEntryRecords($decoded['entries']);
-
-            return $entries[0] ?? null;
-        }
-
-        $candidate = Arr::except($decoded, ['slug', 'url', 'short_url', 'total']);
-
-        return $this->normalizeSingleEntry($candidate);
-    }
-
-    protected function normalizeSingleEntry(array $entry): ?array
-    {
-        $normalized = $this->normalizeEntryRecords([$entry]);
-
-        return $normalized[0] ?? null;
-    }
-
-    /**
-     * @param  array<int, array<string, mixed>>  $entries
-     * @return array<int, array<string, mixed>>
-     */
-    protected function sortEntryRecords(array $entries): array
-    {
-        usort($entries, function (array $left, array $right): int {
-            $leftTimestamp = isset($left['timestamp']) && is_string($left['timestamp'])
-                ? strtotime($left['timestamp'])
-                : null;
-            $rightTimestamp = isset($right['timestamp']) && is_string($right['timestamp'])
-                ? strtotime($right['timestamp'])
-                : null;
-
-            if ($leftTimestamp !== null && $rightTimestamp !== null) {
-                if ($leftTimestamp === $rightTimestamp) {
-                    return $this->compareIdentifiers($left, $right);
+                if (is_string($decoded) && $decoded !== '') {
+                    yield $decoded;
                 }
-
-                return $rightTimestamp <=> $leftTimestamp;
             }
-
-            if ($leftTimestamp !== null) {
-                return -1;
-            }
-
-            if ($rightTimestamp !== null) {
-                return 1;
-            }
-
-            return $this->compareIdentifiers($left, $right);
-        });
-
-        return $entries;
+        }
     }
 
-    protected function compareIdentifiers(array $left, array $right): int
+    protected function isGzipPayload(string $payload): bool
     {
-        $leftIdentifier = isset($left['identifier']) && is_string($left['identifier'])
-            ? $left['identifier']
-            : null;
-        $rightIdentifier = isset($right['identifier']) && is_string($right['identifier'])
-            ? $right['identifier']
-            : null;
-
-        if ($leftIdentifier !== null && $rightIdentifier !== null) {
-            return $leftIdentifier <=> $rightIdentifier;
-        }
-
-        if ($leftIdentifier !== null) {
-            return -1;
-        }
-
-        if ($rightIdentifier !== null) {
-            return 1;
-        }
-
-        return 0;
+        return strlen($payload) >= 2 && str_starts_with($payload, "\x1F\x8B");
     }
 }
