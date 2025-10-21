@@ -48,6 +48,7 @@ it('merges Cloudflare link entry logs into a single payload structure', function
     expect($result['entries'])->toHaveCount(2);
 
     expect($result['entries'][0]['index'])->toBe(0);
+    expect($result['entries'][0]['identifier'])->toBe('0');
     expect($result['entries'][0]['key'])->toBe('alpha:0');
     expect($result['entries'][0]['keys'])->toBe([
         'alpha:0',
@@ -60,6 +61,7 @@ it('merges Cloudflare link entry logs into a single payload structure', function
     expect($result['entries'][0]['response']['status'])->toBe(302);
 
     expect($result['entries'][1]['index'])->toBe(1);
+    expect($result['entries'][1]['identifier'])->toBe('1');
     expect($result['entries'][1]['keys'])->toBe([
         'alpha:1',
         'alpha:1:request',
@@ -93,6 +95,55 @@ it('handles plain JSON payloads without compression', function () {
     expect($result['entries'])->toHaveCount(1);
     expect($result['entries'][0]['timestamp'])->toBe('2024-10-02T11:00:00Z');
     expect($result['total'])->toBe(1);
+});
+
+it('supports UUIDv7 log identifiers', function () {
+    $uuidOne = '018fba1d-56b7-7c9b-b05e-31b89d812345';
+    $uuidTwo = '018fba1d-56b8-7d0a-b37c-31b89d876543';
+
+    $entries = [
+        sprintf('gamma:%s', $uuidOne) => json_encode([
+            'slug' => 'gamma',
+            'timestamp' => '2024-10-03T09:15:00Z',
+            'request' => [
+                'method' => 'GET',
+                'url' => 'https://worker.test/gamma',
+            ],
+            'response' => [
+                'status' => 200,
+            ],
+        ], JSON_THROW_ON_ERROR),
+        sprintf('gamma:%s:request', $uuidTwo) => json_encode([
+            'method' => 'GET',
+            'url' => 'https://worker.test/gamma',
+        ], JSON_THROW_ON_ERROR),
+        sprintf('gamma:%s', $uuidTwo) => base64_encode(gzencode(json_encode([
+            'slug' => 'gamma',
+            'timestamp' => '2024-10-03T09:20:00Z',
+            'request_id' => 'req-3',
+        ], JSON_THROW_ON_ERROR))),
+        sprintf('gamma:%s:response', $uuidTwo) => json_encode([
+            'status' => 302,
+        ], JSON_THROW_ON_ERROR),
+        'gamma:counter' => '2',
+    ];
+
+    $client = new FakeCloudflareClient($entries);
+    $shortener = new LinkShortener($client);
+
+    $result = $shortener->entries('gamma');
+
+    expect($result['total'])->toBe(2);
+    expect($result['entries'])->toHaveCount(2);
+
+    expect($result['entries'][0]['identifier'])->toBe($uuidOne);
+    expect($result['entries'][0])->not->toHaveKey('index');
+    expect($result['entries'][0]['request']['url'])->toBe('https://worker.test/gamma');
+    expect($result['entries'][0]['response']['status'])->toBe(200);
+
+    expect($result['entries'][1]['identifier'])->toBe($uuidTwo);
+    expect($result['entries'][1]['request_id'])->toBe('req-3');
+    expect($result['entries'][1]['keys'])->toContain(sprintf('gamma:%s:response', $uuidTwo));
 });
 
 it('returns an empty structure when the logs namespace is not configured', function () {

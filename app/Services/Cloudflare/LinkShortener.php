@@ -159,7 +159,7 @@ class LinkShortener
                 continue;
             }
 
-            [$index, $path] = $segments;
+            [$identifier, $path] = $segments;
 
             $payload = $kv->retrieve($name);
 
@@ -173,13 +173,17 @@ class LinkShortener
                 continue;
             }
 
-            $entry = &$entries[$index];
+            $entry = &$entries[$identifier];
 
             if (! isset($entry)) {
                 $entry = [
-                    'index' => $index,
+                    'identifier' => $identifier,
                     'keys' => [],
                 ];
+
+                if (ctype_digit($identifier)) {
+                    $entry['index'] = (int) $identifier;
+                }
             }
 
             if (! in_array($name, $entry['keys'], true)) {
@@ -189,6 +193,8 @@ class LinkShortener
             $entry['key'] ??= $name;
 
             if ($path === []) {
+                $entry['key'] = $name;
+
                 if (is_array($value)) {
                     $this->mergeEntryPayload($entry, $value);
                 } elseif ($value !== null) {
@@ -209,9 +215,11 @@ class LinkShortener
             unset($entry);
         }
 
+        $entries = array_values($entries);
+
         $this->sortEntryRecords($entries);
 
-        return [array_values($entries), $counter];
+        return [$entries, $counter];
     }
 
     /**
@@ -229,7 +237,7 @@ class LinkShortener
     protected function mergeEntryPayload(array &$entry, array $payload): void
     {
         foreach ($payload as $key => $value) {
-            if ($key === 'index' || $key === 'keys') {
+            if ($key === 'index' || $key === 'identifier' || $key === 'keys') {
                 continue;
             }
 
@@ -260,14 +268,36 @@ class LinkShortener
     protected function sortEntryRecords(array &$entries): void
     {
         usort($entries, function (array $left, array $right): int {
-            $leftIndex = $left['index'] ?? PHP_INT_MAX;
-            $rightIndex = $right['index'] ?? PHP_INT_MAX;
+            $leftIndex = $left['index'] ?? null;
+            $rightIndex = $right['index'] ?? null;
 
-            if ($leftIndex === $rightIndex) {
-                return strcmp((string) ($left['timestamp'] ?? ''), (string) ($right['timestamp'] ?? ''));
+            if (is_int($leftIndex) && is_int($rightIndex)) {
+                if ($leftIndex === $rightIndex) {
+                    return strcmp((string) ($left['timestamp'] ?? ''), (string) ($right['timestamp'] ?? ''));
+                }
+
+                return $leftIndex <=> $rightIndex;
             }
 
-            return $leftIndex <=> $rightIndex;
+            $leftTimestamp = $left['timestamp'] ?? null;
+            $rightTimestamp = $right['timestamp'] ?? null;
+
+            if ($leftTimestamp !== null && $rightTimestamp !== null && $leftTimestamp !== $rightTimestamp) {
+                return strcmp((string) $leftTimestamp, (string) $rightTimestamp);
+            }
+
+            if ($leftTimestamp !== null && $rightTimestamp === null) {
+                return -1;
+            }
+
+            if ($leftTimestamp === null && $rightTimestamp !== null) {
+                return 1;
+            }
+
+            $leftIdentifier = (string) ($left['identifier'] ?? $left['key'] ?? '');
+            $rightIdentifier = (string) ($right['identifier'] ?? $right['key'] ?? '');
+
+            return strcmp($leftIdentifier, $rightIdentifier);
         });
     }
 
@@ -320,13 +350,13 @@ class LinkShortener
         }
 
         $segments = explode(':', $suffix);
-        $index = array_shift($segments);
+        $identifier = array_shift($segments);
 
-        if (! is_string($index) || $index === '' || ! ctype_digit($index)) {
+        if (! is_string($identifier) || $identifier === '') {
             return null;
         }
 
-        return [(int) $index, $segments];
+        return [$identifier, $segments];
     }
 
     protected function resolveShortLink(string $slug): ?string

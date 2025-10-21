@@ -236,10 +236,12 @@ class LinkEntriesTable extends BaseTableWidget
 
         $entryKey = (string) ($entry['key'] ?? '');
 
+        $identifier = (string) ($entry['identifier'] ?? ($entry['index'] ?? ''));
+
         return [
             'id' => $entryKey !== ''
                 ? $entryKey
-                : sprintf('%s-%s', $link->id, $entry['index'] ?? Str::uuid()),
+                : sprintf('%s-%s', $link->id, $identifier !== '' ? $identifier : Str::uuid()),
             'slug' => $link->slug,
             'short_url' => $shortUrl,
             'url' => $link->url,
