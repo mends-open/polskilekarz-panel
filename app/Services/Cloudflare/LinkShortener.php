@@ -137,29 +137,27 @@ class LinkShortener
     {
         $payload = $kv->retrieve($this->entryRecordsKey($slug));
 
-        if (! is_string($payload) || $payload === '') {
-            return [[], 0, []];
-        }
+        if (is_string($payload) && $payload !== '') {
+            foreach ($this->payloadCandidates($payload) as $candidate) {
+                [$decoded, $valid] = $this->tryDecodeJson($candidate);
 
-        foreach ($this->payloadCandidates($payload) as $candidate) {
-            [$decoded, $valid] = $this->tryDecodeJson($candidate);
+                if (! $valid || ! is_array($decoded)) {
+                    continue;
+                }
 
-            if (! $valid || ! is_array($decoded)) {
-                continue;
+                $entries = $this->normalizeEntryRecords($decoded['entries'] ?? []);
+                $total = $this->resolveEntryTotal($decoded, $entries);
+                $metadata = $this->extractEntryMetadata($decoded);
+
+                return [$entries, $total, $metadata];
             }
 
-            $entries = $this->normalizeEntryRecords($decoded['entries'] ?? []);
-            $total = $this->resolveEntryTotal($decoded, $entries);
-            $metadata = $this->extractEntryMetadata($decoded);
-
-            return [$entries, $total, $metadata];
+            Log::warning('Failed to decode Cloudflare link entries payload', [
+                'slug' => $slug,
+            ]);
         }
 
-        Log::warning('Failed to decode Cloudflare link entries payload', [
-            'slug' => $slug,
-        ]);
-
-        return [[], 0, []];
+        return $this->collectIndividualEntryRecords($kv, $slug);
     }
 
     protected function entryRecordsKey(string $slug): string
@@ -257,6 +255,172 @@ class LinkShortener
      */
     protected function extractEntryMetadata(array $decoded): array
     {
-        return Arr::except($decoded, ['entries', 'total']);
+        return Arr::except($decoded, ['entries', 'entry', 'total']);
+    }
+
+    /**
+     * @return array{0: array<int, array<string, mixed>>, 1: int, 2: array<string, mixed>}
+     */
+    protected function collectIndividualEntryRecords(KVNamespace $kv, string $slug): array
+    {
+        $keys = $this->listEntryRecordKeys($kv, $slug);
+
+        if ($keys === []) {
+            return [[], 0, []];
+        }
+
+        $entries = [];
+        $metadata = [];
+
+        foreach ($keys as $key) {
+            $payload = $kv->retrieve($key);
+
+            if (! is_string($payload) || $payload === '') {
+                continue;
+            }
+
+            foreach ($this->payloadCandidates($payload) as $candidate) {
+                [$decoded, $valid] = $this->tryDecodeJson($candidate);
+
+                if (! $valid || ! is_array($decoded)) {
+                    continue;
+                }
+
+                $metadata = array_merge($metadata, $this->extractEntryMetadata($decoded));
+
+                $entry = $this->resolveIndividualEntry($decoded);
+
+                if ($entry !== null) {
+                    $entries[] = $entry;
+                }
+
+                break;
+            }
+        }
+
+        if ($entries === []) {
+            return [[], 0, $metadata];
+        }
+
+        $entries = $this->sortEntryRecords($entries);
+
+        return [$entries, count($entries), $metadata];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function listEntryRecordKeys(KVNamespace $kv, string $slug): array
+    {
+        $result = $kv->listKeys([
+            'prefix' => $this->entryRecordsKey($slug).':',
+            'limit' => 1000,
+        ]);
+
+        if (! is_array($result) || $result === []) {
+            return [];
+        }
+
+        $keys = array_map(function ($item) {
+            if (is_array($item) && isset($item['name']) && is_string($item['name'])) {
+                return $item['name'];
+            }
+
+            if (is_string($item)) {
+                return $item;
+            }
+
+            return null;
+        }, $result);
+
+        $keys = array_filter($keys);
+
+        sort($keys);
+
+        return array_values($keys);
+    }
+
+    protected function resolveIndividualEntry(array $decoded): ?array
+    {
+        if (isset($decoded['entry']) && is_array($decoded['entry'])) {
+            return $this->normalizeSingleEntry($decoded['entry']);
+        }
+
+        if (isset($decoded['entries']) && is_array($decoded['entries'])) {
+            $entries = $this->normalizeEntryRecords($decoded['entries']);
+
+            return $entries[0] ?? null;
+        }
+
+        $candidate = Arr::except($decoded, ['slug', 'url', 'short_url', 'total']);
+
+        return $this->normalizeSingleEntry($candidate);
+    }
+
+    protected function normalizeSingleEntry(array $entry): ?array
+    {
+        $normalized = $this->normalizeEntryRecords([$entry]);
+
+        return $normalized[0] ?? null;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $entries
+     * @return array<int, array<string, mixed>>
+     */
+    protected function sortEntryRecords(array $entries): array
+    {
+        usort($entries, function (array $left, array $right): int {
+            $leftTimestamp = isset($left['timestamp']) && is_string($left['timestamp'])
+                ? strtotime($left['timestamp'])
+                : null;
+            $rightTimestamp = isset($right['timestamp']) && is_string($right['timestamp'])
+                ? strtotime($right['timestamp'])
+                : null;
+
+            if ($leftTimestamp !== null && $rightTimestamp !== null) {
+                if ($leftTimestamp === $rightTimestamp) {
+                    return $this->compareIdentifiers($left, $right);
+                }
+
+                return $rightTimestamp <=> $leftTimestamp;
+            }
+
+            if ($leftTimestamp !== null) {
+                return -1;
+            }
+
+            if ($rightTimestamp !== null) {
+                return 1;
+            }
+
+            return $this->compareIdentifiers($left, $right);
+        });
+
+        return $entries;
+    }
+
+    protected function compareIdentifiers(array $left, array $right): int
+    {
+        $leftIdentifier = isset($left['identifier']) && is_string($left['identifier'])
+            ? $left['identifier']
+            : null;
+        $rightIdentifier = isset($right['identifier']) && is_string($right['identifier'])
+            ? $right['identifier']
+            : null;
+
+        if ($leftIdentifier !== null && $rightIdentifier !== null) {
+            return $leftIdentifier <=> $rightIdentifier;
+        }
+
+        if ($leftIdentifier !== null) {
+            return -1;
+        }
+
+        if ($rightIdentifier !== null) {
+            return 1;
+        }
+
+        return 0;
     }
 }
