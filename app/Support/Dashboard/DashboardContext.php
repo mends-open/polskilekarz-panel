@@ -22,7 +22,7 @@ class DashboardContext
 
     public function storeChatwoot(ChatwootContext $context): void
     {
-        $this->session()->put(self::CHATWOOT_KEY, $context->toArray());
+        $this->store(self::CHATWOOT_KEY, $context->toArray());
     }
 
     public function chatwoot(): ChatwootContext
@@ -32,7 +32,7 @@ class DashboardContext
 
     public function storeStripe(StripeContext $context): void
     {
-        $this->session()->put(self::STRIPE_KEY, $context->toArray());
+        $this->store(self::STRIPE_KEY, $context->toArray());
     }
 
     public function stripe(): StripeContext
@@ -42,13 +42,15 @@ class DashboardContext
 
     public function markReady(bool $ready = true): void
     {
+        $session = $this->session();
+
         if (! $ready) {
-            $this->session()->put(self::READY_KEY, false);
+            $session->put(self::READY_KEY, false);
 
             return;
         }
 
-        $this->session()->put(self::READY_KEY, $this->chatwootContextIsUsable());
+        $session->put(self::READY_KEY, $this->chatwootContextIsUsable());
     }
 
     public function isReady(): bool
@@ -82,5 +84,13 @@ class DashboardContext
         }
 
         return $chatwootContext->hasContact();
+    }
+
+    /**
+     * @param array<string, mixed> $value
+     */
+    private function store(string $key, array $value): void
+    {
+        $this->session()->put($key, $value);
     }
 }
