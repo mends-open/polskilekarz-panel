@@ -7,6 +7,7 @@ use App\Filament\Widgets\Cloudflare\Concerns\InteractsWithCloudflareLinks;
 use App\Models\CloudflareLink;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
 use App\Services\Cloudflare\LinkShortener;
+use App\Support\Dashboard\Concerns\RefreshesDashboardContextOnBoot;
 use Filament\Actions\BulkActionGroup;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\Layout\Split;
@@ -22,7 +23,7 @@ class LinksTable extends BaseTableWidget
 {
     use InteractsWithCloudflareLinks;
     use InteractsWithDashboardContext;
-
+    use RefreshesDashboardContextOnBoot;
     protected int|string|array $columnSpan = 'full';
 
     public $tableRecordsPerPage = 5;

@@ -8,6 +8,7 @@ use App\Filament\Widgets\Cloudflare\Enums\CloudflareResponseStatus;
 use App\Models\CloudflareLink;
 use App\Services\Cloudflare\LinkShortener;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
+use App\Support\Dashboard\Concerns\RefreshesDashboardContextOnBoot;
 use Filament\Actions\BulkActionGroup;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\Layout\Split;
@@ -26,6 +27,7 @@ class LinkEntriesTable extends BaseTableWidget
 {
     use InteractsWithCloudflareLinks;
     use InteractsWithDashboardContext;
+    use RefreshesDashboardContextOnBoot;
 
     protected int|string|array $columnSpan = 'full';
 

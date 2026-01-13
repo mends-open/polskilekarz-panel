@@ -7,6 +7,7 @@ use App\Filament\Widgets\Stripe\Concerns\HandlesCurrencyDecimals;
 use App\Filament\Widgets\Stripe\Concerns\HasStripeInvoiceForm;
 use App\Filament\Widgets\Stripe\Concerns\InteractsWithStripeInvoices;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
+use App\Support\Dashboard\Concerns\RefreshesDashboardContextOnBoot;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Support\Icons\Heroicon;
@@ -28,6 +29,7 @@ class InvoicesTable extends BaseTableWidget
     use HasStripeInvoiceForm;
     use InteractsWithDashboardContext;
     use InteractsWithStripeInvoices;
+    use RefreshesDashboardContextOnBoot;
 
     protected int|string|array $columnSpan = 'full';
 

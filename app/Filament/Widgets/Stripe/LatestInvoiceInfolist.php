@@ -7,6 +7,7 @@ use App\Filament\Widgets\Stripe\Concerns\HandlesCurrencyDecimals;
 use App\Filament\Widgets\Stripe\Concerns\HasLatestStripeInvoice;
 use App\Filament\Widgets\Stripe\Concerns\HasStripeInvoiceForm;
 use App\Support\Dashboard\Concerns\InteractsWithDashboardContext;
+use App\Support\Dashboard\Concerns\RefreshesDashboardContextOnBoot;
 use Arr;
 use Filament\Actions\Action;
 use Filament\Infolists\Components\TextEntry;
@@ -23,6 +24,7 @@ class LatestInvoiceInfolist extends BaseSchemaWidget
     use HasLatestStripeInvoice;
     use HasStripeInvoiceForm;
     use InteractsWithDashboardContext;
+    use RefreshesDashboardContextOnBoot;
 
     protected int|string|array $columnSpan = 'full';
 
